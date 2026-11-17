@@ -9,51 +9,65 @@
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
-<p align="center"><b>Never think about where to go next.</b><br>
-A levelling companion for WoW Forever. One button tells you what to do and points the way.</p>
+<h2 align="center">Stop alt-tabbing to guides.<br>Press one button and go.</h2>
+
+<p align="center">
+Forever Lazy is a levelling companion for WoW Forever that does the thinking for you.<br>
+It knows your quests, your bags, your professions and the map, and it points an arrow at the next thing worth doing.
+</p>
 
 ---
 
-## What it does
+## A level 20 on a Tuesday night
 
-Click the minimap button (or type `/lazy now`) and **Forever Lazy** points an arrow at the best next thing: your next
-quest stop, a vendor when your bags are full, your trainer, or the next zone, with a full trip by flight path,
-boat and hearthstone if it is far.
+You log in with a full quest log and no idea where to start. You click the minimap button.
 
-## Highlights
+- The arrow points at the **quest stop that earns the most XP for the walking**, with a note on what to do there.
+- Your bags fill up, so the next click sends you to the **nearest vendor**.
+- The next quest is two zones away, so it plans the **flight path, the boat and the hearthstone** for you.
+- Your skill is stuck at 56, so it lights up **the exact recipe to craft** in your profession window and tells you how many.
+
+No spreadsheets. No second monitor. No typing, unless you want to.
+
+## What you get
 
 | | |
 |---|---|
-| **Lazy Mode** | One press points at the best next thing. |
-| **Quest route planner** | An XP-efficient route through your quest log, with what to do at each stop. |
-| **Take me there** | `/lazy go <place>` plans a whole trip by flight, boat, tram and hearthstone. |
-| **Crafting** | What to craft next, materials counted from your bags and bank, and where to get the rest. |
-| **Buttons in the game windows** | A menu, a world map search box, quest log buttons and a craft panel, so you rarely type. |
-| **Duo mode** | Two players with the addon level together: shared plan, partner on the compass. |
+| **One-button Lazy Mode** | Click, and the arrow points at the best next thing: quest, vendor, trainer, or the next zone. |
+| **A route that respects your time** | Your quest log planned for XP per minute, with stops numbered on the world map. |
+| **Take me there** | Type a place and get a whole trip by flight, boat, tram and hearthstone. |
+| **Crafting that tells you what to make** | The recipe to craft next glows in your recipe list with a count, using what is in your bags and bank, and says where to get the rest. |
+| **Buttons where you already look** | A menu on the minimap, a search box on the world map, buttons on the quest log. Nothing to memorise. |
+| **Duo mode** | Level with a friend who has the addon: shared plan, partner on your compass. |
 
-Plus a journey to 60, class quests, dungeons, gathering and fishing routes, library books and more.
-Every part can be switched off, and presets set it up in one click. See the [full feature guide](docs/FEATURES.md).
+And more: a journey to 60, class quests, dungeon levels, gathering and fishing routes, library books, a first-run tour.
+See everything in the [feature guide](docs/FEATURES.md).
 
-> **[Questie](https://www.curseforge.com/wow/addons/questie) is highly recommended for added functionality.**
-> It powers the quest planning, class quests, services and crafting sources.
->
-> **Early test builds.** Releases are marked *pre-release* because a lot of the code has had little in-game testing.
-> If something looks wrong, type `/lazy check` and paste the result into an [Issue](../../issues).
+## It does not get in your way
 
-## Install
+- **Every part switches off.** Want only the arrow? One click.
+- **Presets** set it up in seconds: Minimal, Leveler, Duo or Full.
+- **Private.** It only talks to your own group or guild, and only the small details listed in [what it sends](docs/PRIVACY.md).
+- **Free and open source**, MIT licensed.
 
-1. Download the latest zip from [Releases](../../releases).
-2. Put the **`ForeverLazy`** folder in `World of Warcraft\_forever_\Interface\AddOns\`.
-3. Restart the game. A welcome window opens the options; `/lazy` opens them any time.
+## Install in a minute
+
+1. Download the latest zip from [**Releases**](../../releases/latest).
+2. Drop the **`ForeverLazy`** folder into `World of Warcraft\_forever_\Interface\AddOns\`.
+3. Start the game. A welcome window walks you through it, and `/lazy` opens the options any time.
+
+> **Get [Questie](https://www.curseforge.com/wow/addons/questie) too.** Forever Lazy uses its quest data to plan routes,
+> find class quests and vendors, and work out where to get crafting materials.
+
+## Early days, and I want your feedback
+
+This is a young addon built by one player who levels with it. It works, and it is getting better fast, but some
+corners have had little testing. If something looks wrong, type `/lazy check` and paste the result into an
+[Issue](../../issues). Ideas and questions are welcome in [Discussions](../../discussions).
 
 ## Learn more
 
-- [Feature guide](docs/FEATURES.md): everything it can do
-- [Commands](docs/COMMANDS.md): the full list (most things are also a click)
-- [Teaching it a boat dock](docs/BOATS.md)
-- [What it sends to other players](docs/PRIVACY.md)
-- [Changelog](CHANGELOG.md)
-- Questions: [Discussions](../../discussions). Bugs: [Issues](../../issues)
+[Feature guide](docs/FEATURES.md) · [Commands](docs/COMMANDS.md) · [Teaching it a boat dock](docs/BOATS.md) · [Privacy](docs/PRIVACY.md) · [Changelog](CHANGELOG.md)
 
 ## Credits and licence
 
