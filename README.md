@@ -87,6 +87,21 @@ If a friend runs RestedXP and shares their step with the party, Forever Lazy can
 quest spots and at them. It is **off by default**; turn it on under *RestedXP friend (optional)* in the options.
 You do not need RestedXP installed yourself.
 
+## Teaching it a boat dock
+
+The game does not tell addons where the docks are, so `/lazy boat` only points at docks it knows. It knows a few
+already; you teach it the rest, once, and it remembers them for all your characters.
+
+1. Walk to the dock and **stand on it**, at the spot where you board.
+2. Type `/lazy boat mark <port>`, for example `/lazy boat mark menethil`. (Standing in the port's zone, plain
+   `/lazy boat mark` works too.) It answers with the dock's coordinates.
+3. Now `/lazy boat <where>` points at it. `/lazy boat list` shows every dock you have taught.
+
+Ports: stormwind, auberdine, rutheran (Teldrassil), menethil, theramore, southshore, ratchet, bootybay, gromgol,
+orgrimmar, undercity. A route that is not working for you can be fixed the same way: mark the dock again.
+
+**Share what you find.** If you taught it a dock, please post the line from `/lazy boat list` as an
+[Issue](../../issues) or in [Discussions](../../discussions), and it will be built in for everyone.
 ## Install
 
 1. Download the latest zip from the [Releases](../../releases) page (or **Code → Download ZIP**).

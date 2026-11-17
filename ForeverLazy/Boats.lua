@@ -224,7 +224,7 @@ local function Show()
         PlaceStop(dock, "Boat to " .. toName .. ": " .. fromName .. " dock", detail)
     else
         ClearStop()
-        Print(string.format("I don't know where the %s dock is yet. Walk to it and type /lazy boat mark so I remember it.", fromName))
+        Print(string.format("I don't know where the %s dock is yet. Walk to the dock, stand on it, and type /lazy boat mark %s so I remember it.", fromName, NODES[from].words[1]))
     end
 end
 
@@ -295,9 +295,18 @@ function addon:HandleExtraCommand(cmd, rest)
             return table.concat(t, ", ")
         end)())
         local known = {}
-        for k, d in pairs(Docks()) do known[#known + 1] = k end
-        Print(#known > 0 and ("docks you taught me: " .. table.concat(known, ", ")) or "no docks taught yet")
+        for k, d in pairs(Docks()) do
+            known[#known + 1] = string.format("  %s: %s %.1f, %.1f", k, MapIdByName and "" or "", d.zx * 100, d.zy * 100)
+        end
+        table.sort(known)
+        if #known > 0 then
+            Print("docks you taught me (share these in a GitHub issue to help everyone):")
+            for _, line in ipairs(known) do Print(line) end
+        else
+            Print("no docks taught yet")
+        end
         Print("use /lazy boat <where>, for example /lazy boat darnassus")
+        Print("to teach me a dock: stand on it, then type /lazy boat mark <port>, for example /lazy boat mark menethil")
     elseif low:match("^mark") then
         local arg = low:gsub("^mark%s*", "")
         local key = arg ~= "" and NodeByWord(arg) or NodeHere()
