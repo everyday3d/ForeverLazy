@@ -66,3 +66,4 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy hive on` `off` | Turn the Hive on or off (learning and sharing) |
 | `/lazy hive who` `rares` `rare` | Other players per zone, reported rares, and an arrow to the nearest rare |
 | `/lazy grind` | The best mobs to grind in this zone near your level, by XP per hour |
+| `/lazy coach` `coach say` | The Coach: the best thing to do now by measured XP per hour (a window, or a few lines in chat) |

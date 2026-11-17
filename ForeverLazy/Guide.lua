@@ -126,6 +126,10 @@ local function Refresh()
             head = head .. string.format(" You are earning about %d here.", herePace)
         end
     end
+    if addon.CoachBest then
+        local best = addon.CoachBest()
+        if best then head = head .. "\nCoach says: " .. best .. "  (/lazy coach)" end
+    end
     win.head:SetText(head)
 
     local width = W - 70

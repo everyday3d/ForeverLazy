@@ -273,6 +273,12 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.11.0", {
+        "The Coach (/lazy coach, or Ask the Coach in the menus): compares doing the quests here, the best grind and other zones by measured XP per hour and tells you the best thing to do now, with a button to set it up.",
+        "Real quest spots: with the Hive on, the addon learns where quest objectives are really done and the plan uses those places instead of the original data. Grind advice can point at where you killed a mob most.",
+        "A far-off plan stop starts a flight trip by itself when a flight is quicker.",
+        "Fix: a quest handed in out of order, or dropped, is taken out of the plan at once, so the arrow no longer sends you back to its giver.",
+    } },
     { "0.10.2", {
         "The plan finishes the quests in an area before walking back to hand any in, unless handing one in continues a chain (Options > Extras to turn it off).",
         "This window now has Sam on it.",
@@ -284,7 +290,7 @@ local NEW = {
         "The Hive: the addon learns from your own play. Your real XP per hour (/lazy pace), the drops you loot (/lazy drops, item tooltips, the crafting plan), how long each quest really takes you, and a session report (/lazy session).",
         "Best grind (/lazy grind): which mobs give the most XP per hour near your level. Rare pins turn into timers after a kill, with how long the rare usually takes to come back.",
         "The guide and the new-zone box show your measured pace and your fastest zone, and quests that were slow for you are marked in the skip menu.",
-        "Turn the Hive on (Options > The Hive) to share what it learns with other players who have it on: drop rates, quest times and zone paces, rare spawns on the map, and how many players are in a zone. Only ids and numbers, never your name or position.",
+        "Turn the Hive on (Options > The Hive) to share what it learns with other players who have it on: drop rates, quest times and zone paces, rare spawns on the map, and how many players are in a zone. Only ids and numbers, never your name, and never a track of where you are.",
     } },
     { "0.9.2", {
         "Item tooltips say how many you have in bags, bank, mail, worn and the guild bank, and what your other characters have (/lazy has <item>).",

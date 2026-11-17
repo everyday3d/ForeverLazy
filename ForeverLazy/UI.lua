@@ -295,6 +295,7 @@ function addon:OpenServicesMenu()
     if wp and wp.label and addon.OpenSkipMenu then
         items[#items + 1] = { text = "Skip this quest stop, or do it next...", fn = function() addon:OpenSkipMenu() end }
     end
+    items[#items + 1] = { text = "Ask the Coach: what should I do?", fn = function() Cmd("coach") end }
     items[#items + 1] = { text = "Do the next thing (Lazy Mode)", fn = function() Cmd("now") end, module = "lazymode" }
     items[#items + 1] = { text = "More (full menu)", fn = function() addon:OpenMenu() end }
     addon.ShowMenu(items, "Forever Lazy")
@@ -325,6 +326,7 @@ function addon:OpenMenu()
         { text = "Do the next thing (Lazy Mode)", fn = function() Cmd("now") end, module = "lazymode" },
         { text = "Plan my route", fn = function() addon:PlanRoute() end, module = "plan" },
         { text = "Plan window", fn = function() Cmd("window") end, module = "plan" },
+        { text = "Ask the Coach: what should I do?", fn = function() Cmd("coach") end },
         { text = "Levelling guide", fn = function() Cmd("guide") end, module = "zones" },
         { text = "XP hot spots on the map", fn = function() Cmd("xpmap") end, module = "plan" },
         { text = "What the arrow points at", sub = function() return ArrowChoices(true) end },

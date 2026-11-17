@@ -405,6 +405,8 @@ local function BuildControls(parent)
         function() return DB().classAlert ~= false end, function(v) DB().classAlert = v end)
     Check(content, "Put class quest givers in my plan when they are in this zone", 16,
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
+    Check(content, "When the next plan stop is a long way off and a flight is quicker, start the trip by itself", 16,
+        function() return DB().autoTrip ~= false end, function(v) DB().autoTrip = v end)
     Check(content, "Finish the quests in an area before walking back to hand any in (unless it continues a chain)", 16,
         function() return DB().planBatch ~= false end, function(v) DB().planBatch = v end)
     Check(content, "Draw my plan's route on the world map", 16,
@@ -466,8 +468,10 @@ local function BuildControls(parent)
     end
     Toggle(16, 200, "The Hive", function() return DB().hiveOn == true end,
         function(v) if addon.HiveLiveSet then addon.HiveLiveSet(v) else DB().hiveOn = v end end, true)
-    Label(content, "ON: it learns your real XP per hour, the drops you loot and how long quests take, and exchanges those numbers, rare spawns and zone counts with other players who have it on, as hidden addon messages. It never sends your name, guild, position, items or chat. OFF: nothing is learned or shared.")
+    Label(content, "ON: it learns your real XP per hour, the drops you loot and how long quests take, and exchanges those numbers, rare spawns and zone counts with other players who have it on, as hidden addon messages. It never sends your name, guild, items or chat, and never a track of where you are. The only places shared are rare sightings and coarse map squares where a quest objective was done (no name, no time). OFF: nothing is learned or shared.")
     y = y - 70
+    Check(content, "Use the places where quest objectives were really done (learned from play) instead of the original data", 16,
+        function() return DB().hiveSpots ~= false end, function(v) DB().hiveSpots = v end)
     Check(content, "Item tooltips show the mobs seen dropping the item", 16,
         function() return DB().hiveTooltip ~= false end, function(v) DB().hiveTooltip = v end)
     Check(content, "Tell me when a rare shows up in my zone", 16,

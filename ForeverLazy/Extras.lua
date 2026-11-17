@@ -177,6 +177,18 @@ function BuildGroup(q)
             end
             local te = QDB.QueryQuestSingle(q.id, "triggerEnd")
             if type(te) == "table" and te[2] then api.AddSpawns(g.spawns, te[2]) end
+            -- where the objective was really done (mine and other players', from the Hive): when it is well known it
+            -- replaces Questie's spawn points, which were made for the original game; a few sightings are added to them
+            if addon.HiveQuestSpots and DB().hiveSpots ~= false then
+                local ok, spots, total = pcall(addon.HiveQuestSpots, q.id)
+                if ok and spots and #spots > 0 then
+                    if total >= 4 then
+                        g.spawns = spots
+                    else
+                        for _, s in ipairs(spots) do g.spawns[#g.spawns + 1] = s end
+                    end
+                end
+            end
         end
         return g
     end
@@ -1395,11 +1407,49 @@ local function QuestChanged()
     end
 end
 
+-- A quest was handed in (in any order) or dropped: take it out of every stop of the plan right away, wherever the
+-- stop is in the list, so the arrow never sends me back to a quest giver I have already seen.
+local function ScrubQuest(id)
+    local wps = DB().waypoints
+    if not wps or #wps == 0 then return end
+    local changed = false
+    for i = #wps, 1, -1 do
+        local w = wps[i]
+        if w.quests and #w.quests > 0 then
+            local keep = {}
+            for _, q in ipairs(w.quests) do
+                if q.id ~= id then keep[#keep + 1] = q end
+            end
+            if #keep < #w.quests then
+                changed = true
+                if #keep == 0 and w.label then
+                    table.remove(wps, i)
+                else
+                    w.quests = keep
+                    local labels = {}
+                    for _, q in ipairs(keep) do labels[#labels + 1] = q.label end
+                    if #labels > 0 then w.label = table.concat(labels, " + ") end
+                end
+            end
+        end
+    end
+    if changed then
+        RenumberPlan(wps)
+        addon:RefreshPins()
+        if addon.RefreshOptions then addon.RefreshOptions() end
+    end
+end
+addon.ScrubQuest = ScrubQuest
+
 local questWatch = CreateFrame("Frame")
 for _, e in ipairs({ "QUEST_LOG_UPDATE", "QUEST_TURNED_IN", "QUEST_REMOVED" }) do
     pcall(questWatch.RegisterEvent, questWatch, e)
 end
-questWatch:SetScript("OnEvent", function()
+questWatch:SetScript("OnEvent", function(_, event, arg1)
+    if event == "QUEST_TURNED_IN" or event == "QUEST_REMOVED" then
+        local id = tonumber(arg1)
+        if id then pcall(ScrubQuest, id) end
+    end
     if questCheck or not (C_Timer and C_Timer.After) then return end
     questCheck = true
     C_Timer.After(1.5, function() pcall(QuestChanged); questCheck = false end)

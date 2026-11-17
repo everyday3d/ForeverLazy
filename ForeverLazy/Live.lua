@@ -4,7 +4,8 @@
 --   zone counts:   "somebody is in this zone, level band 10-14". Never who, and never where in the zone.
 --   what was learned: drop counts (mob id, item ids, kill counts), quest times and zone XP rates, as plain numbers.
 --                  Everyone who has the Hive on adds what others send to their own numbers.
--- It never sends your character name, guild, position, items, gold or anything you typed.
+-- It never sends your character name, guild, items, gold or anything you typed, and never a track of where you are:
+-- the only places it shares are where a rare was seen and coarse map squares where a quest objective was done.
 --   /lazy hive on|off      /lazy hive who      /lazy hive rares      /lazy hive rare (arrow to the nearest)
 local ADDON, ns = ...
 local addon = ns.addon
@@ -91,9 +92,9 @@ local function Receive(sender, text)
     bk.t = now
     if bk.tokens < 1 then return end
     bk.tokens = bk.tokens - 1
-    local kind, a, b, c, d, e = strsplit("|", text)
-    if kind == "K" or kind == "Q" or kind == "X" then
-        if addon.HiveMerge then addon.HiveMerge(kind, who, a, b, c, d) end
+    local kind, a, b, c, d, e, f = strsplit("|", text)
+    if kind == "K" or kind == "Q" or kind == "X" or kind == "G" or kind == "O" or kind == "T" then
+        if addon.HiveMerge then addon.HiveMerge(kind, who, a, b, c, d, e, f) end
     elseif kind == "SK" or kind == "SQ" or kind == "SX" then
         heardSnapshot = true
         if addon.HiveMerge then addon.HiveMerge(kind, who, a, b, c, d) end
@@ -340,7 +341,7 @@ function addon.HiveLiveSet(on)
     db.hiveOn = on and true or false
     if on then
         if C_Timer then Enable() end
-        Print("the Hive is ON: it learns from your play and shares numbers, rares and zone counts with other players who have it on (never your name or position). /lazy hive off stops it.")
+        Print("the Hive is ON: it learns from your play and shares numbers, rares and zone counts with other players who have it on (never your name, and never a track of where you are). /lazy hive off stops it.")
     else
         Leave()
         queue = {}

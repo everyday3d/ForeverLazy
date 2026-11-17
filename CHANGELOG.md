@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.0
+- **The Coach** (`/lazy coach`, "Ask the Coach" in the menus): compares doing the quests here, the best grind and other zones by measured XP per hour, and says what is best right now, with a button for each that sets it up. Every line says what it rests on. The guide shows what the Coach says.
+- **Real quest spots**: with the Hive on, the addon records the map square where each quest objective counted up (and shares it with other Hive players). Once a quest has enough sightings, the plan and arrow use those places instead of the original game's spawn data. An option turns it off. Grind advice can now point at where you killed a mob most.
+- **Far-off plan stops use flights by themselves**: when the next stop is more than about 1,500 yards away and a flight is quicker, the trip starts on its own (flight master, where to fly, then the quest). An option turns it off.
+- **Fix:** a quest handed in out of the plan's order (or dropped) is now taken out of every plan stop at once, wherever it is in the list, so the arrow no longer sends you back to a quest giver you have already seen.
+- Privacy wording updated: the only places shared are rare sightings and coarse map squares for quest objectives, never a track of where you are. See [docs/PRIVACY.md](docs/PRIVACY.md).
 ## 0.10.2
 - **The plan batches quests by area**: it finishes the quests around here before walking back to hand any in, unless handing one in opens the next quest of a chain. An option turns it off.
 - The what's new window has Sam on it (credited, CC BY-SA 2.0).
@@ -16,7 +22,7 @@
   - **Rare timers**: the pin of a rare that died stays as a timer, with how long it usually takes to come back, learned from deaths and later sightings, and a line in chat when it should be back.
   - **Session report** (`/lazy session`): XP, XP per hour, quests, kills and gold this session.
   - **Shared numbers**: with the Hive on, drop counts, quest times and zone paces are exchanged with other players over a hidden channel and added to your own, so the numbers are good from the first day. Rare spawns show as pins on the world map, and the map says how many other Forever Lazy players are in a zone.
-  - It only ever sends ids and numbers, never your name, guild, position, items or chat. See [docs/HIVE.md](docs/HIVE.md) and [docs/PRIVACY.md](docs/PRIVACY.md).
+  - It only ever sends ids and numbers, never your name, guild, items or chat, and never a track of where you are. See [docs/HIVE.md](docs/HIVE.md) and [docs/PRIVACY.md](docs/PRIVACY.md).
 ## 0.9.2
 - **Item tooltips know your stock**: hover an item and it says how many you have in your bags, bank, mail and worn, what each of your other characters has, and what is in your guild bank (as of the last time you opened them). `/lazy has <part of a name>` lists it. Options turn it off.
 - **Hunters**: a warning when ammo runs low (you choose how low), and a reminder when a better kind of arrow or bullet opens up for your level.

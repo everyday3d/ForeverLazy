@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.10.2-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.11.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
@@ -48,16 +48,20 @@ No spreadsheets. No second monitor. No typing, unless you want to.
 | **Take me there** | Type a place and get a whole trip by flight, boat, tram and hearthstone. |
 | **Crafting that tells you what to make** | The recipe to craft next glows in your recipe list with a count, using what is in your bags and bank, and says where to get the rest. |
 | **Buttons where you already look** | A menu on the minimap, a search box on the world map, buttons on the quest log. Nothing to memorise. |
+| **The Coach** | Compares the quests here, the best grind and other zones by your measured XP per hour and tells you the best thing to do now. |
+| **A levelling guide** | Your whole journey to 60 in one window, with your pace and the dungeons that fit. Its text scales for the couch and TV. |
+| **The Hive** | Learns from real play (your pace, drops, quest times, where objectives are done) and, if you turn it on, shares those numbers with other players. Off until you switch it on. |
+| **One arrow, your choice** | Right-click it to pick what it points at: what is next, your plan, a quest, your partner, a library book. |
 | **Duo mode** | Level with a friend who has the addon: shared plan, partner on your compass. |
 
-And more: a journey to 60, class quests, dungeon levels, gathering and fishing routes, library books, a first-run tour.
+And more: class quests, dungeon levels, gathering and fishing routes, library books, item tooltips that count your bank and your other characters, hunter ammo and pet reminders, a Titan Panel button, a first-run tour.
 See everything in the [feature guide](docs/FEATURES.md).
 
 ## It does not get in your way
 
 - **Every part switches off.** Want only the arrow? One click.
 - **Presets** set it up in seconds: Minimal, Leveler, Duo or Full.
-- **Private.** It only talks to your own group or guild, and only the small details listed in [what it sends](docs/PRIVACY.md).
+- **Private.** By default it only talks to your own group or guild. The Hive, which shares numbers with other players, is off until you turn it on, and it only ever sends ids and numbers. See [what it sends](docs/PRIVACY.md).
 - **Free and open source**, MIT licensed.
 
 <p align="center">
@@ -82,7 +86,7 @@ corners have had little testing. If something looks wrong, type `/lazy check` an
 
 ## Learn more
 
-[Feature guide](docs/FEATURES.md) · [Commands](docs/COMMANDS.md) · [Teaching it a boat dock](docs/BOATS.md) · [Privacy](docs/PRIVACY.md) · [Changelog](CHANGELOG.md)
+[Feature guide](docs/FEATURES.md) · [Commands](docs/COMMANDS.md) · [The Hive](docs/HIVE.md) · [Teaching it a boat dock](docs/BOATS.md) · [Privacy](docs/PRIVACY.md) · [Changelog](CHANGELOG.md)
 
 ## Credits and licence
 

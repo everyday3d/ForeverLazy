@@ -9,6 +9,7 @@ local ADDON, ns = ...
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
+local hbd = api.hbd
 
 local function Root()
     local r = addon.GetRoot()
@@ -17,6 +18,8 @@ local function Root()
     r.hive.drops = r.hive.drops or {}
     r.hive.grind = r.hive.grind or {}
     r.hive.rt = r.hive.rt or {}
+    r.hive.spots = r.hive.spots or {}
+    r.hive.killspots = r.hive.killspots or {}
     r.hive.rareDeath = r.hive.rareDeath or {}
     return r.hive
 end
@@ -31,7 +34,8 @@ local function Community() return Root().shared end
 -- this play session, for /lazy session
 local session = { t0 = time(), xp = 0, quests = 0, kills = 0, money0 = nil }
 -- what I learned since I last shared it (only filled while the Hive is on)
-local outbox = { drops = {}, quests = {}, pace = {}, grind = {}, rt = {} }
+local outbox = { drops = {}, quests = {}, pace = {}, grind = {}, rt = {}, spots = {} }
+local AddKillSpot            -- defined further down; the kill handler above it needs to see it
 
 --------------------------------------------------------------------------------
 -- XP per hour
@@ -308,6 +312,15 @@ local function AverageQuestRate()
     return xp / (secs / 60)
 end
 
+-- how many seconds a quest takes me from accept to turn-in, on average (nil until I have timed 3)
+function addon.HiveAvgQuestSecs()
+    local q = Quests()
+    local n, secs = 0, 0
+    for _, e in pairs(q) do n = n + e.n; secs = secs + e.secs end
+    if n >= 3 then return secs / n end
+    return nil
+end
+
 -- a quest that has been much slower for me than my usual: worth skipping next time
 function addon.HiveQuestSlow(id)
     local r, avg = addon.HiveQuestRate(id), AverageQuestRate()
@@ -423,6 +436,21 @@ function addon.HiveMerge(kind, who, a, b, c, d, e, f)
         if not g then g = { n = 0, xp = 0, secs = 0 }; m[lvl] = g end
         if snapshot then g.n, g.xp, g.secs = math.max(g.n, n), math.max(g.xp, xp), math.max(g.secs, secs)
         else g.n, g.xp, g.secs = g.n + n, g.xp + xp, g.secs + secs end
+    elseif base == "O" and not snapshot then
+        local qid, map, cx, cy, n = tonumber(a), tonumber(b), tonumber(c), tonumber(d), tonumber(e)
+        if not (qid and map and cx and cy and n) or qid < 1 or qid > 9999999 or map < 1 or map > 99999 then return end
+        if cx < 0 or cx > 99 or cy < 0 or cy > 99 or n < 1 or n > 20 then return end
+        S.spots = S.spots or {}
+        local byMap = S.spots[qid]
+        if not byMap then
+            if TableSize(S.spots) > 4000 then return end
+            byMap = {}
+            S.spots[qid] = byMap
+        end
+        byMap[map] = byMap[map] or {}
+        local key = math.floor(cx) .. ":" .. math.floor(cy)
+        if not byMap[map][key] and TableSize(byMap[map]) > 80 then return end
+        byMap[map][key] = (byMap[map][key] or 0) + n
     elseif base == "T" and not snapshot then
         local npc, secs = tonumber(a), tonumber(b)
         if not npc or not secs or npc < 1 or npc > 9999999 or secs < 300 or secs > 259200 then return end
@@ -474,7 +502,8 @@ function addon.HiveOutbox()
         if zone then msgs[#msgs + 1] = string.format("G|%s|%d|%s|%d|%d|%d", zone, tonumber(lvl), name, e.n, math.floor(e.xp), math.floor(e.secs)) end
     end
     for npc, secs in pairs(outbox.rt) do msgs[#msgs + 1] = string.format("T|%d|%d", npc, secs) end
-    outbox = { drops = {}, quests = {}, pace = {}, grind = {}, rt = {} }
+    for _, s in pairs(outbox.spots) do msgs[#msgs + 1] = string.format("O|%d|%d|%d|%d|%d", s.q, s.map, s.cx, s.cy, s.n) end
+    outbox = { drops = {}, quests = {}, pace = {}, grind = {}, rt = {}, spots = {} }
     -- never more than 40 messages at once; the rest is simply not shared (it is still in my own numbers)
     while #msgs > 40 do table.remove(msgs) end
     return msgs
@@ -517,6 +546,11 @@ local function AddOutbox(kind, a, b, c, d, e)
         local e = outbox.quests[a] or { n = 0, secs = 0, xp = 0 }
         outbox.quests[a] = e
         e.n = e.n + 1; e.secs = e.secs + b; e.xp = e.xp + c
+    elseif kind == "spot" then
+        local key = a .. ":" .. b .. ":" .. c .. ":" .. d
+        local s = outbox.spots[key] or { q = a, map = b, cx = c, cy = d, n = 0 }
+        outbox.spots[key] = s
+        s.n = s.n + (e or 1)
     elseif kind == "grind" then
         local key = a .. "\t" .. b .. "\t" .. c
         local g = outbox.grind[key] or { n = 0, xp = 0, secs = 0 }
@@ -556,6 +590,7 @@ local function OnKillXP(msg)
     local e = g[ck][zone][name][lvl] or { n = 0, xp = 0, secs = 0 }
     g[ck][zone][name][lvl] = e
     e.n = e.n + 1; e.xp = e.xp + xp; e.secs = e.secs + secs
+    AddKillSpot(zone, name)
     if addon.HiveAddOutbox then addon.HiveAddOutbox("grind", zone, name, lvl, xp, secs) end
 end
 
@@ -635,10 +670,122 @@ function addon.HiveRareSeen(npc)
     if addon.GetDB().hiveOn then outbox.rt[npc] = dt end
 end
 --------------------------------------------------------------------------------
+-- Real quest spots: where each quest objective was really done (the place I stood when its count went up)
+--------------------------------------------------------------------------------
+local objSeen = {}      -- quest id -> how many objective items I had at the last look
+
+local function ObjectiveTotal(id)
+    if not (C_QuestLog and C_QuestLog.GetQuestObjectives) then return nil end
+    local ok, objs = pcall(C_QuestLog.GetQuestObjectives, id)
+    if not ok or type(objs) ~= "table" then return nil end
+    local total = 0
+    for _, o in ipairs(objs) do total = total + (tonumber(o.numFulfilled) or 0) end
+    return total
+end
+
+local function AddSpot(qid, map, zx, zy, n)
+    local cx, cy = math.floor(zx * 100), math.floor(zy * 100)
+    if cx < 0 or cx > 99 or cy < 0 or cy > 99 then return end
+    local spots = Root().spots
+    local byMap = spots[qid]
+    if not byMap then
+        if TableSize(spots) > 3000 then return end
+        byMap = {}
+        spots[qid] = byMap
+    end
+    byMap[map] = byMap[map] or {}
+    local key = cx .. ":" .. cy
+    if not byMap[map][key] and TableSize(byMap[map]) > 80 then return end
+    byMap[map][key] = (byMap[map][key] or 0) + n
+    if addon.HiveAddOutbox then addon.HiveAddOutbox("spot", qid, map, cx, cy, n) end
+end
+
+local scanPending = false
+local function ScanQuestProgress()
+    scanPending = false
+    local log = api.ReadQuestLog and api.ReadQuestLog()
+    if type(log) ~= "table" then return end
+    local zx, zy, map = hbd:GetPlayerZonePosition()
+    for _, q in ipairs(log) do
+        local total = ObjectiveTotal(q.id)
+        if total then
+            local prev = objSeen[q.id]
+            objSeen[q.id] = total
+            if prev and total > prev and zx and map then AddSpot(q.id, map, zx, zy, math.min(total - prev, 20)) end
+        end
+    end
+end
+
+-- the spots for a quest as places the planner can use, with how many sightings they rest on:
+-- { { x, y, instance, uiMapId, zx, zy }, ... }, total
+function addon.HiveQuestSpots(qid)
+    local cells = {}
+    local own = Root().spots[qid]
+    local S = Root().shared
+    local theirs = S and S.spots and S.spots[qid]
+    local total = 0
+    local function add(byMap)
+        for map, list in pairs(byMap or {}) do
+            for key, n in pairs(list) do
+                local ck = map .. ":" .. key
+                local c = cells[ck]
+                if not c then
+                    local cx, cy = key:match("^(%d+):(%d+)$")
+                    c = { map = map, cx = tonumber(cx), cy = tonumber(cy), n = 0 }
+                    cells[ck] = c
+                end
+                c.n = c.n + n
+                total = total + n
+            end
+        end
+    end
+    add(own); add(theirs)
+    local list = {}
+    for _, c in pairs(cells) do list[#list + 1] = c end
+    if #list == 0 then return {}, 0 end
+    table.sort(list, function(x, y) return x.n > y.n end)
+    local out = {}
+    for i = 1, math.min(40, #list) do
+        local c = list[i]
+        local zx, zy = (c.cx + 0.5) / 100, (c.cy + 0.5) / 100
+        local x, y, inst = hbd:GetWorldCoordinatesFromZone(zx, zy, c.map)
+        if x then out[#out + 1] = { x = x, y = y, instance = inst, uiMapId = c.map, zx = zx, zy = zy, hive = true } end
+    end
+    return out, total
+end
+
+--------------------------------------------------------------------------------
+-- Where I kill things: the cells where kills of each mob kind happened, so grind advice can point somewhere
+--------------------------------------------------------------------------------
+function AddKillSpot(zone, name)
+    local zx, zy = hbd:GetPlayerZonePosition()
+    if not zx then return end
+    local cx, cy = math.floor(zx * 100), math.floor(zy * 100)
+    if cx < 0 or cx > 99 or cy < 0 or cy > 99 then return end
+    local k = Root().killspots
+    k[zone] = k[zone] or {}
+    k[zone][name] = k[zone][name] or {}
+    local cells = k[zone][name]
+    local key = cx .. ":" .. cy
+    if not cells[key] and TableSize(cells) >= 16 then return end
+    cells[key] = (cells[key] or 0) + 1
+end
+
+-- the cell where I killed this kind of mob most: zone position (0-1) and the world map it is on, or nil
+function addon.HiveKillSpot(zone, name)
+    local cells = Root().killspots[zone] and Root().killspots[zone][name]
+    if not cells then return nil end
+    local best, bn
+    for key, n in pairs(cells) do if not bn or n > bn then best, bn = key, n end end
+    if not best then return nil end
+    local cx, cy = best:match("^(%d+):(%d+)$")
+    return (tonumber(cx) + 0.5) / 100, (tonumber(cy) + 0.5) / 100, bn
+end
+--------------------------------------------------------------------------------
 -- Events and commands
 --------------------------------------------------------------------------------
 local ev = CreateFrame("Frame")
-for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_XP_UPDATE", "LOOT_OPENED", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "CHAT_MSG_COMBAT_XP_GAIN" }) do
+for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_XP_UPDATE", "LOOT_OPENED", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "CHAT_MSG_COMBAT_XP_GAIN", "UNIT_QUEST_LOG_CHANGED", "QUEST_WATCH_UPDATE" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event, a, b)
@@ -646,6 +793,7 @@ ev:SetScript("OnEvent", function(_, event, a, b)
     if event == "PLAYER_LOGIN" then
         Snap(); lastT = GetTime()
         session.t0 = time(); session.money0 = GetMoney and GetMoney() or nil
+        if C_Timer then C_Timer.After(6, function() pcall(ScanQuestProgress) end) end
         pcall(Hook)
     elseif not (db and db.hiveOn) then
         return
@@ -653,6 +801,11 @@ ev:SetScript("OnEvent", function(_, event, a, b)
         pcall(OnXP)
     elseif event == "LOOT_OPENED" then
         pcall(OnLoot)
+    elseif event == "UNIT_QUEST_LOG_CHANGED" or event == "QUEST_WATCH_UPDATE" then
+        if (event == "QUEST_WATCH_UPDATE" or a == "player") and not scanPending and C_Timer then
+            scanPending = true
+            C_Timer.After(0.4, function() pcall(ScanQuestProgress) end)
+        end
     elseif event == "CHAT_MSG_COMBAT_XP_GAIN" then
         pcall(OnKillXP, a)
     elseif event == "QUEST_ACCEPTED" then
