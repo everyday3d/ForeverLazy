@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.2
+- **Fix: trip steps by tram, boat or flight** now finish when the ride has taken you away from where you boarded (or you are back out of the tram's own area). Before, the Deeprun Tram step could stay open and the arrow kept pointing back at the boarding spot.
+
 ## 0.11.1
 - **Fix: the measured XP per hour was too high.** A big quest hand-in after a long walk used to count as 30 seconds of play. The time since your last XP now counts, up to 15 minutes. If your Coach or guide shows a pace that looks far too high, `/lazy pace reset` clears the old numbers (your drop counts and quest times are kept).
 

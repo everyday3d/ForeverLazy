@@ -338,7 +338,18 @@ local function Tick()
     local l = trip.legs[trip.idx]
     local near = l.to.instance == pinst and Dist({ x = px, y = py }, l.to)
     local reached
-    if l.kind == "walk" then reached = near and near < 40 else reached = near and near < 150 end
+    if l.kind == "walk" then
+        reached = near and near < 40
+    else
+        -- a ride (tram, boat, flight, hearth): done when I am where it lands, or when it clearly took me away from where I boarded
+        reached = near and near < 150
+        local fromD = (l.from and l.from.instance == pinst) and Dist({ x = px, y = py }, l.from) or nil
+        if not reached and near and fromD and fromD > 400 and near < fromD then reached = true end
+        -- the tram and some boats run inside another area: once I have been in it and I am back out away from the boarding spot, it is done
+        if l.to.instance ~= pinst then trip.away = true end
+        if not reached and trip.away and l.to.instance == pinst and (not fromD or fromD > 150) then reached = true end
+    end
+    if reached then trip.away = nil end
     if reached then
         trip.idx = trip.idx + 1
         if trip.idx > #trip.legs then

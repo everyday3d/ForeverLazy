@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.11.2", {
+        "Fix: a trip step by tram, boat or flight now finishes when it has taken you away from where you boarded, so the arrow no longer points back at the boarding spot.",
+    } },
     { "0.11.1", {
         "Fix: the measured XP per hour was too high (a big quest hand-in after a long walk counted as 30 seconds). The time since your last XP now counts, up to 15 minutes. /lazy pace reset clears the old numbers.",
     } },
