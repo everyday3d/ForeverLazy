@@ -206,7 +206,30 @@ end
 
 -- right-click on the arrow: the services you are most likely to want, one click each.
 -- Only the ones that exist on this continent and are within walking distance are listed.
-local NEAR_YARDS = 500
+-- out in the open world only services within a walk count; in a city every service in the city is offered
+local OPEN_YARDS, CITY_MAX_YARDS = 900, 2500
+local function WhereAmI()
+    local mapId
+    if C_Map and C_Map.GetBestMapForUnit then
+        local ok, id = pcall(C_Map.GetBestMapForUnit, "player")
+        if ok then mapId = id end
+    end
+    local inCity = IsResting and IsResting() or false
+    if not inCity and mapId and C_Map.GetMapInfo and Enum and Enum.UIMapType and Enum.UIMapType.City then
+        local info = C_Map.GetMapInfo(mapId)
+        if info and info.mapType == Enum.UIMapType.City then inCity = true end
+    end
+    return inCity, mapId
+end
+
+-- is this result worth listing from where I stand?
+local function IsClose(r, inCity, mapId)
+    if not (r and r.d) then return false end
+    if inCity then
+        return (mapId and r.spawn and r.spawn.uiMapId == mapId) or r.d <= CITY_MAX_YARDS
+    end
+    return r.d <= OPEN_YARDS
+end
 function addon:OpenServicesMenu()
     local db = addon.GetDB and addon.GetDB()
     local wp = db and db.waypoints and db.waypoints[1]
@@ -219,10 +242,11 @@ function addon:OpenServicesMenu()
     local function ServicesList()
         local list = { { text = "< Back", fn = function() addon:OpenServicesMenu() end } }
         local find = api and api.FindService
+        local inCity, mapId = WhereAmI()
         if find then
             for _, w in ipairs(wanted) do
                 local ok, r = pcall(find, w[2])
-                if ok and r and r.d and r.d <= NEAR_YARDS then
+                if ok and r and IsClose(r, inCity, mapId) then
                     local cmd = w[3] or w[2]
                     list[#list + 1] = { text = string.format("%s  |cff888888%d yd|r", w[1], r.d), fn = function() Cmd(cmd) end }
                 end

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.6
+- **A custom minimap button**: a Sam Kinison icon (credited, CC BY-SA 2.0), with a tooltip that matches what the clicks do.
+- The services menu on the arrow adapts to where you are: in a city it offers every service in that city, in the open world only those within about 900 yards.
+- The what's new window scrolls, so a long history never runs off the screen.
+
 ## 0.8.5
 - **Right-click the arrow** for a short menu: **Services near me** (repair, inn, bank, auction house, mailbox, flight master, trainers and more, listing only those within 500 yards, with distances), skip this quest stop or do it next, and Lazy Mode.
 - The addon's macros now have their own icons instead of a question mark, and macros from older versions are renamed to Lazy ... on login.

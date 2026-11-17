@@ -5,3 +5,5 @@ via Wikimedia Commons ("Sam Kinison.jpg"). Licensed under Creative Commons Attri
 (https://creativecommons.org/licenses/by-sa/2.0/).
 Changes: converted to a 256 x 256 game texture (TGA) with transparent padding; the picture itself is not altered.
 This file is distributed under the same licence (CC BY-SA 2.0). The rest of the addon is under the MIT licence.
+
+media\icon.tga (the minimap button) is a cropped version of the same photo, under the same licence (CC BY-SA 2.0).

@@ -273,6 +273,11 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.8.6", {
+        "A Sam Kinison minimap button.",
+        "The services menu on the arrow adapts: in a city it offers every service in the city, in the open world only those within a walk.",
+        "This what's new window scrolls.",
+    } },
     { "0.8.5", {
         "Right-click the arrow for a short menu: services near me (repair, inn, bank and more, only the ones close by), skip or do this quest next, and Lazy Mode.",
         "The addon's macros have their own icons, and any older ones are renamed to Lazy ... on login.",
@@ -304,7 +309,7 @@ local newWin
 local function ShowNew(current)
     newWin = newWin or (function()
         local f = CreateFrame("Frame", "ForeverLazy_New", UIParent)
-        f:SetSize(420, 300)
+        f:SetSize(420, 380)
         f:SetPoint("CENTER", 0, 80)
         f:SetFrameStrata("DIALOG")
         f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
@@ -313,8 +318,14 @@ local function ShowNew(current)
         bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
         f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         f.title:SetPoint("TOPLEFT", 14, -12)
-        f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-        f.text:SetPoint("TOPLEFT", 14, -42); f.text:SetWidth(392); f.text:SetJustifyH("LEFT"); f.text:SetJustifyV("TOP")
+        -- the list sits in a scroll area so a long history never runs off the window
+        f.scroll = CreateFrame("ScrollFrame", "ForeverLazy_NewScroll", f, "UIPanelScrollFrameTemplate")
+        f.scroll:SetPoint("TOPLEFT", 14, -42); f.scroll:SetPoint("BOTTOMRIGHT", -34, 46)
+        f.content = CreateFrame("Frame", nil, f.scroll)
+        f.content:SetSize(360, 10)
+        f.scroll:SetScrollChild(f.content)
+        f.text = f.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        f.text:SetPoint("TOPLEFT", 0, 0); f.text:SetWidth(360); f.text:SetJustifyH("LEFT"); f.text:SetJustifyV("TOP")
         local tourBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         tourBtn:SetSize(120, 24); tourBtn:SetPoint("BOTTOMLEFT", 14, 12); tourBtn:SetText("Take the tour")
         tourBtn:SetScript("OnClick", function() f:Hide(); addon.StartTour() end)
@@ -332,6 +343,8 @@ local function ShowNew(current)
     end
     newWin.title:SetText("What's new in Forever Lazy " .. (current or Version()))
     newWin.text:SetText(table.concat(lines, "\n"))
+    newWin.content:SetHeight(newWin.text:GetStringHeight() + 10)
+    if newWin.scroll.SetVerticalScroll then newWin.scroll:SetVerticalScroll(0) end
     newWin:Show()
 end
 function addon.ShowWhatsNew() ShowNew(Version()) end
