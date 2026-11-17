@@ -48,6 +48,23 @@ local function Describe(seg, status, level)
                 parts[#parts + 1] = string.format("Quests worth doing right now: %d, about %d XP.", #hot, sum)
             end
         end
+        if addon.HivePace then
+            local pace = addon.HivePace(seg.zone)
+            if pace then
+                local bz = addon.HiveBestZone and addon.HiveBestZone()
+                parts[#parts + 1] = string.format("Your measured pace here: about %d XP per hour.%s", pace, bz == seg.zone and " Your fastest zone lately." or "")
+            end
+        end
+        if addon.HiveBestGrind then
+            local best = addon.HiveBestGrind(seg.zone)[1]
+            if best then
+                parts[#parts + 1] = string.format("Best grind here for your level: %s (about %d XP per hour).", best.name, best.rate)
+            end
+        end
+        if addon.HiveCommunityPace then
+            local typical = addon.HiveCommunityPace(seg.zone)
+            if typical then parts[#parts + 1] = string.format("Other players typically get about %d XP per hour here.", typical) end
+        end
         if seg.dungeons and #seg.dungeons > 0 then
             local lv = api.DungeonLevels or {}
             local names = {}
@@ -93,6 +110,22 @@ local function Refresh()
     -- the top line
     local even = (level % 2 == 0) and level or level + 1
     local head = string.format("You are level %d.  Class trainer: every even level (next at %d).", level, even)
+    -- how fast I really level, measured from my own play (the hive)
+    if addon.HiveTimeToLevel then
+        local mins, pace = addon.HiveTimeToLevel()
+        if mins then
+            local when = mins >= 120 and string.format("%.1f hours", mins / 60) or string.format("%d minutes", math.floor(mins + 0.5))
+            head = head .. string.format("\nYour pace: about %d XP per hour, so about %s to level %d.", pace, when, level + 1)
+        end
+    end
+    local bestZone, bestPace, hereZone, herePace
+    if addon.HiveBestZone then bestZone, bestPace, hereZone, herePace = addon.HiveBestZone() end
+    if bestZone and bestPace then
+        head = head .. string.format("\nFastest zone for you lately: %s (about %d XP per hour).", bestZone, bestPace)
+        if hereZone and bestZone ~= hereZone and herePace and herePace < bestPace * 0.7 then
+            head = head .. string.format(" You are earning about %d here.", herePace)
+        end
+    end
     win.head:SetText(head)
 
     local width = W - 70

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.0
+- **The Hive**: the addon learns from real play and players who have it on share what they measured. One switch (Options > The Hive, or `/lazy hive on`), off until you turn it on.
+  - **Your real pace**: XP per hour per zone and level (`/lazy pace`), shown in the guide with your fastest zone lately and the time to your next level.
+  - **Real drop rates**: every corpse you loot is counted. `/lazy drops <item>`, item tooltips and the crafting plan's "where to get it" use the mobs actually seen dropping things.
+  - **Real quest times**: each quest is timed from accept to turn-in (`/lazy pace quests`). Quests that were slow for you are marked in the skip menu.
+  - **Best grind** (`/lazy grind`): XP per hour for each kind of mob, counting the time between kills, near your level, also shown in the guide.
+  - **Rare timers**: the pin of a rare that died stays as a timer, with how long it usually takes to come back, learned from deaths and later sightings, and a line in chat when it should be back.
+  - **Session report** (`/lazy session`): XP, XP per hour, quests, kills and gold this session.
+  - **Shared numbers**: with the Hive on, drop counts, quest times and zone paces are exchanged with other players over a hidden channel and added to your own, so the numbers are good from the first day. Rare spawns show as pins on the world map, and the map says how many other Forever Lazy players are in a zone.
+  - It only ever sends ids and numbers, never your name, guild, position, items or chat. See [docs/HIVE.md](docs/HIVE.md) and [docs/PRIVACY.md](docs/PRIVACY.md).
 ## 0.9.2
 - **Item tooltips know your stock**: hover an item and it says how many you have in your bags, bank, mail and worn, what each of your other characters has, and what is in your guild bank (as of the last time you opened them). `/lazy has <part of a name>` lists it. Options turn it off.
 - **Hunters**: a warning when ammo runs low (you choose how low), and a reminder when a better kind of arrow or bullet opens up for your level.

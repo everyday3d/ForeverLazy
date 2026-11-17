@@ -58,3 +58,11 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy why` | Explain where the plan's arrow comes from (for bug reports) |
 | `/lazy guide` `bigger` `smaller` `tv` `normal` | The levelling guide window and its text size (couch and TV) |
 | `/lazy xpmap` | XP hot spots on the world map, on or off |
+| `/lazy pace` `pace quests` | Your measured XP per hour, the time to your next level, and your fastest and slowest quests |
+| `/lazy drops <item>` | The mobs you have seen drop an item, with the rate |
+| `/lazy session` | This session: XP, quests, kills and gold |
+| `/lazy hive` `hive reset` | What the hive has learned, or forget it |
+| `/lazy has <item>` | What each of your characters has of an item |
+| `/lazy hive on` `off` | Turn the Hive on or off (learning and sharing) |
+| `/lazy hive who` `rares` `rare` | Other players per zone, reported rares, and an arrow to the nearest rare |
+| `/lazy grind` | The best mobs to grind in this zone near your level, by XP per hour |

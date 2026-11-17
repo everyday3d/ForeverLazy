@@ -1577,7 +1577,9 @@ function addon:OpenSkipMenu()
     f.title:SetText(wp.name or wp.label)
     local items = {}
     for _, q in ipairs(wp.quests or {}) do
-        items[#items + 1] = { text = "Skip quest: " .. PlainTitle(q.label), fn = function() SkipQuest(q.id, q.label) end }
+        local slow = addon.HiveQuestSlow and addon.HiveQuestSlow(q.id)
+        items[#items + 1] = { text = "Skip quest: " .. PlainTitle(q.label) .. (slow and "  |cffff8800(slow for you)|r" or ""),
+                              fn = function() SkipQuest(q.id, q.label) end }
     end
     items[#items + 1] = { text = "Do a quest from the plan now...", fn = function() addon:OpenQuestList() end }
     if db.planFocus then

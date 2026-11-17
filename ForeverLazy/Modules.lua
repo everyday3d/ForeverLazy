@@ -155,6 +155,7 @@ function addon.CheckInstall()
     local T = _G.QuestieLoader and select(2, pcall(_G.QuestieLoader.ImportModule, _G.QuestieLoader, "Townsfolk"))
     check("Questie's service lists are loaded", type(T) == "table" and T.townsfolk and next(T.townsfolk) ~= nil, "they fill in a minute after login")
     check("the map data works", hbd and hbd.GetWorldCoordinatesFromZone and hbd:GetWorldCoordinatesFromZone(0.5, 0.5, 1429) ~= nil, "HereBeDragons did not load")
+    check("options page is registered in the AddOns list", addon.OptionsBuilt and addon.OptionsBuilt(), addon.OptionsError or "it is made 3 seconds after login; try /lazy check again in a moment")
     local parts = {
         { "planner", addon.PlanRoute }, { "plan window", addon.TogglePlanWindow }, { "route lines on the map", addon.DrawRouteLines },
         { "right-click skip menu", addon.OpenSkipMenu }, { "journey", addon.JourneyGenerate }, { "lazy mode", addon.LazyNow },
@@ -167,7 +168,7 @@ function addon.CheckInstall()
     }
     local FILES = { "ForeverLazy.lua", "Options.lua", "Extras.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
         "ClassQuests.lua", "Boats.lua", "Services.lua", "FlightData.lua", "Travel.lua", "Party.lua", "Quests.lua", "PlanWindow.lua", "Journey.lua",
-        "Community.lua", "Crafting.lua", "Inventory.lua", "Gather.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Modules.lua" }
+        "Community.lua", "Crafting.lua", "Inventory.lua", "Hive.lua", "Live.lua", "Gather.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Modules.lua" }
     for _, f in ipairs(FILES) do
         check("file loaded: " .. f, addon.loaded and addon.loaded[f], "this file stopped on a Lua error while loading. Turn errors on with /console scriptErrors 1, then /reload")
     end

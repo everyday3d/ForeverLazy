@@ -206,6 +206,17 @@ local function NearestSource(QDB, id)
         end
         if bestS then return { kind = "vendor", name = bestName, spawn = bestS, d = bestD } end
     end
+    -- 1b. a mob I have seen drop it myself (the hive counts the corpses I loot)
+    local hb = addon.HiveBest and addon.HiveBest(id)
+    if hb then
+        local sp = {}
+        api.AddNpcs(sp, { hb.npc })
+        local s, d = nearest(sp)
+        if s then
+            return { kind = "drop", name = string.format("%s, %d%% of the kills I have seen", hb.name or "?", math.floor(hb.rate * 100 + 0.5)),
+                     spawn = s, d = d }
+        end
+    end
     -- 2. an herb, ore or other node
     local objs = QDB.QueryItemSingle(id, "objectDrops")
     if type(objs) == "table" then

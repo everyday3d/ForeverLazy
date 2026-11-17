@@ -925,6 +925,11 @@ local function ShowZoneToast(zoneId)
     end
     zoneToast.zoneId = zoneId
     zoneToast.text:SetText("You are in " .. ZoneName(zoneId))
+    do
+        local base = "Plan the quests you can do here, or leave it if you are just passing through?"
+        local pace = addon.HivePace and addon.HivePace(ZoneName(zoneId))
+        zoneToast.sub:SetText(pace and (base .. string.format("\nYou have earned about %d XP per hour here before.", pace)) or base)
+    end
     zoneToast:Show()
     local token = zoneToken
     if C_Timer and C_Timer.After then

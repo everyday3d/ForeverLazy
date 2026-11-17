@@ -273,6 +273,12 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.10.0", {
+        "The Hive: the addon learns from your own play. Your real XP per hour (/lazy pace), the drops you loot (/lazy drops, item tooltips, the crafting plan), how long each quest really takes you, and a session report (/lazy session).",
+        "Best grind (/lazy grind): which mobs give the most XP per hour near your level. Rare pins turn into timers after a kill, with how long the rare usually takes to come back.",
+        "The guide and the new-zone box show your measured pace and your fastest zone, and quests that were slow for you are marked in the skip menu.",
+        "Turn the Hive on (Options > The Hive) to share what it learns with other players who have it on: drop rates, quest times and zone paces, rare spawns on the map, and how many players are in a zone. Only ids and numbers, never your name or position.",
+    } },
     { "0.9.2", {
         "Item tooltips say how many you have in bags, bank, mail, worn and the guild bank, and what your other characters have (/lazy has <item>).",
         "Hunters are warned when ammo runs low, and when a better kind of arrow or bullet opens up for their level.",

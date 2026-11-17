@@ -276,6 +276,9 @@ local function BuildControls(parent)
         function() return DB().journeyHint ~= false end, function(v) DB().journeyHint = v end)
 
     ----------------------------------------------------------------- Arrows
+    Slider(content, "Guide text size (1.8 is big, for the TV)", 0.8, 2.6, 0.1, "%.1f", function() return DB().guideScale or 1 end,
+        function(v) DB().guideScale = v; if _G.ForeverLazy_Guide and _G.ForeverLazy_Guide:IsShown() then _G.ForeverLazy_Guide:SetScale(v) end end)
+
     Header(content, "Arrows")
     Check(content, "Simple arrows: one main arrow (plus the ghost and follow arrows). Everything else shows on the compass.", 16,
         function() return DB().simpleArrows ~= false end, function(v) DB().simpleArrows = v; Changed() end)
@@ -404,8 +407,6 @@ local function BuildControls(parent)
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
     Check(content, "Draw my plan's route on the world map", 16,
         function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
-    Slider(content, "Levelling guide text size (for the couch and TV, 1.8 is big)", 0.8, 2.6, 0.1, "%.1f", function() return DB().guideScale or 1 end,
-        function(v) DB().guideScale = v; if _G.ForeverLazy_Guide and _G.ForeverLazy_Guide:IsShown() then _G.ForeverLazy_Guide:SetScale(v) end end)
     Check(content, "Item tooltips say how many I have in my bags, bank, mail and worn", 16,
         function() return DB().itemTooltip ~= false end, function(v) DB().itemTooltip = v end)
     Check(content, "... and how many my other characters have", 16,
@@ -447,6 +448,36 @@ local function BuildControls(parent)
     Button(content, "Export", 276, 80, function() addon:OpenIO("export") end, false)
     Button(content, "Import", 366, 80, function() addon:OpenIO("import") end, true)
     Label(content, "Routes: /lazy route save|load|delete <name>.  Profiles: /lazy profile list|new|use|delete.")
+    y = y - 26
+
+    Header(content, "The Hive")
+    Label(content, "The Hive learns from how you play, and shares with other players who have it on. Turn it on to use the features that need it.")
+    y = y - 26
+    -- one on/off button that shows its state
+    local function Toggle(x, w, name, get, set, advance)
+        local b
+        local function show() b:SetText(name .. ": " .. (get() and "|cff55ff55ON|r" or "|cffff5555OFF|r")) end
+        b = Button(content, "", x, w, function() set(not get()); show() end, advance)
+        refreshers[#refreshers + 1] = show
+        show()
+        return b
+    end
+    Toggle(16, 200, "The Hive", function() return DB().hiveOn == true end,
+        function(v) if addon.HiveLiveSet then addon.HiveLiveSet(v) else DB().hiveOn = v end end, true)
+    Label(content, "ON: it learns your real XP per hour, the drops you loot and how long quests take, and exchanges those numbers, rare spawns and zone counts with other players who have it on, as hidden addon messages. It never sends your name, guild, position, items or chat. OFF: nothing is learned or shared.")
+    y = y - 70
+    Check(content, "Item tooltips show the mobs seen dropping the item", 16,
+        function() return DB().hiveTooltip ~= false end, function(v) DB().hiveTooltip = v end)
+    Check(content, "Tell me when a rare shows up in my zone", 16,
+        function() return DB().hiveRareAlert ~= false end, function(v) DB().hiveRareAlert = v end)
+    Check(content, "Show reported rares as pins on the world map", 16,
+        function() return DB().hiveRarePins ~= false end, function(v) DB().hiveRarePins = v; if addon.HiveLiveChanged then addon.HiveLiveChanged() end end)
+    Check(content, "Share which zone I am in (as a count, never who)", 16,
+        function() return DB().hiveShareZone ~= false end, function(v) DB().hiveShareZone = v end)
+    Button(content, "What has it learned?", 16, 150, function() addon:HandleExtraCommand("hive", "") end, false)
+    Button(content, "My pace", 176, 90, function() addon:HandleExtraCommand("pace", "") end, false)
+    Button(content, "This session", 276, 110, function() addon:HandleExtraCommand("session", "") end, true)
+    Label(content, "Commands: /lazy hive on|off, /lazy hive, /lazy pace, /lazy drops <item>, /lazy session, /lazy hive who, /lazy hive rares.")
     y = y - 26
 
     Header(content, "My waypoints")
@@ -806,6 +837,19 @@ welcome:SetScript("OnEvent", function(self)
         ShowWelcome()
     end)
 end)
+
+-- put Forever Lazy in the AddOns list of the game's options from the start (it used to appear only after
+-- the options had been opened once in a session)
+local registerEv = CreateFrame("Frame")
+pcall(registerEv.RegisterEvent, registerEv, "PLAYER_LOGIN")
+registerEv:SetScript("OnEvent", function()
+    local function go()
+        local ok, err = pcall(Build)
+        if not ok then addon.OptionsError = tostring(err) end
+    end
+    if C_Timer and C_Timer.After then C_Timer.After(3, go) else go() end
+end)
+function addon.OptionsBuilt() return built and true or false end
 
 -- macros made by an older version are renamed once, on login, so no "LRXP ..." titles are left
 local renamer = CreateFrame("Frame")
