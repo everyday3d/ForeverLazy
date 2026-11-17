@@ -10,190 +10,164 @@
 </p>
 
 <p align="center"><b>Never think about where to go next.<br>
-A levelling companion for WoW Forever: it plans your quest route, points the way and guides you through the secrets.</b></p>
+A levelling companion for WoW Forever: it plans your quests, your trips and your crafting, and points the way.</b></p>
 
 ---
 
 ## What it does
 
-**Forever Lazy** looks at your quest log and tells you what to do next, and where. One arrow always points at the
-next stop of an XP-efficient route; the line under it says exactly what to do there. It also guides the
-Forever secrets, tracks your class quests, finds dungeon entrances for your quests and collects the world's
-library books.
+**Forever Lazy** looks at your character and tells you what to do next, and where. One arrow points at the next
+stop; the line under it says exactly what to do there. Press one key (**Lazy Mode**) and it decides for you:
+sell and repair, visit your trainer, follow your quest route, or head for the next zone, planning the whole trip
+with flight paths, boats and your hearthstone if the zone is far.
 
 > **[Questie](https://www.curseforge.com/wow/addons/questie) is highly recommended for added functionality.**
 > Forever Lazy runs without it, but the route planner, quest arrows, class quests, dungeon quests, service and
-> trainer search and the text under the arrow all use Questie's quest and NPC database. Without Questie you keep
-> the waypoints, books, follow arrow, boats, timers and the pet reminder.
+> trainer search, crafting sources and the text under the arrow all use Questie's quest and NPC database.
+> Without Questie you keep waypoints, books, the follow arrow, trips by flight and boat, timers and the pet reminder.
 
-Nothing in the addon needs RestedXP (see [RestedXP friends](#restedxp-friends-optional)).
+> **Status: early test builds.** The newest releases are marked *pre-release* because a lot of the code has had
+> little in-game testing. If something looks wrong, type `/lazy check` and paste what it says into an
+> [Issue](../../issues).
+
+## Quick start
+
+1. Download the latest zip from [Releases](../../releases) and put the **`ForeverLazy`** folder in
+   `World of Warcraft\_forever_\Interface\AddOns\`. Restart the game (a full restart the first time, `/reload` for
+   small updates).
+2. A welcome window opens the options on your first login. `/lrxp`, `/forever` or `/lazy` open them any time.
+3. Pick a **preset** at the top of the options (Minimal, Leveler, Duo, Everything), or switch modules on and off one by one.
+4. Press **Plan my route**, or just type `/lazy now`.
 
 ## Features
 
-### A route planner that thinks about XP
+### Quests and routes
 
-`/lrxp plan` (or the **Plan my route** button) turns your quest log into the most efficient trip:
+- **Route planner** (`/lrxp plan`): stops that pay the most XP for the least walking come first; quests that overlap
+  are done in one visit and every turn-in comes after its objectives. Green, yellow and orange quests count, red
+  only as a turn-in, grey never. It stays in your zone, replans when a quest or objective is finished or you
+  change area, and when nothing of yours is in the zone it routes you to the nearest quest givers.
+- **Says what to do**: the line under the arrow reads your quest log (*Kill 5 more Defias Pillager (3/8)*,
+  *Turn in X to Y*). A gold **?** marks a turn-in and a **!** a quest to pick up.
+- **Right-click the arrow** to skip a quest or stop, or pick any quest to do next. The plan resumes once it is done.
+- **Plan window** (`/lazy window`): the stops in a movable list, and the route drawn on the world map.
+- **Class quests**, **dungeon quests** and entrances, **group quest** handling (green ones are fine solo), and
+  the **Cozy Sleeping Bag** secret chain guide.
+- **Quest helpers**: a button for quest items, what comes next in a chain, the best quest reward pick, and the
+  best place to farm a quest item (`/lazy farm`).
 
-- **XP-weighted**: stops that pay the most XP for the least walking come first
-- **Does quests together**: spots where several quests overlap are done in one visit, then each turn-in comes after its objectives
-- **Colour filter**: green, yellow and orange quests are in, red only as a turn-in, grey never
-- **Stays in your zone**: no being sent across the world once you are somewhere
-- **Updates itself**: replans when a quest is accepted, an objective or quest is finished, or you enter a new area
-- **Nothing to do here?** It routes you to the nearest hub of **quest givers** instead and fills in the objectives as you accept quests
-- **Class quests** you can take are slotted in with extra weight
-- **Says what to do**: the line under the arrow reads your quest log (*Kill 5 more Defias Pillager (3/8)*, *Turn in X to Y*)
-- A gold **?** over the arrow marks a turn-in, a gold **!** marks a quest to pick up
-- **Right-click the arrow** to skip a quest or stop, or to pick any quest in the plan to do next. The plan picks up again once it is handed in
+### Lazy Mode and trips
 
-### Guides and suggestions
+- **Lazy Mode** (`/lazy now`, a key, a macro, or the options button): the best next thing. Bags nearly full or gear
+  damaged leads to a vendor; a due trainer visit to your trainer; otherwise your plan, then your journey.
+  **Keep going** picks the next one by itself when you arrive.
+- **Take me there** (`/lazy go <place>`): plans the whole trip with your flight points, boats and zeppelins, the
+  Deeprun Tram, your hearthstone and walking, whichever is quickest, and the arrow follows it leg by leg.
+- **Journey** (`/lazy journey`): a saved zone-by-zone route from your level to 60, with the dungeons that fit.
+  **Generate** and **Regenerate** buttons in the options.
+- **Find a service** (`/lazy inn`, `repair`, `flight`, `bank`, `ah`, `mailbox`, `stable`, `spirit`, `battlemaster`,
+  `trainer`, `cooking`...): the nearest one, with the arrow on it.
+- **Boats and zeppelins** (`/lazy boat darnassus`), **hearthstone and flight points** (`/lazy hearth`, `/lazy fp`).
+  Every flight master's position in Forever is built in; it learns which flight points you have opened.
 
-| | |
-|---|---|
-| **Cozy Sleeping Bag chain** | Follows the secret quest chain step by step, makes the next spot **stop 1** whenever you are in its zone, and gives directions for getting there (`/lrxp bag`). |
-| **Class quests** | Finds the quests only your class can take, announces new ones as you level, and shows where to get them (`/lrxp class`). |
-| **Dungeons** | Which of your quests need a dungeon, where its entrance is, and which dungeons suit your level (`/lrxp dungeons`). |
-| **Next zone** | When you outgrow a zone it suggests where to go for your level (`/lrxp nextzone`). |
-| **Find a service** | The nearest innkeeper, repair vendor, flight master, banker, auctioneer, mailbox, stable master, spirit healer, battlemaster, class trainer or profession trainer, with the arrow on it (`/lazy inn`, `/lazy repair`, `/lazy cooking`...). |
-| **Boats and zeppelins** | `/lazy boat darnassus` plans the boat route and points at each dock. Docks the addon does not know yet are taught with `/lazy boat mark`. |
+### Crafting, gathering, collecting
 
-### Lazy Mode: one press, the best next thing
+- **Crafting** (`/lazy craft`): reads the recipes you know (enchanting too), says what to craft next, and lists the
+  materials counting your **bags and bank**, with where to get what is missing.
+- **Gathering routes** (`/lazy herb peacebloom`, `/lazy ore tin`, `/lazy gather`) and **fishing spots** (`/lazy fish`).
+- **Library books**: waypoints, zone alerts, collected tracking, map pins, party sharing and a Titan Panel button.
+- **Flight timer** (learns each flight), **hunter pet reminder**, a few **macros** (`/lrxp macros`).
 
-`/lazy now` (or a key, a macro, or the button in the options) points the arrow at the single best next thing:
-a vendor when your bags are full or your gear is damaged, your trainer when a visit is due, your plan's next stop,
-or the next zone of your journey. Turn on **Keep going** and it picks the next one by itself when you arrive.
+### Playing with others
 
-### Take me there
+- **Follow arrow**: a purple arrow that points at anyone in your group, with or without the addon.
+- **Duo mode**: two players with the addon in a group of two; the party leader's plan is followed by the other,
+  shared quests count extra, and your partner shows on the compass. It starts by itself.
+- **Share your plan** (`/lazy shareplan`), see **quests you share** (`/lazy party`), and a note when someone in
+  your group runs a newer version.
 
-`/lazy go <place>` plans the whole trip: your flight points, boats and zeppelins, the Deeprun Tram, your hearthstone and walking, whichever is quickest, then the arrow follows it leg by leg. It knows where every flight master stands in Forever (from the community flight path guide) and learns which ones you have opened. Boat docks you have not taught it yet fall back to the port town's flight master.
+### Keeping it simple
 
-### More guides and helpers
+- **Simple arrows** (default): one main arrow, everything else on the compass bar.
+- **Modules**: every part can be switched off in the options. **Presets** set them in one click.
+- **`/lazy check`** says if everything loaded and works. Paste it in a bug report.
 
-| | |
-|---|---|
-| **Journey** | A saved zone-by-zone route from your level to 60, with dungeons that fit (`/lazy journey`, **Generate** and **Regenerate** buttons in the options). |
-| **Crafting** | Reads the recipes you know (including enchanting), says what to craft next, counts your **bags and bank**, and tells you where to get what is missing (`/lazy craft`). |
-| **Gathering and fishing** | A route through the nearest herb or ore nodes (`/lazy herb peacebloom`, `/lazy gather`) and the nearest fishing pools (`/lazy fish`). |
-| **Quest helpers** | A button for quest items, what comes next in a quest chain, a pick for the best quest reward, and the best place to farm a quest item (`/lazy farm`). |
-| **Hearth and flight points** | An arrow to your hearthstone inn, a nudge when it would save a long walk, and the nearest flight point you have not found (`/lazy hearth`, `/lazy fp`). |
-| **Duo mode** | Two players with the addon in a group of two: the party leader's plan is followed by the other, shared quests count extra, and your partner is on the compass. Starts by itself. |
-| **Plan window** | A movable list of the plan's stops, with the route drawn on the world map (`/lazy window`). |
-| **Modules and presets** | Every part can be switched off in the options. **Minimal**, **Leveler**, **Duo** and **Everything** presets set them in one click. |
-| **Simple arrows** | One main arrow. Friends, quest targets and your partner show on the compass instead, so the screen stays clean. |
-| **Check** | `/lazy check` tells you if everything loaded and is working. Paste it into a bug report. |
+### Arrows and display
 
-### Arrows
-
-| | |
-|---|---|
-| **Follow a group member** | A separate purple arrow that points at anyone in your party or raid, with or without the addon. Right-click it to change who (`/lrxp follow`). |
-| **My quests arrow and compass bar** | Follows the quest you have selected or tracked, with a slim compass bar at the top of the screen. |
-| **Waypoints** | `/lrxp way`, Ctrl + right-click the world map, minimap and world-map pins, optional TomTom support. |
-| **Three arrow styles** | Classic, chevron and thick. Colours, size, opacity and position are all yours, and everything is movable. |
-| **Smart hiding** | Hide in combat, in cities and inns, on flight paths and **inside dungeons and raids**. |
-| **Ghost arrow** | When you die, one arrow points at your body. Die in a dungeon and it points at the **dungeon entrance** for the corpse run. |
-
-### Collections and timers
-
-| | |
-|---|---|
-| **Library books** | All the world-collection books with waypoints, a zone alert, a level filter, collected tracking, map pins and party sharing. Includes a **Titan Panel / LibDataBroker** button with a drop-down to track any book. |
-| **Flight timer** | Learns how long each flight takes the first time you fly it, then counts down (and shows the time on the flight map). |
-| **Hunter pet reminder** | Tells you when your pet is unhappy or missing and what it eats. |
-| **Macros** | Makes a few shared macros for you (`/lrxp macros`). |
-
-### Party sharing
-
-Send waypoints and whole book routes to your party. Receivers can accept or ignore them, and it stays quiet
-for people who do not have the addon.
+Three arrow styles, colours, size, opacity and position are all yours. Arrows hide in combat, in cities and inns,
+on flight paths and inside dungeons and raids (the ghost arrow still shows, and after a death in a dungeon it
+points at the entrance for the corpse run). Optional TomTom support.
 
 ### RestedXP friends (optional)
 
 If a friend runs RestedXP and shares their step with the party, Forever Lazy can listen and point arrows at their
-quest spots and at them. It is **off by default**; turn it on under *RestedXP friend (optional)* in the options.
-You do not need RestedXP installed yourself.
-
-## Teaching it a boat dock
-
-The game does not tell addons where the docks are, so `/lazy boat` only points at docks it knows. It knows a few
-already; you teach it the rest, once, and it remembers them for all your characters.
-
-1. Walk to the dock and **stand on it**, at the spot where you board.
-2. Type `/lazy boat mark <port>`, for example `/lazy boat mark menethil`. (Standing in the port's zone, plain
-   `/lazy boat mark` works too.) It answers with the dock's coordinates.
-3. Now `/lazy boat <where>` points at it. `/lazy boat list` shows every dock you have taught.
-
-Ports: stormwind, auberdine, rutheran (Teldrassil), menethil, theramore, southshore, ratchet, bootybay, gromgol,
-orgrimmar, undercity. A route that is not working for you can be fixed the same way: mark the dock again.
-
-**Share what you find.** If you taught it a dock, please post the line from `/lazy boat list` as an
-[Issue](../../issues) or in [Discussions](../../discussions), and it will be built in for everyone.
-## Install
-
-1. Download the latest zip from the [Releases](../../releases) page (or **Code → Download ZIP**).
-2. Put the **`ForeverLazy`** folder into:
-   `World of Warcraft\_forever_\Interface\AddOns\`
-3. Start the game. The first time, it needs a full restart; later updates only need `/reload`.
-
-## Getting started
-
-- A welcome window opens the options the first time you log in. `/lrxp` (or `/forever`, `/lazy`) opens them any time.
-- Click **Plan my route** (or `/lrxp plan`) and follow the blue arrow.
+quest spots and at them. **Off by default**; turn it on under *RestedXP friend (optional)*. You do not need
+RestedXP installed yourself.
 
 ## Commands
 
+`/lrxp`, `/forever` and `/lazy` all do the same thing.
+
 | Command | What it does |
 |---|---|
-| `/lrxp` | Open the options |
-| `/lrxp plan [all]` | Plan the most efficient route (add `all` to include other zones) |
-| `/lrxp skip` `skip clear` | List or bring back quests you skipped from the arrow's right-click menu |
-| `/lrxp follow [name]` `follow off` | Follow a group member with the purple arrow |
-| `/lrxp class` `class go [n]` | Class quests |
-| `/lrxp dungeons` `dungeons go [n]` | Dungeon quests and entrances |
-| `/lrxp bag` `bag all` `bag start` `bag done` | Cozy Sleeping Bag chain |
-| `/lrxp nextzone` `nextzone go` | Where to level next |
-| `/lazy inn` `repair` `flight` `bank` `ah` `mailbox` `stable` `spirit` `battlemaster` | The nearest one, add a number for the next (`/lazy inn 2`) |
-| `/lazy trainer` `/lazy cooking` | Class trainer, or a profession trainer (first aid, fishing, mining, ...) |
-| `/lazy boat <place>` `boat mark` `boat list` `boat stop` | Boat and zeppelin routes with the dock arrow |
-| `/lrxp books` `zone` `turnin` `list` `done` `share` `say` | Library book collection |
-| `/lrxp arrow` | Toggle the book waypoint arrow |
-| `/lrxp way <x> <y> [name]` `here` `list` `next` `remove <n>` `clear` | Waypoints |
-| `/lrxp own` `compass` | Toggle the "my quests" arrow and the compass bar |
-| `/lrxp pet` `pet test` | Hunter pet reminder |
-| `/lazy flighttimes` | Flight times learned so far |
-| `/lrxp macros` `macros remove` | Make or remove the addon's macros |
 | `/lazy now` | Lazy Mode: point at the best next thing |
 | `/lazy go <place>` `go stop` | Plan and follow a whole trip |
+| `/lrxp plan [all]` | Plan the most efficient route (`all` includes other zones) |
+| `/lazy window` | The plan window |
+| `/lrxp skip` `skip clear` | List or bring back quests you skipped |
 | `/lazy journey` `generate` `regenerate` `go <n>` | Your zone-by-zone route to 60 |
+| `/lazy inn` `repair` `flight` `bank` `ah` `mailbox` `stable` `spirit` `battlemaster` | The nearest one (add a number for the next) |
+| `/lazy trainer` `/lazy cooking` | Class trainer, or a profession trainer |
+| `/lazy boat <place>` `boat mark` `boat list` `boat stop` | Boat and zeppelin routes |
+| `/lazy hearth` `hearth set` `fp` `fp list` | Hearthstone and flight points |
 | `/lazy craft [profession] [goal]` `craft go` `craft bank` | Crafting plan, materials, bank |
 | `/lazy herb <name>` `ore <name>` `gather` `fish` | Gathering routes and fishing spots |
-| `/lazy hearth` `hearth set` `fp` `fp list` | Hearthstone inn and flight points |
+| `/lrxp class` `dungeons` `bag` `nextzone` | Class quests, dungeons, sleeping bag chain, next zone (each takes `go`) |
 | `/lazy chain` `farm` | Quest chain follow-up, best place to farm |
-| `/lazy window` | The plan window |
+| `/lrxp follow [name]` `follow off` | Follow a group member |
 | `/lazy party` `shareplan` `acceptplan` `duo` | Group features |
 | `/lazy net on` `off` | Share boat docks with your guild and group (hidden messages) |
-| `/lazy preset minimal` `leveler` `duo` `full` | Switch modules in one go |
-| `/lazy check` | Is everything loaded and working |
-| `/lrxp toggle` | Turn the RestedXP friend arrows off and back on |
-| `/lrxp both` `quest` `friend` `off` | Choose which RestedXP friend arrows show |
+| `/lrxp books` `zone` `turnin` `list` `done` `share` `say` | Library book collection |
+| `/lrxp way <x> <y> [name]` `here` `list` `next` `remove <n>` `clear` | Waypoints |
+| `/lrxp own` `compass` `pet` `flighttimes` | My quests arrow, compass bar, pet reminder, flight times (`/lazy flighttimes`) |
 | `/lrxp lock` `unlock` `scale <n>` `reset` | Move, resize and reset the arrows |
-| `/lrxp why` | Explain where the plan's arrow comes from (for bug reports) |
+| `/lrxp macros` `macros remove` | Make or remove the addon's macros |
+| `/lazy preset minimal` `leveler` `duo` `full` | Switch modules in one go |
+| `/lazy check` `/lrxp why` | Health report; explain where the plan arrow comes from |
+
+## Teaching it a boat dock
+
+The game does not tell addons where the docks are. Until a dock is known, the arrow heads for the port town's
+flight master (by the harbour) and says so. To teach it the real spot, once:
+
+1. Walk to the dock and **stand on it**, at the spot where you board.
+2. Type `/lazy boat mark <port>`, for example `/lazy boat mark menethil`.
+3. `/lazy boat <where>` now points at it. `/lazy boat list` shows the docks you taught.
+
+Ports: stormwind, auberdine, rutheran (Teldrassil), menethil, theramore, southshore, ratchet, bootybay, gromgol,
+orgrimmar, undercity, steamwheedle, powderfuse. If you taught a dock, please post the line from
+`/lazy boat list` as an [Issue](../../issues) or in [Discussions](../../discussions) so it can be built in.
+
+## What it sends to other players
+
+Nothing is ever typed into chat. When you are in a group, the addon sends **hidden addon messages** to other players
+who also have it: your quest list (for shared quests), your plan when you share it, and the addon's version number.
+**Dock sharing is off by default**; when on, it sends a map and two coordinates to your guild and group. There is no
+custom chat channel.
 
 ## Help and feedback
 
 Questions and ideas: [Discussions](../../discussions). Bugs: [Issues](../../issues), with what you did, what you
-expected, and any Lua error text.
+expected, the output of `/lazy check`, and any Lua error text. See the [changelog](CHANGELOG.md) for what changed.
 
-## Notes
+## Data and credits
 
-- Quest data, dungeon entrances, class quests and the service and trainer search come from **Questie's** database, so install Questie for the full experience.
-- It is under active development and some parts have only seen light testing in-game.
-- Level ranges for zones, the dungeon list and the secret-chain coordinates were collected from the community
-  guides and may be slightly off. Open an issue if you find a bad spot.
-
-## Credits
-
-Built on [HereBeDragons](https://www.curseforge.com/wow/addons/herebedragons), AceComm, AceSerializer,
-CallbackHandler, LibDeflate and LibStub (all in `ForeverLazy/libs`, under their own licences).
+- Quest, NPC, vendor and drop data: **Questie's** database.
+- Flight master positions and boat routes: the community flight path guide at
+  [wowforever.be](https://wowforever.be/guides/flight-paths/) (read from the live game files); secret-chain and travel
+  details from the Forever guides at method.gg and kami-labs.fr. Zone level ranges are rough and may be slightly off.
+- Built on [HereBeDragons](https://www.curseforge.com/wow/addons/herebedragons), AceComm, AceSerializer,
+  CallbackHandler, LibDeflate and LibStub (all in `ForeverLazy/libs`, under their own licences).
 
 Not affiliated with or endorsed by RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
 
