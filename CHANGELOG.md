@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.2 (pre-release)
+- **Buttons and menus in the game windows**: a menu on the minimap button, a search box on the world map, buttons under the quest log, a craft plan beside the profession window, bank highlights, flight map and boat NPC buttons.
+- Numbered stop markers on the route drawn on the world map.
+- A **first-run tour**, **settings export and import**, and a **what's new** window.
+- A new welcome window with a photo (CC BY-SA 2.0, credited).
+
 ## 0.8.0 (pre-release)
 - **Take me there**: `/lazy go <place>` plans a whole trip (flight points, boats and zeppelins, the Deeprun Tram, hearthstone, walking). Lazy Mode uses it when the next zone is far.
 - Every Forever flight master position is built in (from the community flight path guide); the addon learns which flight points you have opened.

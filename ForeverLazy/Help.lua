@@ -1,0 +1,358 @@
+-- Making it easier to learn: a first-run tour, settings export and import, and a "what's new" window.
+--   /lazy tour       the tour (it also starts by itself after the welcome window)
+--   /lazy export     my settings as one line of text to share
+--   /lazy import     paste a line of settings
+--   /lazy new        what changed in this version
+local ADDON, ns = ...
+local addon = ns.addon
+local api = ns.api
+local Print = addon.Print
+
+local function DB() return addon.GetDB() end
+
+local function Version()
+    local get = (C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata
+    return get and get(ADDON, "Version") or "?"
+end
+
+--------------------------------------------------------------------------------
+-- The tour
+--------------------------------------------------------------------------------
+local STEPS = {
+    { text = "|cffffd100Welcome to Forever Lazy.|r This is a quick tour (8 short steps). It shows where the buttons are, so you never need to type a command. Press Next.",
+      target = nil },
+    { text = "|cffffd100The minimap button.|r Left-click: do the next best thing (Lazy Mode). Right-click: the menu with everything. Shift-click: the options.",
+      target = function() return _G.LRXPT_MinimapButton end },
+    { text = "|cffffd100The menu.|r This is what the right-click opens: go somewhere, plan your route, boats, journey, crafting, group, settings. Pick anything to try it.",
+      target = nil, onShow = function() if addon.OpenMenu then addon:OpenMenu() end end, onHide = function() if _G.ForeverLazy_Menu then _G.ForeverLazy_Menu:Hide() end end },
+    { text = "|cffffd100The world map.|r Press M. In the top right there is a search box (\"Go to...\") and a Lazy button. Type a place, a city, a dungeon or a flight point, and press Enter: the arrow plans the whole trip. Your route shows on the map with numbered stops.",
+      target = function() local w = _G.WorldMapFrame; return w and w:IsShown() and w or nil end },
+    { text = "|cffffd100The quest log.|r Press L. Under it: Plan my route, Do this next, Skip this. Right-clicking the main arrow does the same.",
+      target = function() local q = _G.QuestLogFrame; return q and q:IsShown() and q or nil end },
+    { text = "|cffffd100Professions.|r Open a profession window once. Beside it, a craft plan appears: what to craft, the materials counting your bags and bank, and where to get what is missing.",
+      target = function() local p = _G.ForeverLazy_CraftPanel; return p and p:IsShown() and p or nil end },
+    { text = "|cffffd100The options.|r /lrxp opens them. At the top: Presets (Minimal, Leveler, Duo, Everything) and a switch for every module, so you only keep what you want.",
+      target = nil, onShow = function() if addon.OpenOptions then addon:OpenOptions() end end },
+    { text = "|cffffd100That is it.|r Lazy Mode (/lazy now, or left-click the minimap button) is the one to remember. /lazy tour shows this again, and /lazy check says if everything is working.",
+      target = nil },
+}
+
+local tour, hl
+local idx = 0
+
+local function Highlight(frame)
+    if not hl then
+        hl = CreateFrame("Frame", nil, UIParent)
+        hl:SetFrameStrata("TOOLTIP")
+        hl.edges = {}
+        for i = 1, 4 do
+            local t = hl:CreateTexture(nil, "OVERLAY")
+            t:SetColorTexture(1, 0.82, 0, 0.95)
+            hl.edges[i] = t
+        end
+    end
+    if not frame then hl:Hide(); return end
+    hl:ClearAllPoints()
+    hl:SetPoint("TOPLEFT", frame, "TOPLEFT", -3, 3)
+    hl:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 3, -3)
+    local e = hl.edges
+    e[1]:ClearAllPoints(); e[1]:SetPoint("TOPLEFT"); e[1]:SetPoint("TOPRIGHT"); e[1]:SetHeight(3)
+    e[2]:ClearAllPoints(); e[2]:SetPoint("BOTTOMLEFT"); e[2]:SetPoint("BOTTOMRIGHT"); e[2]:SetHeight(3)
+    e[3]:ClearAllPoints(); e[3]:SetPoint("TOPLEFT"); e[3]:SetPoint("BOTTOMLEFT"); e[3]:SetWidth(3)
+    e[4]:ClearAllPoints(); e[4]:SetPoint("TOPRIGHT"); e[4]:SetPoint("BOTTOMRIGHT"); e[4]:SetWidth(3)
+    hl:Show()
+end
+
+local function ShowStep()
+    local step = STEPS[idx]
+    if not step then return end
+    tour.counter:SetText(string.format("%d of %d", idx, #STEPS))
+    tour.text:SetText(step.text)
+    tour.back:SetEnabled(idx > 1)
+    tour.next:SetText(idx == #STEPS and "Done" or "Next")
+    local target = step.target and step.target()
+    Highlight(target)
+    tour:ClearAllPoints()
+    if target and target.GetCenter then
+        local _, cy = target:GetCenter()
+        if cy and cy > UIParent:GetHeight() / 2 then
+            tour:SetPoint("TOP", target, "BOTTOM", 0, -16)
+        else
+            tour:SetPoint("BOTTOM", target, "TOP", 0, 16)
+        end
+    else
+        tour:SetPoint("CENTER", UIParent, "CENTER", 0, 180)
+    end
+    tour:SetHeight(110 + tour.text:GetStringHeight())
+    tour:Show()
+    if step.onShow then pcall(step.onShow) end
+end
+
+local function Leave(step)
+    if step and step.onHide then pcall(step.onHide) end
+end
+
+local function Finish()
+    Leave(STEPS[idx])
+    if tour then tour:Hide() end
+    Highlight(nil)
+    local root = addon.GetRoot()
+    if root then root.tourDone = true end
+    idx = 0
+end
+
+local function BuildTour()
+    local f = CreateFrame("Frame", "ForeverLazy_Tour", UIParent)
+    f:SetSize(360, 150)
+    f:SetFrameStrata("TOOLTIP")
+    f:SetClampedToScreen(true)
+    f:EnableMouse(true)
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.97)
+    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    f.title:SetPoint("TOPLEFT", 12, -10); f.title:SetText("Forever Lazy tour")
+    f.counter = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.counter:SetPoint("TOPRIGHT", -12, -14)
+    f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    f.text:SetPoint("TOPLEFT", 12, -36); f.text:SetWidth(336); f.text:SetJustifyH("LEFT"); f.text:SetJustifyV("TOP")
+    f.back = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.back:SetSize(70, 22); f.back:SetPoint("BOTTOMLEFT", 12, 10); f.back:SetText("Back")
+    f.back:SetScript("OnClick", function() Leave(STEPS[idx]); idx = math.max(1, idx - 1); ShowStep() end)
+    f.next = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.next:SetSize(80, 22); f.next:SetPoint("LEFT", f.back, "RIGHT", 6, 0)
+    f.next:SetScript("OnClick", function()
+        Leave(STEPS[idx])
+        if idx >= #STEPS then Finish() else idx = idx + 1; ShowStep() end
+    end)
+    local skip = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    skip:SetSize(70, 22); skip:SetPoint("BOTTOMRIGHT", -12, 10); skip:SetText("Skip")
+    skip:SetScript("OnClick", Finish)
+    f:Hide()
+    return f
+end
+
+function addon.StartTour()
+    tour = tour or BuildTour()
+    idx = 1
+    ShowStep()
+end
+
+--------------------------------------------------------------------------------
+-- Settings export and import
+--------------------------------------------------------------------------------
+local function Deflate() return LibStub and LibStub("LibDeflate", true) end
+
+local function IsColor(v)
+    if type(v) ~= "table" or #v ~= 3 then return false end
+    for i = 1, 3 do if type(v[i]) ~= "number" or v[i] < 0 or v[i] > 1 then return false end end
+    return true
+end
+
+local function Clean(db)
+    local out = {}
+    for k, v in pairs(db) do
+        local t = type(v)
+        if t == "boolean" or t == "number" or t == "string" then out[k] = v
+        elseif k == "modules" and t == "table" then
+            local m = {}
+            for key, val in pairs(v) do if type(val) == "boolean" and type(key) == "string" then m[key] = val end end
+            out[k] = m
+        elseif IsColor(v) then out[k] = { v[1], v[2], v[3] } end
+    end
+    out.minimapAngle = nil
+    return out
+end
+
+local function Export()
+    local LD = Deflate()
+    local ok, data = pcall(addon.Serialize, addon, Clean(DB()))
+    if not ok or not data then return nil end
+    if LD then
+        local packed = LD:EncodeForPrint(LD:CompressDeflate(data))
+        return "FL1:" .. packed
+    end
+    return "FL0:" .. data
+end
+
+local function Import(text)
+    text = (text or ""):gsub("%s+", "")
+    if #text < 8 or #text > 12000 then return false, "that does not look like a settings line" end
+    local LD = Deflate()
+    local data
+    if text:sub(1, 4) == "FL1:" and LD then
+        local raw = LD:DecodeForPrint(text:sub(5))
+        data = raw and LD:DecompressDeflate(raw)
+    elseif text:sub(1, 4) == "FL0:" then
+        data = text:sub(5)
+    end
+    if not data then return false, "I could not read that line" end
+    local ok, t = addon:Deserialize(data)
+    if not ok or type(t) ~= "table" then return false, "that line is damaged" end
+    local db = DB()
+    local n = 0
+    local current = Clean(db)
+    for k, v in pairs(t) do
+        if type(k) == "string" and (current[k] ~= nil or k == "modules") then
+            local want = type(current[k])
+            if k == "modules" and type(v) == "table" then
+                db.modules = db.modules or {}
+                for key, val in pairs(v) do if type(val) == "boolean" then db.modules[key] = val; n = n + 1 end end
+            elseif type(v) == want and want ~= "table" then
+                db[k] = v; n = n + 1
+            elseif want == "table" and IsColor(v) then
+                db[k] = { v[1], v[2], v[3] }; n = n + 1
+            end
+        end
+    end
+    return true, n
+end
+
+local box
+local function BuildBox()
+    local f = CreateFrame("Frame", "ForeverLazy_SettingsBox", UIParent)
+    f:SetSize(420, 230)
+    f:SetPoint("CENTER")
+    f:SetFrameStrata("DIALOG")
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
+    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    f.title:SetPoint("TOPLEFT", 14, -12)
+    f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.hint:SetPoint("TOPLEFT", 14, -36); f.hint:SetWidth(390); f.hint:SetJustifyH("LEFT")
+    local ebBg = f:CreateTexture(nil, "BORDER")
+    ebBg:SetPoint("TOPLEFT", 12, -62); ebBg:SetSize(396, 120); ebBg:SetColorTexture(0, 0, 0, 0.6)
+    local eb = CreateFrame("EditBox", nil, f)
+    eb:SetMultiLine(true); eb:SetFontObject(ChatFontNormal or GameFontHighlight)
+    eb:SetSize(384, 116); eb:SetPoint("TOPLEFT", 18, -66); eb:SetAutoFocus(false); eb:SetMaxLetters(12000)
+    eb:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+    f.edit = eb
+    f.action = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    f.action:SetSize(110, 24); f.action:SetPoint("BOTTOMLEFT", 14, 12)
+    local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText("Close")
+    close:SetScript("OnClick", function() f:Hide() end)
+    f:Hide()
+    return f
+end
+
+function addon.ExportSettings()
+    box = box or BuildBox()
+    local s = Export()
+    box.title:SetText("Export my settings")
+    box.hint:SetText("Copy this line (Ctrl+A, Ctrl+C) and send it. The other player pastes it under Import.")
+    box.edit:SetText(s or "I could not make the line")
+    box.action:SetText("Select all")
+    box.action:SetScript("OnClick", function() box.edit:SetFocus(); box.edit:HighlightText() end)
+    box:Show()
+end
+
+function addon.ImportSettings()
+    box = box or BuildBox()
+    box.title:SetText("Import settings")
+    box.hint:SetText("Paste a settings line here (Ctrl+V) and press Apply. Your waypoints and quests are not touched.")
+    box.edit:SetText("")
+    box.action:SetText("Apply")
+    box.action:SetScript("OnClick", function()
+        local ok, n = Import(box.edit:GetText())
+        if ok then
+            Print(string.format("imported %d settings", n))
+            if addon.ApplyAll then pcall(addon.ApplyAll, addon) end
+            if addon.ModulesChanged then pcall(addon.ModulesChanged) end
+            box:Hide()
+        else
+            Print(n)
+        end
+    end)
+    box:Show()
+    box.edit:SetFocus()
+end
+
+--------------------------------------------------------------------------------
+-- What is new
+--------------------------------------------------------------------------------
+local NEW = {
+    { "0.8.2", {
+        "Buttons and menus in the game windows: a menu on the minimap button, a search box on the world map, quest log buttons, a craft plan beside your profession window.",
+        "Numbered stop markers on the route drawn on the world map.",
+        "A tour of all this, settings export and import, and this window.",
+    } },
+    { "0.8.0", {
+        "Take me there: /lazy go <place> plans a whole trip by flight path, boat, tram and hearthstone.",
+        "Every Forever flight point is built in; boat routes updated.",
+    } },
+    { "0.7.0", {
+        "Lazy Mode, crafting with bank counting, journey, gathering routes, fishing spots, duo mode, modules and presets.",
+    } },
+}
+
+local newWin
+local function ShowNew(current)
+    newWin = newWin or (function()
+        local f = CreateFrame("Frame", "ForeverLazy_New", UIParent)
+        f:SetSize(420, 300)
+        f:SetPoint("CENTER", 0, 80)
+        f:SetFrameStrata("DIALOG")
+        f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        f.title:SetPoint("TOPLEFT", 14, -12)
+        f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        f.text:SetPoint("TOPLEFT", 14, -42); f.text:SetWidth(392); f.text:SetJustifyH("LEFT"); f.text:SetJustifyV("TOP")
+        local tourBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        tourBtn:SetSize(120, 24); tourBtn:SetPoint("BOTTOMLEFT", 14, 12); tourBtn:SetText("Take the tour")
+        tourBtn:SetScript("OnClick", function() f:Hide(); addon.StartTour() end)
+        local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText("Close")
+        close:SetScript("OnClick", function() f:Hide() end)
+        f:Hide()
+        return f
+    end)()
+    local lines = {}
+    for _, v in ipairs(NEW) do
+        lines[#lines + 1] = "|cffffd100" .. v[1] .. "|r"
+        for _, item in ipairs(v[2]) do lines[#lines + 1] = "  - " .. item end
+        lines[#lines + 1] = ""
+    end
+    newWin.title:SetText("What's new in Forever Lazy " .. (current or Version()))
+    newWin.text:SetText(table.concat(lines, "\n"))
+    newWin:Show()
+end
+function addon.ShowWhatsNew() ShowNew(Version()) end
+
+--------------------------------------------------------------------------------
+-- When these show by themselves
+--------------------------------------------------------------------------------
+local ev = CreateFrame("Frame")
+ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+ev:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+    if not C_Timer then return end
+    C_Timer.After(8, function()
+        local root = addon.GetRoot()
+        if not root then return end
+        local current = Version()
+        if root.welcomed and not root.tourDone and not root.tourOffered then
+            root.tourOffered = true
+            Print("a quick tour of the buttons: /lazy tour")
+        end
+        if root.seenVersion and root.seenVersion ~= current and root.welcomed then
+            ShowNew(current)
+        end
+        root.seenVersion = current
+    end)
+end)
+
+local prev = addon.HandleExtraCommand
+function addon:HandleExtraCommand(cmd, rest)
+    local word = (cmd or ""):lower()
+    if word == "tour" then addon.StartTour(); return true
+    elseif word == "export" then addon.ExportSettings(); return true
+    elseif word == "import" then addon.ImportSettings(); return true
+    elseif word == "new" or word == "whatsnew" then addon.ShowWhatsNew(); return true
+    elseif word == "welcome" then if addon.ShowWelcome then addon.ShowWelcome() end; return true end
+    if prev then return prev(self, cmd, rest) end
+end

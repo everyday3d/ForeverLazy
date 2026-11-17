@@ -257,6 +257,10 @@ local function Pick(profData)
     return best
 end
 
+local capture, lastIds = nil, {}
+local function Say(s) if capture then capture[#capture + 1] = s else Print(s) end end
+function addon.CraftReagentIds() return lastIds end
+
 local function Plan(profName, goalArg)
     local data = Section("crafting")
     local prof
@@ -265,7 +269,7 @@ local function Plan(profName, goalArg)
             if name:lower():find(profName:lower(), 1, true) then prof = name; break end
         end
         if not prof then
-            Print("I don't know your " .. profName .. " recipes yet. Open the profession window once, then try again.")
+            Say("I don't know your " .. profName .. " recipes yet. Open the profession window once, then try again.")
             return
         end
     else
@@ -274,7 +278,7 @@ local function Plan(profName, goalArg)
             for name in pairs(data) do prof = name; break end
         end
     end
-    if not prof then Print("open a profession window once so I can read your recipes, then /lazy craft"); return end
+    if not prof then Say("open a profession window once so I can read your recipes, then /lazy craft"); return end
     local pd = data[prof]
     local rank, maxRank = pd.rank or 0, pd.max or 300
     local goal = tonumber(goalArg)
@@ -282,21 +286,23 @@ local function Plan(profName, goalArg)
         for _, t in ipairs(TARGETS) do if t > rank and t <= maxRank then goal = t; break end end
         goal = goal or maxRank
     end
-    if rank >= goal then Print(string.format("%s is already %d, past %d", prof, rank, goal)); return end
-    Print(string.format("%s %d/%d, planning up to %d (recipes as of the last time you opened the window)", prof, rank, maxRank, goal))
+    if rank >= goal then Say(string.format("%s is already %d, past %d", prof, rank, goal)); return end
+    Say(string.format("%s %d/%d, planning up to %d (recipes as of the last time you opened the window)", prof, rank, maxRank, goal))
 
     local r = Pick(pd)
     if not r then
-        Print("nothing you know gives skill points right now. Learn new recipes from the profession trainer: /lazy " .. prof:lower())
+        Say("nothing you know gives skill points right now. Learn new recipes from the profession trainer: /lazy " .. prof:lower())
         return
     end
     local chance = CHANCE[r.kind]
     local points = goal - rank
     local crafts = math.min(60, math.max(1, math.ceil(points / chance)))
-    Print(string.format("  craft %d x %s (%s, about %d skill points). Open the window again afterwards and plan again as it turns green.",
+    Say(string.format("  craft %d x %s (%s, about %d skill points). Open the window again afterwards and plan again as it turns green.",
         crafts, r.name, COLOR[r.kind] or r.kind, math.floor(crafts * chance)))
 
     needs = {}
+    lastIds = {}
+    for _, re in ipairs(r.reagents) do if re.id then lastIds[re.id] = true end end
     local QDB = (api.QuestieReady and api.QuestieReady()) and api.GetQuestie() or nil
     local anyBank, bankKnown = false, nil
     for _, re in ipairs(r.reagents) do
@@ -327,11 +333,20 @@ local function Plan(profName, goalArg)
                 end
             end
         end
-        Print(line)
+        Say(line)
     end
-    if anyBank then Print("  some of it is waiting in your bank: /lazy craft bank takes you to the nearest banker") end
-    if bankKnown == false then Print("  I have never seen inside your bank. Open it once and I will count it too.") end
-    if #needs > 0 then Print("  /lazy craft go points at where to get the first missing material") end
+    if anyBank then Say("  some of it is waiting in your bank: /lazy craft bank takes you to the nearest banker") end
+    if bankKnown == false then Say("  I have never seen inside your bank. Open it once and I will count it too.") end
+    if #needs > 0 then Say("  /lazy craft go points at where to get the first missing material") end
+end
+
+
+function addon.CraftPlanText(profName, goal)
+    capture = {}
+    local ok = pcall(Plan, profName, goal)
+    local out = capture
+    capture = nil
+    return out
 end
 
 local function Go(n)

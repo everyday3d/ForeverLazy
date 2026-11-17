@@ -218,6 +218,20 @@ local function BuildControls(parent)
 
     ----------------------------------------------------------------- Arrows
     ---------------------------------------------------------------- Modules
+    Header(content, "Buttons in the game windows")
+    Label(content, "Forever Lazy adds a search box and menu to the world map, buttons under the quest log, a craft plan beside your profession window, and more.")
+    y = y - 22
+    Check(content, "Show Forever Lazy buttons and panels in the game windows", 16,
+        function() return DB().uiButtons ~= false end, function(v) DB().uiButtons = v end)
+    Label(content, "The minimap button: left-click = Lazy Mode, right-click = the menu, shift-click = options.")
+    y = y - 26
+
+    Header(content, "Help")
+    Button(content, "Take the tour", 16, 130, function() if addon.StartTour then addon.StartTour() end end, false)
+    Button(content, "What's new", 156, 110, function() if addon.ShowWhatsNew then addon.ShowWhatsNew() end end, false)
+    Button(content, "Export settings", 276, 130, function() if addon.ExportSettings then addon.ExportSettings() end end, false)
+    Button(content, "Import settings", 416, 130, function() if addon.ImportSettings then addon.ImportSettings() end end, true)
+
     Header(content, "Presets")
     Label(content, "One click sets which modules are on. Change any of them below afterwards.")
     y = y - 22
@@ -679,26 +693,66 @@ end
 --------------------------------------------------------------------------------
 -- Welcome pop-up, the very first time the addon loads
 --------------------------------------------------------------------------------
-StaticPopupDialogs["LRXPT_WELCOME"] = {
-    text = "|cff4db8ffWelcome to Forever Lazy!|r\n\n"
-        .. "Arrows that point at your quests, your party and your next best XP. Click OK to open the options, "
-        .. "where you can turn features on and off.\n\n"
-        .. "I have also added a few shared macros (type |cffffd100/macro|r and look for |cffffd100LRXP|r) that you can drag to your action bars.\n\n"
-        .. "|cffaaaaaaTip: |cffffd100Plan my route|r|cffaaaaaa builds your levelling route, and |cffffd100/lrxp|r|cffaaaaaa opens the options any time.|r\n\n"
-        .. "|cffffd100Brought to you by Sam Skinison|r",
-    button1 = OKAY or "OK",
-    OnAccept = function()
-        if C_Timer and C_Timer.After then
-            C_Timer.After(0.2, function() addon:OpenOptions() end)
-        else
-            addon:OpenOptions()
-        end
-    end,
-    timeout = 0,
-    whileDead = true,
-    hideOnEscape = true,
-    preferredIndex = 3,
-}
+-- A custom window instead of the plain pop-up, so it can carry a picture.
+-- The photo is media\kinison.tga (credit in media\CREDITS.txt: CC BY-SA 2.0, The World Famous Comedy Store).
+local welcomeFrame
+local function ShowWelcome()
+    if not welcomeFrame then
+        local f = CreateFrame("Frame", "ForeverLazy_Welcome", UIParent)
+        f:SetSize(400, 520)
+        f:SetPoint("CENTER", 0, 20)
+        f:SetFrameStrata("DIALOG")
+        f:SetClampedToScreen(true)
+        f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.97)
+
+        local pic = f:CreateTexture(nil, "ARTWORK")
+        pic:SetSize(135, 215)
+        pic:SetPoint("TOP", 0, -16)
+        pic:SetTexture("Interface\\AddOns\\ForeverLazy\\media\\kinison.tga")
+        pic:SetTexCoord(60 / 256, 195 / 256, 20 / 256, 235 / 256)
+
+        local caption = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+        caption:SetPoint("TOP", pic, "BOTTOM", 0, -8)
+        caption:SetText("|cffff3333OH Oh OHH|r")
+
+        local by = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        by:SetPoint("TOP", caption, "BOTTOM", 0, -6)
+        by:SetText("Brought to you by Sam Skinison")
+
+        local text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        text:SetPoint("TOP", by, "BOTTOM", 0, -14)
+        text:SetWidth(360); text:SetJustifyH("CENTER")
+        text:SetText("|cff4db8ffWelcome to Forever Lazy!|r\n\n"
+            .. "Arrows that point at your quests, your party and your next best XP. Click OK to open the options, "
+            .. "where you can turn features on and off, and take a quick tour of the buttons.\n\n"
+            .. "I have also added a few shared macros (type |cffffd100/macro|r and look for |cffffd100LRXP|r) that you can drag to your action bars.\n\n"
+            .. "|cffaaaaaaTip: |cffffd100/lazy now|r|cffaaaaaa (or left-click the minimap button) points at the best next thing, and |cffffd100/lrxp|r|cffaaaaaa opens the options any time.|r")
+
+        local credit = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        credit:SetPoint("BOTTOM", 0, 46)
+        credit:SetText("Photo: The World Famous Comedy Store, CC BY-SA 2.0 (via Wikimedia Commons)")
+
+        local ok = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        ok:SetSize(110, 24); ok:SetPoint("BOTTOM", 0, 14); ok:SetText(OKAY or "OK")
+        ok:SetScript("OnClick", function()
+            f:Hide()
+            if C_Timer and C_Timer.After then
+                C_Timer.After(0.2, function() addon:OpenOptions() end)
+                C_Timer.After(1.5, function() if addon.StartTour then addon.StartTour() end end)
+            else
+                addon:OpenOptions()
+            end
+        end)
+        table.insert(UISpecialFrames, "ForeverLazy_Welcome")
+        f:Hide()
+        welcomeFrame = f
+    end
+    welcomeFrame:Show()
+end
+addon.ShowWelcome = ShowWelcome
 
 local welcome = CreateFrame("Frame")
 welcome:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -715,6 +769,6 @@ welcome:SetScript("OnEvent", function(self)
         end
         root.welcomed = true
         if root.autoMacros ~= false then pcall(addon.MakeMacros) end
-        StaticPopup_Show("LRXPT_WELCOME")
+        ShowWelcome()
     end)
 end)

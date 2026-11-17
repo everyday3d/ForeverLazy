@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.8.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.8.2-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
@@ -86,6 +86,14 @@ with flight paths, boats and your hearthstone if the zone is far.
 - **Share your plan** (`/lazy shareplan`), see **quests you share** (`/lazy party`), and a note when someone in
   your group runs a newer version.
 
+### In the game's own windows
+
+Most things are a click, not a command. The **minimap button** (left-click = Lazy Mode, right-click = a menu with
+everything) is the hub. There is a "Go to..." search box on the **world map**, buttons under the **quest log**
+(plan my route, do this next, skip this), a **craft plan** beside your profession window, the materials you need
+lit up in the **bank**, and buttons on the **flight map** and at boat NPCs. A **first-run tour** shows you where
+everything is (`/lazy tour`), settings can be shared as one line (`/lazy export`, `/lazy import`), and a
+**what's new** window appears after an update (`/lazy new`).
 ### Keeping it simple
 
 - **Simple arrows** (default): one main arrow, everything else on the compass bar.
@@ -166,6 +174,7 @@ expected, the output of `/lazy check`, and any Lua error text. See the [changelo
 - Flight master positions and boat routes: the community flight path guide at
   [wowforever.be](https://wowforever.be/guides/flight-paths/) (read from the live game files); secret-chain and travel
   details from the Forever guides at method.gg and kami-labs.fr. Zone level ranges are rough and may be slightly off.
+- The welcome window photo of Sam Kinison is by The World Famous Comedy Store, via Wikimedia Commons, licensed [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/) (details in ForeverLazy/media/CREDITS.txt).
 - Built on [HereBeDragons](https://www.curseforge.com/wow/addons/herebedragons), AceComm, AceSerializer,
   CallbackHandler, LibDeflate and LibStub (all in `ForeverLazy/libs`, under their own licences).
 

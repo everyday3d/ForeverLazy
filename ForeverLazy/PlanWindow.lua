@@ -159,7 +159,35 @@ end
 --------------------------------------------------------------------------------
 local overlay
 local lines = {}
+local markers = {}
 
+-- a numbered marker on the map for each stop, with its name when the mouse is over it
+local function Marker(i)
+    local m = markers[i]
+    if m then return m end
+    m = CreateFrame("Frame", nil, overlay)
+    m:SetSize(20, 20)
+    m:EnableMouse(true)
+    m.bg = m:CreateTexture(nil, "ARTWORK")
+    m.bg:SetAllPoints()
+    m.bg:SetColorTexture(1, 0.82, 0, 0.95)
+    m.num = m:CreateFontString(nil, "OVERLAY", "GameFontBlackSmall")
+    m.num:SetPoint("CENTER")
+    m:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:AddLine(self.title or "Stop", 1, 0.82, 0)
+        if self.detail then GameTooltip:AddLine(self.detail, 1, 1, 1, true) end
+        GameTooltip:Show()
+    end)
+    m:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    markers[i] = m
+    return m
+end
+
+-- a stop on the route: a plan stop, or a stop made by a trip, boat, gathering, service or Lazy Mode
+local function RouteStop(s)
+    return s.label or s.go or s.gather or s.lazy or s.boat or s.service or s.craft or s.farm or s.hearth
+end
 local function Canvas()
     local wm = _G.WorldMapFrame
     if not wm then return nil end
@@ -170,6 +198,7 @@ end
 
 local function HideLines(from)
     for i = from or 1, #lines do lines[i]:Hide() end
+    if not from then for _, m in ipairs(markers) do m:Hide() end end
 end
 
 function addon.DrawRouteLines()
@@ -187,12 +216,17 @@ function addon.DrawRouteLines()
     overlay:SetFrameLevel(canvas:GetFrameLevel() + 6)
     overlay:Show()
     local w, h = canvas:GetWidth(), canvas:GetHeight()
-    local pts = {}
+    local pts, stopOf = {}, {}
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if px then pts[#pts + 1] = { px, py, pinst } end
+    local number = 0
     for i, s in ipairs(db.waypoints or {}) do
         if i > 15 then break end
-        if s.label and s.instance and s.x then pts[#pts + 1] = { s.x, s.y, s.instance } end
+        if RouteStop(s) and s.instance and s.x then
+            number = number + 1
+            pts[#pts + 1] = { s.x, s.y, s.instance }
+            stopOf[#pts] = { stop = s, number = number }
+        end
     end
     local screen = {}
     for i, p in ipairs(pts) do
@@ -219,6 +253,26 @@ function addon.DrawRouteLines()
         end
     end
     HideLines(n + 1)
+
+    -- numbered markers on the stops that are on this map
+    local m = 0
+    for i = 1, #pts do
+        local info, pos = stopOf[i], screen[i]
+        if info and pos then
+            m = m + 1
+            local mk = Marker(m)
+            mk:SetParent(overlay)
+            mk:SetFrameLevel(overlay:GetFrameLevel() + 3)
+            mk:ClearAllPoints()
+            mk:SetPoint("CENTER", overlay, "TOPLEFT", pos[1], pos[2])
+            mk.num:SetText(tostring(info.number))
+            mk.title = info.stop.name or info.stop.label
+            mk.detail = info.stop.detail
+            mk.bg:SetColorTexture(1, 0.82, 0, info.number == 1 and 1 or 0.8)
+            mk:Show()
+        end
+    end
+    for i = m + 1, #markers do markers[i]:Hide() end
 end
 
 local ev = CreateFrame("Frame")
