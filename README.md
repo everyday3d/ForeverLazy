@@ -60,6 +60,11 @@ See everything in the [feature guide](docs/FEATURES.md).
 - **Private.** It only talks to your own group or guild, and only the small details listed in [what it sends](docs/PRIVACY.md).
 - **Free and open source**, MIT licensed.
 
+<p align="center">
+  <img src="docs/options-list.png" alt="Forever Lazy's options pages: Presets, Modules, Lazy mode, Journey, Arrows and more" width="240"><br>
+  <i>Every part has its own page in the game's options.</i>
+</p>
+
 ## Install in a minute
 
 1. Download the latest zip from [**Releases**](../../releases/latest).
