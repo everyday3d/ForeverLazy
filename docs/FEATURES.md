@@ -35,7 +35,7 @@ Back to the [README](../README.md) · [Commands](COMMANDS.md)
 
 - **Crafting** (`/lazy craft`): reads the recipes you know (enchanting too), says what to craft next, and lists the
   materials counting your **bags and bank**, with where to get what is missing. A craft plan panel sits beside the
-  profession window and the materials are lit up in the bank.
+  profession window. The recipe to craft next is lit up in the recipe list with how many to make, and the materials are lit up in the bank. When a material has no known source it names the zones to skin, mine or loot it.
 - **Gathering routes** (`/lazy herb peacebloom`, `/lazy ore tin`, `/lazy gather`) and **fishing spots** (`/lazy fish`).
 
 ## In the game's own windows
