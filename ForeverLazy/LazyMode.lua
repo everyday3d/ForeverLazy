@@ -116,7 +116,7 @@ local function Decide()
         local s = addon.JourneyNext()
         if s then
             return { map = s.map, zx = s.zx, zy = s.zy, label = string.format("Lazy mode: %s (level %d-%d)", s.zone, s.from, s.to),
-                     reason = "nothing left to do here, time to move on to " .. s.zone, say = "nothing left to do here: on to " .. s.zone }
+                     reason = "nothing left to do here, time to move on to " .. s.zone, say = "nothing left to do here: on to " .. s.zone, trip = s.zone }
         end
     end
     return { say = "nothing to suggest right now. Take a quest, or /lrxp plan" }
@@ -124,7 +124,10 @@ end
 
 local function Now()
     local d = Decide()
-    if d.map then
+    if d.map and d.trip and addon.GoTo and addon.ModuleOn("go") then
+        Print("lazy mode: " .. d.say)
+        addon.GoTo(d.map, d.zx, d.zy, d.trip)       -- far away: plan the whole trip
+    elseif d.map then
         Waypoint(d.map, d.zx, d.zy, d.label, d.reason)
         Print("lazy mode: " .. d.say)
     elseif d.follow then

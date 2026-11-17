@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.7.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.8.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
@@ -61,6 +61,10 @@ Nothing in the addon needs RestedXP (see [RestedXP friends](#restedxp-friends-op
 `/lazy now` (or a key, a macro, or the button in the options) points the arrow at the single best next thing:
 a vendor when your bags are full or your gear is damaged, your trainer when a visit is due, your plan's next stop,
 or the next zone of your journey. Turn on **Keep going** and it picks the next one by itself when you arrive.
+
+### Take me there
+
+`/lazy go <place>` plans the whole trip: your flight points, boats and zeppelins, the Deeprun Tram, your hearthstone and walking, whichever is quickest, then the arrow follows it leg by leg. It knows where every flight master stands in Forever (from the community flight path guide) and learns which ones you have opened. Boat docks you have not taught it yet fall back to the port town's flight master.
 
 ### More guides and helpers
 
@@ -158,6 +162,7 @@ orgrimmar, undercity. A route that is not working for you can be fixed the same 
 | `/lazy flighttimes` | Flight times learned so far |
 | `/lrxp macros` `macros remove` | Make or remove the addon's macros |
 | `/lazy now` | Lazy Mode: point at the best next thing |
+| `/lazy go <place>` `go stop` | Plan and follow a whole trip |
 | `/lazy journey` `generate` `regenerate` `go <n>` | Your zone-by-zone route to 60 |
 | `/lazy craft [profession] [goal]` `craft go` `craft bank` | Crafting plan, materials, bank |
 | `/lazy herb <name>` `ore <name>` `gather` `fish` | Gathering routes and fishing spots |

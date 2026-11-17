@@ -106,19 +106,29 @@ end
 --------------------------------------------------------------------------------
 -- Flight points
 --------------------------------------------------------------------------------
+-- the flight map lists the points I have opened as reachable; the guide data gives each one's position
 local function LearnFlightPoint()
     if not (NumTaxiNodes and TaxiNodeGetType and TaxiNodeName) or not addon.ModuleOn("travel") then return end
     local fp = Store("flightPoints")
+    local added, last = 0, nil
     for i = 1, NumTaxiNodes() do
-        if TaxiNodeGetType(i) == "CURRENT" then
-            local zx, zy, map = hbd:GetPlayerZonePosition()
+        local kind = TaxiNodeGetType(i)
+        if kind == "CURRENT" or kind == "REACHABLE" then
             local name = TaxiNodeName(i)
-            if zx and name and not fp[name] then
-                fp[name] = { map = map, zx = zx, zy = zy }
-                Print("flight point learned: " .. name)
+            if name and not fp[name] then
+                local data = api.FlightPointByName and api.FlightPointByName(name)
+                if data then
+                    fp[name] = { map = data.map, zx = data.zx, zy = data.zy }
+                elseif kind == "CURRENT" then
+                    local zx, zy, map = hbd:GetPlayerZonePosition()
+                    if zx then fp[name] = { map = map, zx = zx, zy = zy } end
+                end
+                if fp[name] then added = added + 1; last = name end
             end
         end
     end
+    if added == 1 then Print("flight point learned: " .. last)
+    elseif added > 1 then Print(string.format("learned %d flight points from the flight map", added)) end
 end
 
 local function KnownFlightPoints()
@@ -130,38 +140,26 @@ local function KnownFlightPoints()
     return list
 end
 
--- flight masters I have not been to, nearest first
+-- flight points I have not opened, nearest first (the guide data lists every one)
 local function Undiscovered()
-    local T = Mod("Townsfolk")
-    local QDB = api.GetQuestie()
-    if not (T and QDB and api.QuestieReady and api.QuestieReady()) then return nil, "needs Questie loaded and ready" end
-    local ids = T.townsfolk and T.townsfolk["Flight Master"]
-    if not ids or #ids == 0 then return nil, "Questie's flight master list is still loading, try again in a minute" end
-    local known = KnownFlightPoints()
+    if not api.FlightData then return nil, "the flight point data did not load" end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if not px then return nil, "I can't read your position here" end
+    local have = {}
+    for name in pairs(Store("flightPoints")) do have[((name:match("^[^,]+")) or name):lower()] = true end
     local out = {}
-    for _, id in ipairs(ids) do
-        if QDB.IsFriendlyToPlayer(QDB.QueryNPCSingle(id, "friendlyToFaction")) then
-            local sp = {}
-            api.AddNpcs(sp, { id })
-            for _, s in ipairs(sp) do
-                if s.instance == pinst then
-                    local seen
-                    for _, k in ipairs(known) do
-                        if k.instance == s.instance and Dist(k, s) < 120 then seen = true; break end
-                    end
-                    if not seen then
-                        out[#out + 1] = { name = QDB.QueryNPCSingle(id, "name"), spawn = s, d = Dist({ x = px, y = py }, s) }
-                    end
-                end
+    for _, f in ipairs(api.FlightData()) do
+        if not have[f.name:lower()] then
+            local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(f.zx, f.zy, f.map)
+            if wx and inst == pinst then
+                out[#out + 1] = { name = f.name, d = Dist({ x = px, y = py }, { x = wx, y = wy }),
+                                  spawn = { uiMapId = f.map, zx = f.zx, zy = f.zy, x = wx, y = wy, instance = inst } }
             end
         end
     end
     table.sort(out, function(a, b) return a.d < b.d end)
     return out
 end
-
 local function GoFlightPoint(n)
     local list, err = Undiscovered()
     if not list then Print(err); return end
@@ -232,4 +230,16 @@ function addon:HandleExtraCommand(cmd, rest)
         return true
     end
     if prev then return prev(self, cmd, rest) end
+end
+
+-- used by the trip planner
+function api.KnownFlightPoints()
+    local out = {}
+    for name, f in pairs(Store("flightPoints")) do out[#out + 1] = { name = name, map = f.map, zx = f.zx, zy = f.zy } end
+    return out
+end
+
+function api.HearthPoint()
+    local h = Store("hearth")
+    if h.map then return { name = h.name, map = h.map, zx = h.zx, zy = h.zy } end
 end

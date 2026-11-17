@@ -284,3 +284,13 @@ ev:SetScript("OnEvent", function()
         end)
     end)
 end)
+
+-- used by the trip planner: the dungeon whose name contains this text
+function api.DungeonFind(text)
+    if not Build() then return nil end
+    local k = Key(text)
+    if k == "" then return nil end
+    for key, rec in pairs(byKey) do
+        if key:find(k, 1, true) and #rec.entrances > 0 then return rec end
+    end
+end

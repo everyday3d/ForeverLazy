@@ -18,6 +18,7 @@ addon.MODULES = {
     { "bag",      "Cozy Sleeping Bag guide" },
     { "zones",    "Next zone and journey" },
     { "services", "Find services and trainers (inn, repair, flight master, ...)" },
+    { "go",       "Take me there (/lazy go <place>)" },
     { "boats",    "Boats and zeppelins" },
     { "travel",   "Hearthstone and flight points" },
     { "party",    "Group features (shared quests, share plan, duo mode)" },
@@ -41,6 +42,7 @@ local COMMANDS = {
     bag = { "bag" },
     zones = { "nextzone", "journey" },
     boats = { "boat", "boats", "zeppelin" },
+    go = { "go" },
     travel = { "hearth", "home", "fp", "flightpoint", "flightpoints" },
     party = { "party", "shareplan", "acceptplan", "duo" },
     quests = { "chain", "farm" },
@@ -73,7 +75,7 @@ function addon:PlanRoute(...)
 end
 
 -- switching a module off should show straight away: hide its windows and remove its arrows
-local STOP_FLAG = { bag = "bag", boats = "boat", services = "service", travel = "hearth", quests = "farm", crafting = "craft", gather = "gather" }
+local STOP_FLAG = { bag = "bag", boats = "boat", services = "service", travel = "hearth", quests = "farm", crafting = "craft", gather = "gather", go = "go" }
 
 function addon.ModulesChanged()
     local db = DB()
@@ -105,8 +107,8 @@ end
 --------------------------------------------------------------------------------
 local PRESETS = {
     minimal = { "lazymode", "plan", "services" },
-    leveler = { "lazymode", "plan", "follow", "books", "classq", "dungeons", "bag", "zones", "services", "boats", "travel", "quests", "gather", "pet", "flight" },
-    duo     = { "lazymode", "plan", "follow", "party", "classq", "dungeons", "bag", "zones", "services", "boats", "travel", "quests", "gather", "pet", "flight" },
+    leveler = { "lazymode", "plan", "follow", "books", "classq", "dungeons", "bag", "zones", "services", "boats", "go", "travel", "quests", "gather", "pet", "flight" },
+    duo     = { "lazymode", "plan", "follow", "party", "classq", "dungeons", "bag", "zones", "services", "boats", "go", "travel", "quests", "gather", "pet", "flight" },
 }
 
 function addon.ApplyPreset(name)

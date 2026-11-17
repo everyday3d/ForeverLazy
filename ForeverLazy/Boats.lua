@@ -27,6 +27,8 @@ local NODES = {
     gromgol    = { name = "Grom'gol",            zones = { "Stranglethorn Vale" },              words = { "grom'gol", "gromgol", "grom" } },
     orgrimmar  = { name = "Orgrimmar zeppelin tower", zones = { "Durotar" },                    words = { "orgrimmar", "durotar" } },
     undercity  = { name = "Undercity zeppelin tower", zones = { "Tirisfal Glades" },            words = { "undercity", "tirisfal" } },
+    steamwheedle = { name = "Steamwheedle Port", zones = { "Tanaris" },                         words = { "steamwheedle", "tanaris" } },
+    powderfuse = { name = "Powderfuse Port",     zones = { "The Riverglades" },                 words = { "powderfuse", "riverglades" } },
 }
 
 -- from, to, boat, side (A = Alliance, H = Horde, nil = anyone), oneWay
@@ -34,9 +36,10 @@ local EDGES = {
     { "stormwind", "auberdine", "the Stormwind Harbour boat", "A" },
     { "auberdine", "rutheran",  "The Moonspray", "A" },
     { "menethil",  "theramore", "The Lady Mehley", "A" },
-    { "auberdine", "menethil",  "the Auberdine-Menethil-Southshore boat", "A", true },
-    { "menethil",  "southshore", "the Auberdine-Menethil-Southshore boat", "A", true },
-    { "southshore", "auberdine", "the Auberdine-Menethil-Southshore boat", "A", true },
+    { "auberdine", "menethil",  "the Menethil-Auberdine boat", "A" },
+    { "menethil",  "southshore", "the Menethil-Southshore boat", "A", true },
+    { "southshore", "auberdine", "the Southshore-Auberdine boat", "A", true },
+    { "steamwheedle", "powderfuse", "the Steamwheedle Port boat" },
     { "ratchet",   "bootybay",  "The Maiden's Fancy" },
     { "orgrimmar", "gromgol",   "The Iron Eagle zeppelin", "H" },
     { "undercity", "gromgol",   "the Undercity zeppelin", "H" },
@@ -166,6 +169,13 @@ local function MapIdByName(name)
     return found
 end
 
+-- the flight point name of each port town, used until its dock is taught
+local PORT_TOWN = {
+    stormwind = "Stormwind", auberdine = "Auberdine", rutheran = "Rut'theran Village", menethil = "Menethil Harbor",
+    theramore = "Theramore", southshore = "Southshore", ratchet = "Ratchet", bootybay = "Booty Bay",
+    gromgol = "Grom'gol", orgrimmar = "Orgrimmar", undercity = "Undercity",
+}
+
 local function DockFor(node, to)
     local d = Docks()
     local mine = d[node .. ">" .. (to or "")] or d[node]
@@ -175,7 +185,11 @@ local function DockFor(node, to)
         local map = MapIdByName(k.zone)
         if map then return { map = map, zx = k.x / 100, zy = k.y / 100 } end
     end
-    return seeds[node] or (addon.CommunityDock and addon.CommunityDock(node, to))
+    local shared = seeds[node] or (addon.CommunityDock and addon.CommunityDock(node, to))
+    if shared then return shared end
+    -- not taught yet: the town's flight master is by the harbour, close enough to head for
+    local fp = PORT_TOWN[node] and api.FlightPointByName and api.FlightPointByName(PORT_TOWN[node])
+    if fp then return { map = fp.map, zx = fp.zx, zy = fp.zy, approx = true } end
 end
 
 --------------------------------------------------------------------------------
@@ -219,6 +233,8 @@ local function Show()
     local fromName, toName = NODES[from].name, NODES[to].name
     local boat = trip.boats[trip.idx]
     local detail = string.format("Board %s to %s", boat, toName)
+    local approxDock = DockFor(from, to)
+    if approxDock and approxDock.approx then detail = detail .. " (head for the harbour: I do not know the exact dock yet, /lazy boat mark teaches me)" end
     local dock = DockFor(from, to)
     if dock then
         PlaceStop(dock, "Boat to " .. toName .. ": " .. fromName .. " dock", detail)
@@ -337,4 +353,27 @@ function addon:HandleExtraCommand(cmd, rest)
         StartTrip(fromKey, toKey)
     end
     return true
+end
+
+-- used by the trip planner
+function api.BoatPorts()
+    local list = {}
+    for key, n in pairs(NODES) do list[#list + 1] = { key = key, name = n.name, words = n.words } end
+    return list
+end
+
+function api.BoatLinks()
+    local out = {}
+    for _, e in ipairs(EDGES) do
+        if not e[4] or e[4] == Side() then
+            local a, b = DockFor(e[1], e[2]), DockFor(e[2], e[1]) or DockFor(e[2], nil)
+            if a and b then
+                local from = { map = a.map, zx = a.zx, zy = a.zy, name = NODES[e[1]].name .. " dock" }
+                local to = { map = b.map, zx = b.zx, zy = b.zy, name = NODES[e[2]].name .. " dock" }
+                out[#out + 1] = { boat = e[3], from = from, to = to }
+                if not e[5] then out[#out + 1] = { boat = e[3], from = to, to = from } end
+            end
+        end
+    end
+    return out
 end
