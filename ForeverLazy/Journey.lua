@@ -158,6 +158,15 @@ function addon.JourneyGenerate() Generate(false) end
 function addon.JourneyRegenerate() Generate(true) end
 function addon.JourneyShow() if Saved() then Show() else Generate(false) end end
 
+-- every stretch of the journey, made if I have none yet (used by the guide window)
+function addon.JourneySegments()
+    if not Segments() then
+        local segs = Build()
+        if segs and #segs > 0 then Save(segs) end
+    end
+    return Segments()
+end
+
 -- used by Lazy Mode: the stretch I should be in now (made if I have none yet)
 function addon.JourneyNext()
     if not Segments() then

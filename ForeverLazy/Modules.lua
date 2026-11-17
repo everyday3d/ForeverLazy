@@ -35,13 +35,13 @@ for _, m in ipairs(addon.MODULES) do LABEL[m[1]] = m[2] end
 -- which command belongs to which module
 local COMMANDS = {
     lazymode = { "now" },
-    plan = { "plan", "route!", "window", "list", "stops", "skip", "why", "own" },
+    plan = { "plan", "route!", "window", "list", "stops", "skip", "why", "own", "xpmap", "heat", "hotspots" },
     follow = { "follow" },
     books = { "books", "book", "arrow" },
     classq = { "class" },
     dungeons = { "dungeons", "dungeon" },
     bag = { "bag" },
-    zones = { "nextzone", "journey" },
+    zones = { "nextzone", "journey", "guide" },
     boats = { "boat", "boats", "zeppelin" },
     go = { "go" },
     travel = { "hearth", "home", "fp", "flightpoint", "flightpoints" },
@@ -162,11 +162,12 @@ function addon.CheckInstall()
         { "class quests", api.ClassGivers }, { "dungeon entrances", api.DungeonEntrance }, { "duo mode", addon.DuoRole },
         { "quest items", addon.RefreshQuestItems }, { "crafting", addon.CraftNeeds }, { "dock sharing", addon.NetShareDock },
         { "next zone", api.NextZone }, { "follow arrow", addon.FollowMember },
+        { "levelling guide (Guide.lua)", addon.ToggleGuide }, { "XP hot spots", addon.XPHotSpots }, { "arrow choice", addon.ArrowTarget },
         { "menu and buttons (UI.lua)", addon.ShowMenu }, { "tour and settings sharing (Help.lua)", addon.StartTour },
     }
     local FILES = { "ForeverLazy.lua", "Options.lua", "Extras.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
         "ClassQuests.lua", "Boats.lua", "Services.lua", "FlightData.lua", "Travel.lua", "Party.lua", "Quests.lua", "PlanWindow.lua", "Journey.lua",
-        "Community.lua", "Crafting.lua", "Gather.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Modules.lua" }
+        "Community.lua", "Crafting.lua", "Gather.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Modules.lua" }
     for _, f in ipairs(FILES) do
         check("file loaded: " .. f, addon.loaded and addon.loaded[f], "this file stopped on a Lua error while loading. Turn errors on with /console scriptErrors 1, then /reload")
     end

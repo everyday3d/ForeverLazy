@@ -354,6 +354,52 @@ function addon.SimpleTarget()
     return nil
 end
 
+-- The one main arrow points at whatever the player picked in its right-click menu (db.arrowSource):
+--   auto     what is next: a plan or trip stop, else my own quest (the default)
+--   plan     my plan or trip stop
+--   mine     my nearest quest objective
+--   partner  my partner, the friend I follow, or a group member
+--   rxp      my friend's quest target (RestedXP)
+-- When the picked source has nothing to point at yet, it falls back to auto so the arrow never just vanishes.
+local function PartnerTarget()
+    local fp = addon.FollowPosition and addon.FollowPosition()
+    if fp and addon.ModuleOn("follow") and GetTime() - fp.t < 3 then
+        return { instance = fp.instance, x = fp.x, y = fp.y, name = "Your partner" }
+    end
+    local lk = state.lastKnown
+    if lk and GetTime() - lk.t < 3 then
+        return { instance = lk.instance, x = lk.x, y = lk.y, name = state.friend or "Your friend" }
+    end
+    for i = 1, 4 do
+        local u = "party" .. i
+        if UnitExists(u) and not UnitIsUnit(u, "player") then
+            local x, y, inst = hbd:GetUnitWorldPosition(u)
+            if x then return { instance = inst, x = x, y = y, name = UnitName(u) or "Group member" } end
+        end
+    end
+    return nil
+end
+
+function addon.ArrowTarget()
+    local db = DB()
+    if not db then return nil end
+    local src = db.arrowSource or "auto"
+    if src == "plan" then
+        local wp = db.waypoints and db.waypoints[1]
+        if wp then return wp end
+    elseif src == "mine" then
+        if mine.chosen then
+            return { instance = mine.chosen.spawn.instance, x = mine.chosen.spawn.x, y = mine.chosen.spawn.y, name = mine.chosen.label }
+        end
+    elseif src == "rxp" then
+        local c = state.chosen and state.chosen[1]
+        if c then return { instance = c.spawn.instance, x = c.spawn.x, y = c.spawn.y, name = c.label } end
+    elseif src == "partner" then
+        local pt = PartnerTarget()
+        if pt then return pt end
+    end
+    return (db.waypoints and db.waypoints[1]) or addon.SimpleTarget()
+end
 -- duo mode: my partner is on the compass as an F, even when the compass bar and the arrows are off
 local function DuoPartnerSource()
     local db = DB()
@@ -786,6 +832,65 @@ local function CollectGivers(zoneId, pinst, from)
     return kept
 end
 
+-- XP hot spots on a zone map: where the quests worth doing for my level are, weighted by the XP they give.
+-- Returns a list of { zx, zy, xp, name } (positions as fractions of the zone map), or nil when Questie is not ready.
+-- Quests I hold count where their objectives are, quests I can pick up count where their giver stands.
+local hotCache = {}
+function addon.XPHotSpots(mapId)
+    local QDB = api.GetQuestie()
+    if not (mapId and QDB and api.QuestieReady and api.QuestieReady()) then return nil end
+    local cached = hotCache[mapId]
+    if cached and GetTime() - cached.at < 8 then return cached.list end
+    local out = {}
+    local function add(spawn, xp, name, share)
+        if spawn and spawn.uiMapId == mapId and spawn.zx and xp > 0 then
+            out[#out + 1] = { zx = spawn.zx, zy = spawn.zy, xp = xp * (share or 1), name = name }
+        end
+    end
+    -- quests I hold
+    local okLog, log = pcall(ReadQuestLog)
+    if okLog and type(log) == "table" then
+        for _, q in ipairs(log) do
+            local ok, g = pcall(BuildGroup, q)
+            if ok and g and g.spawns and Wanted(g) and not q.complete then
+                local xp = QuestXPNow(q.id)
+                if xp <= 0 and q.level and q.level > 0 then xp = 40 + 10 * q.level end
+                local here = {}
+                for _, s in ipairs(g.spawns) do if s.uiMapId == mapId then here[#here + 1] = s end end
+                for _, s in ipairs(here) do add(s, xp, q.title, 1 / #here) end
+            end
+        end
+    end
+    -- quests I can pick up
+    local ql = _G.QuestieLoader
+    local okAQ, AQ = pcall(function() return ql and ql:ImportModule("AvailableQuests") end)
+    local avail = okAQ and AQ and AQ.__availableQuests
+    if type(avail) == "table" then
+        local mylvl = UnitLevel("player") or 1
+        for id in pairs(avail) do
+            local level = QDB.QueryQuestSingle(id, "questLevel")
+            local need = QDB.QueryQuestSingle(id, "requiredLevel") or 0
+            local g = { id = id, level = level, complete = false, grey = IsGrey(QDB, level) }
+            g.tier = Tier(level, g.grey)
+            if need <= mylvl and not g.grey and Wanted(g) then
+                local by = QDB.QueryQuestSingle(id, "startedBy")
+                if by then
+                    local sp, here = {}, {}
+                    api.AddNpcs(sp, by[1]); api.AddObjects(sp, by[2])
+                    for _, s in ipairs(sp) do if s.uiMapId == mapId then here[#here + 1] = s end end
+                    if #here > 0 then
+                        local xp = QuestXPNow(id)
+                        if xp <= 0 and level and level > 0 then xp = 40 + 10 * level end
+                        local name = QDB.QueryQuestSingle(id, "name") or ("quest " .. id)
+                        for _, s in ipairs(here) do add(s, xp, name, 1 / #here) end
+                    end
+                end
+            end
+        end
+    end
+    hotCache[mapId] = { at = GetTime(), list = out }
+    return out
+end
 -- Is there anything worth planning in this zone? true / false, or nil when Questie cannot say yet.
 -- Quests I already hold here count, and so do quests I can pick up here that are not red or grey.
 function addon.ZoneWorthPlanning(zoneId)

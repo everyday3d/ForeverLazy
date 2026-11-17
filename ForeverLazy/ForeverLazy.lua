@@ -886,7 +886,7 @@ end
 local wpArrived
 local function UpdateWaypointArrow(show)
     local f = arrows.waypoint
-    local wp = db.waypoints[1] or (db.simpleArrows ~= false and addon.SimpleTarget and addon.SimpleTarget()) or nil
+    local wp = (addon.ArrowTarget and addon.ArrowTarget()) or db.waypoints[1] or (db.simpleArrows ~= false and addon.SimpleTarget and addon.SimpleTarget()) or nil
     if not show or not wp or db.waypointArrowOff then f:Hide(); return end
     f:Show()
     f:SetAlpha(db.alpha)

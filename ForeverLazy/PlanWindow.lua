@@ -463,9 +463,132 @@ mmTick:SetScript("OnUpdate", function(_, dt)
     mmAcc = 0
     pcall(UpdateMinimapRoute)
 end)
+--------------------------------------------------------------------------------
+-- XP hot spots: a heat layer on the zone map showing where the quests worth doing for my level are
+--------------------------------------------------------------------------------
+local GX, GY = 40, 27
+local heatFrame, heatCells, heatLabel = nil, {}, nil
+
+local function HeatColor(t)
+    -- low: cool blue-green, middle: yellow, high: red
+    if t < 0.5 then
+        local k = t / 0.5
+        return 0.2 + 0.8 * k, 0.6 + 0.25 * k, 1 - 0.9 * k
+    end
+    local k = (t - 0.5) / 0.5
+    return 1, 0.85 - 0.65 * k, 0.1
+end
+
+local function HideHeat()
+    if heatFrame then heatFrame:Hide() end
+end
+
+function addon.DrawXPHeat()
+    local db = DB()
+    local wm = _G.WorldMapFrame
+    if not db or not db.xpHeat or not addon.ModuleOn("plan") or not (wm and wm:IsShown()) then return HideHeat() end
+    local canvas = Canvas()
+    local mapId = wm.GetMapID and wm:GetMapID()
+    if not (canvas and mapId and canvas.GetWidth) then return HideHeat() end
+    if not heatFrame then
+        heatFrame = CreateFrame("Frame", nil, canvas)
+        heatFrame:SetAllPoints(canvas)
+        heatLabel = CreateFrame("Frame", nil, heatFrame)
+        heatLabel:SetSize(10, 10)
+        heatLabel.bg = heatLabel:CreateTexture(nil, "BACKGROUND")
+        heatLabel.bg:SetAllPoints(); heatLabel.bg:SetColorTexture(0, 0, 0, 0.7)
+        heatLabel.text = heatLabel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        heatLabel.text:SetPoint("CENTER")
+    end
+    heatFrame:SetParent(canvas)
+    heatFrame:SetFrameLevel(canvas:GetFrameLevel() + 1)
+    heatFrame:Show()
+    local w, h = canvas:GetWidth(), canvas:GetHeight()
+    local cw, ch = w / GX, h / GY
+    local list = addon.XPHotSpots and addon.XPHotSpots(mapId)
+    local function label(text)
+        heatLabel.text:SetText(text)
+        heatLabel:SetSize(heatLabel.text:GetStringWidth() + 24, 26)
+        heatLabel:ClearAllPoints()
+        heatLabel:SetPoint("TOP", heatFrame, "TOP", 0, -8)
+        heatLabel:Show()
+    end
+    for _, c in ipairs(heatCells) do c:Hide() end
+    if list == nil then return label("XP hot spots: waiting for Questie") end
+    if #list == 0 then return label("XP hot spots: nothing worth doing here for your level") end
+
+    -- spread each quest's XP over the cells around it
+    local heat, top, topCell = {}, 0, nil
+    for _, p in ipairs(list) do
+        local cx, cy = p.zx * GX, p.zy * GY
+        for gx = math.max(0, math.floor(cx - 3)), math.min(GX - 1, math.ceil(cx + 3)) do
+            for gy = math.max(0, math.floor(cy - 3)), math.min(GY - 1, math.ceil(cy + 3)) do
+                local d2 = (gx + 0.5 - cx) ^ 2 + (gy + 0.5 - cy) ^ 2
+                local v = p.xp * math.exp(-d2 / 2.4)
+                local i = gx + gy * GX + 1
+                heat[i] = (heat[i] or 0) + v
+                if heat[i] > top then top, topCell = heat[i], { gx, gy } end
+            end
+        end
+    end
+    local n = 0
+    for i, v in pairs(heat) do
+        local t = v / top
+        if t > 0.15 then
+            n = n + 1
+            local c = heatCells[n]
+            if not c then
+                c = heatFrame:CreateTexture(nil, "ARTWORK")
+                heatCells[n] = c
+            end
+            local gx, gy = (i - 1) % GX, math.floor((i - 1) / GX)
+            local r, g, b = HeatColor(t)
+            c:ClearAllPoints()
+            c:SetPoint("TOPLEFT", heatFrame, "TOPLEFT", gx * cw, -gy * ch)
+            c:SetSize(cw, ch)
+            c:SetColorTexture(r, g, b, 0.04 + 0.16 * t)
+            c:Show()
+        end
+    end
+    -- the hottest spot in words
+    local sum, count, names = 0, 0, {}
+    for _, p in ipairs(list) do
+        if math.abs(p.zx * GX - (topCell[1] + 0.5)) <= 4 and math.abs(p.zy * GY - (topCell[2] + 0.5)) <= 4 then
+            sum = sum + p.xp; count = count + 1
+            if #names < 3 then names[#names + 1] = p.name end
+        end
+    end
+    label(string.format("Hottest spot: about %d XP in %d quest%s  (%s)", sum, count, count == 1 and "" or "s", table.concat(names, ", ")))
+end
+
+local heatEv = CreateFrame("Frame")
+pcall(heatEv.RegisterEvent, heatEv, "PLAYER_LOGIN")
+heatEv:SetScript("OnEvent", function()
+    if not C_Timer then return end
+    C_Timer.After(3.5, function()
+        local wm = _G.WorldMapFrame
+        if not wm then return end
+        wm:HookScript("OnShow", function() addon.DrawXPHeat() end)
+        if hooksecurefunc and wm.OnMapChanged then pcall(hooksecurefunc, wm, "OnMapChanged", function() addon.DrawXPHeat() end) end
+        local t = 0
+        wm:HookScript("OnUpdate", function(_, dt)
+            t = t + dt
+            if t > 2 then t = 0; addon.DrawXPHeat() end
+        end)
+    end)
+end)
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     local word = (cmd or ""):lower()
+    if word == "xpmap" or word == "heat" or word == "hotspots" then
+        local db = DB()
+        local a = (rest or ""):lower()
+        if a == "on" then db.xpHeat = true elseif a == "off" then db.xpHeat = false else db.xpHeat = not db.xpHeat end
+        Print("XP hot spots on the world map " .. (db.xpHeat and "on (open the map)" or "off"))
+        if addon.DrawXPHeat then addon.DrawXPHeat() end
+        if addon.RefreshOptions then addon.RefreshOptions() end
+        return true
+    end
     if word == "window" or word == "list" or word == "stops" then
         addon:TogglePlanWindow()
         return true

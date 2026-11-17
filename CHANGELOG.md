@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0
+- **The levelling guide** (`/lazy guide`): your journey to 60 in one window, with where you are, the quests worth doing in each stretch, the dungeons that fit, and a Take me there button per stretch. The whole window scales for the couch and TV (A-, A+, TV buttons, `/lazy guide tv`, or a slider in the options).
+- **XP hot spots**: an optional, light heat layer on the zone map (the XP button, or `/lazy xpmap`) showing where the quests worth doing for your level are, with the hottest spot spelled out.
+- **One arrow, your choice**: right-click the arrow to pick what it points at: what is next (automatic), my plan or trip stop, my nearest quest, my partner or friend, or my friend's quest target. It switches at once, and the choice is kept.
 ## 0.8.9
 - **Hunter pets get a scream**: a huge red, shaking FEED ME!!! across the screen when your pet needs feeding (an option turns it off).
 - Your own sound for the pet reminder: put `feedme.ogg` or `feedme.mp3` in `ForeverLazy/media/custom/` and it plays instead of the raid warning. That folder is never part of the addon download.

@@ -164,6 +164,7 @@ end
 local function JourneyMenu()
     return {
         Back(),
+        { text = "Open the levelling guide", fn = function() Cmd("guide") end },
         { text = "Show my journey", fn = function() Cmd("journey") end },
         { text = "Generate it", fn = function() Cmd("journey", "generate") end },
         { text = "Regenerate from my level", fn = function() Cmd("journey", "regenerate") end },
@@ -204,6 +205,36 @@ local function SettingsMenu()
     }
 end
 
+-- Which target the one main arrow follows. The pick is kept, and the arrow switches at once.
+local ARROW_SOURCES = {
+    { "auto",    "What is next (automatic)" },
+    { "plan",    "My plan or trip stop" },
+    { "mine",    "My nearest quest objective" },
+    { "partner", "My partner or friend" },
+    { "rxp",     "My friend's quest target" },
+}
+local function ArrowLabel(key)
+    for _, s in ipairs(ARROW_SOURCES) do if s[1] == key then return s[2] end end
+    return ARROW_SOURCES[1][2]
+end
+local function SetArrowSource(key)
+    local db = DB()
+    db.arrowSource = key
+    if key == "mine" then db.ownQuests = true end          -- needed to work out my nearest objective
+    if key == "rxp" then db.rxpListen = true end           -- needed to hear my friend's target
+    Print("the arrow now points at: " .. ArrowLabel(key))
+    if addon.RefreshOptions then addon.RefreshOptions() end
+end
+local function ArrowChoices(withBack)
+    local cur = DB().arrowSource or "auto"
+    local list = {}
+    if withBack then list[#list + 1] = { text = "< Back", fn = function() addon:OpenMenu() end } end
+    for _, s in ipairs(ARROW_SOURCES) do
+        local key = s[1]
+        list[#list + 1] = { text = (key == cur and "|cff55ff55> |r" or "   ") .. s[2], fn = function() SetArrowSource(key) end }
+    end
+    return list
+end
 -- right-click on the arrow: the services you are most likely to want, one click each.
 -- Only the ones that exist on this continent and are within walking distance are listed.
 -- out in the open world only services within a walk count; in a city every service in the city is offered
@@ -256,7 +287,9 @@ function addon:OpenServicesMenu()
         list[#list + 1] = { text = "A profession trainer...", fn = function() Ask("Which profession? (cooking, mining, ...)", function(x) Cmd(x) end) end }
         return list
     end
-    local items = {}
+    local items = { { text = "Point this arrow at:", header = true } }
+    for _, it in ipairs(ArrowChoices(false)) do items[#items + 1] = it end
+    items[#items + 1] = { text = " ", header = true }
     if addon.ModuleOn("services") then items[#items + 1] = { text = "Services near me", sub = ServicesList } end
     if wp and wp.label and addon.OpenSkipMenu then
         items[#items + 1] = { text = "Skip this quest stop, or do it next...", fn = function() addon:OpenSkipMenu() end }
@@ -291,6 +324,9 @@ function addon:OpenMenu()
         { text = "Do the next thing (Lazy Mode)", fn = function() Cmd("now") end, module = "lazymode" },
         { text = "Plan my route", fn = function() addon:PlanRoute() end, module = "plan" },
         { text = "Plan window", fn = function() Cmd("window") end, module = "plan" },
+        { text = "Levelling guide", fn = function() Cmd("guide") end, module = "zones" },
+        { text = "XP hot spots on the map", fn = function() Cmd("xpmap") end, module = "plan" },
+        { text = "What the arrow points at", sub = function() return ArrowChoices(true) end },
         { text = "Go somewhere", sub = GoMenu },
         { text = "Boats and zeppelins...", fn = function() Ask("Where to by boat? (darnassus, ratchet, ...)", function(t) Cmd("boat", t) end) end, module = "boats" },
         { text = "Mark this dock (stand on it)", fn = function() Cmd("boat", "mark") end, module = "boats" },
@@ -384,6 +420,9 @@ local function BuildMap()
     local btn = MakeButton(wm, "Lazy", 60, function() addon:OpenMenu() end)
     btn:SetPoint("LEFT", box, "RIGHT", 6, 0)
     btn:SetFrameStrata("HIGH")
+    local xpb = MakeButton(wm, "XP", 40, function() Cmd("xpmap") end)
+    xpb:SetPoint("RIGHT", box, "LEFT", -6, 0)
+    xpb:SetFrameStrata("HIGH")
 end
 
 --------------------------------------------------------------------------------

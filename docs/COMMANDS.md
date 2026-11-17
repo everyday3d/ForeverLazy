@@ -56,3 +56,5 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy macros` `macros remove` | Make or remove the addon's macros |
 | `/lazy toggle` `both` `quest` `friend` `off` | RestedXP friend arrows |
 | `/lazy why` | Explain where the plan's arrow comes from (for bug reports) |
+| `/lazy guide` `bigger` `smaller` `tv` `normal` | The levelling guide window and its text size (couch and TV) |
+| `/lazy xpmap` | XP hot spots on the world map, on or off |

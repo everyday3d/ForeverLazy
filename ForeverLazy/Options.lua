@@ -398,6 +398,10 @@ local function BuildControls(parent)
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
     Check(content, "Draw my plan's route on the world map", 16,
         function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
+    Slider(content, "Levelling guide text size (for the couch and TV, 1.8 is big)", 0.8, 2.6, 0.1, "%.1f", function() return DB().guideScale or 1 end,
+        function(v) DB().guideScale = v; if _G.ForeverLazy_Guide and _G.ForeverLazy_Guide:IsShown() then _G.ForeverLazy_Guide:SetScale(v) end end)
+    Check(content, "Show XP hot spots on the world map (where the quests worth doing for my level are)", 16,
+        function() return DB().xpHeat == true end, function(v) DB().xpHeat = v; if addon.DrawXPHeat then addon.DrawXPHeat() end end)
     Check(content, "Draw my route on the minimap (numbered stops joined in order)", 16,
         function() return DB().minimapLine ~= false end, function(v) DB().minimapLine = v end)
     Check(content, "Offer to plan a new zone once I have stayed in it a while", 16,
