@@ -39,6 +39,18 @@ No spreadsheets. No second monitor. No typing, unless you want to.
   <i>Your route drawn on the world map, with a "Go to..." box and a Lazy button built in.</i>
 </p>
 
+## New: it learns from how you play
+
+- **The Coach** looks at the quests here, the best mob to grind and the other zones, ranks them by **your measured XP per
+  hour**, and tells you the best thing to do right now. Each line says what it rests on, and a button sets it up.
+- **The Hive** (off until you switch it on) measures your real pace, drop rates, quest times and where quest objectives are
+  really done. Turn it on to share those numbers with other players who have it on, so a new player starts with real data,
+  rare spawns show up as pins on the map, and the planner stops trusting spawn data made for a different server.
+  It only ever sends ids and numbers, never your name. [How it works and what it sends](docs/HIVE.md).
+- **Far-off quests use flights by themselves**: the arrow points at the flight master and says where to fly.
+- **The plan finishes an area before handing in**, unless a hand-in opens the next quest of a chain.
+- **A levelling guide** for your whole journey to 60, with text that scales for the couch and TV.
+
 ## What you get
 
 | | |
