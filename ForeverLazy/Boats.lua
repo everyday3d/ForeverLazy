@@ -288,6 +288,12 @@ function addon:HandleExtraCommand(cmd, rest)
         ClearStop()
         Print("boat trip cancelled")
     elseif low == "list" or low == "" then
+        if low == "" then
+            Print("|cffffd100/lazy boat <where>|r  route and arrow to the dock, for example /lazy boat darnassus")
+            Print("|cffffd100/lazy boat <from> to <where>|r  name both ends, for example /lazy boat stormwind to darnassus")
+            Print("|cffffd100Adding a dock:|r stand on the dock where you board, then type |cffffd100/lazy boat mark <port>|r, for example /lazy boat mark menethil. I remember it for all your characters.")
+            Print("|cffffd100/lazy boat list|r shows the docks you taught me, |cffffd100/lazy boat stop|r cancels a trip")
+        end
         Print("ports: " .. (function()
             local t = {}
             for _, n in pairs(NODES) do t[#t + 1] = n.name end
