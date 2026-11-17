@@ -1,11 +1,11 @@
-﻿-- Lazy RestedXP Tracker
+-- Forever Lazy
 -- Listens for a party member's RestedXP "active step" broadcast (addon channel RXPGComms)
 -- and points arrows at the quest / kill / collect / NPC location (via the Questie database)
 -- and at the party member who sent the step.  RestedXP does NOT need to be installed on this client.
 
 local ADDON, ns = ...
 local PREFIX = "RXPGComms"
-local MEDIA = "Interface\\AddOns\\LazyRestedXPTracker\\media\\"
+local MEDIA = "Interface\\AddOns\\ForeverLazy\\media\\"
 
 local LibStub = _G.LibStub
 local AceSerializer = LibStub("AceSerializer-3.0")
@@ -19,7 +19,7 @@ LibStub("AceComm-3.0"):Embed(addon)
 AceSerializer:Embed(addon)
 
 -- Binding labels
-_G.BINDING_HEADER_LRXPT = "Lazy RestedXP Tracker"
+_G.BINDING_HEADER_LRXPT = "Forever Lazy"
 _G.BINDING_NAME_LRXPT_CYCLE = "Cycle arrow mode"
 _G.BINDING_NAME_LRXPT_OPTIONS = "Open options"
 _G.BINDING_NAME_LRXPT_PANEL = "Show / hide step panel"
@@ -51,7 +51,8 @@ local DEFAULTS = {
     hideCombat = false,
     hideResting = false,
     hideTaxi = true,
-    showPanel = true,
+    showPanel = false,        -- only useful with a RestedXP friend
+    rxpListen = false,        -- RestedXP is optional: off until switched on in the options
     panelScale = 1,
     alertChat = true,
     alertSound = false,
@@ -73,7 +74,7 @@ local DEFAULTS = {
 }
 addon.DEFAULTS = DEFAULTS
 
-local function Print(msg) print("|cff33ccffLazyRestedXPTracker:|r " .. tostring(msg)) end
+local function Print(msg) print("|cff33ccffForeverLazy:|r " .. tostring(msg)) end
 addon.Print = Print
 
 local function Strip(s)
@@ -579,6 +580,7 @@ end
 
 function addon:OnComm(prefix, message, distribution, sender)
     if prefix ~= PREFIX then return end
+    if db and db.rxpListen == false then return end       -- RestedXP is optional: switched off in the options
     if ShortName(sender) == ShortName(UnitName("player")) then return end
     state.rawCount = (state.rawCount or 0) + 1
     local ok, obj = self:Deserialize(message)
@@ -916,12 +918,12 @@ driver:SetScript("OnUpdate", function(_, dt)
         recompute = 0
         if #state.groups > 0 then addon:Recompute() end
     end
-    local show = db.mode ~= "off" and not ShouldHide()
+    local show = db.mode ~= "off" and not ShouldHide() and db.rxpListen ~= false
     UpdateQuestArrows(show)
     UpdateFriendArrow(show)
     UpdateWaypointArrow(not ShouldHide())
     if addon.panel then
-        addon.panel:SetShown(db.showPanel and state.stepText ~= nil and not ShouldHide())
+        addon.panel:SetShown(db.showPanel and state.stepText ~= nil and not ShouldHide() and db.rxpListen ~= false)
     end
 end)
 
@@ -1029,7 +1031,7 @@ local function MakeMinimapButton()
     mmb:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
     mmb:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Lazy RestedXP Tracker")
+        GameTooltip:AddLine("Forever Lazy")
         GameTooltip:AddLine("Left-click: options", 1, 1, 1)
         GameTooltip:AddLine("Right-click: cycle arrow mode (" .. db.mode .. ")", 1, 1, 1)
         GameTooltip:AddLine("Drag: move button", 1, 1, 1)
@@ -1204,6 +1206,10 @@ init:SetScript("OnEvent", function(_, event)
         C_Timer.After(5, BuildIndex)
     elseif event == "GROUP_ROSTER_UPDATE" then
         if state.friend and not FindUnit(state.friend) then state.friend = nil end
+        if db.followName and not FindUnit(db.followName) then
+            Print(db.followName .. " is no longer in your group, the follow arrow is off")
+            db.followName = nil
+        end
     end
 end)
 
@@ -1219,6 +1225,8 @@ ns.api = {
 }
 
 SLASH_LAZYRXPT1 = "/lrxp"
+SLASH_LAZYRXPT2 = "/forever"
+SLASH_LAZYRXPT3 = "/lazy"
 SlashCmdList["LAZYRXPT"] = function(msg)
     msg = (msg or ""):gsub("^%s+", ""):gsub("%s+$", "")
     local cmd, rest = msg:match("^(%S+)%s*(.*)$")

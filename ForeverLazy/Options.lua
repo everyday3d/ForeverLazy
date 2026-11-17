@@ -1,8 +1,8 @@
--- Options panel for Lazy RestedXP Tracker
+-- Options panel for Forever Lazy
 local ADDON, ns = ...
 local addon = ns.addon
 
-local TITLE = "Lazy RestedXP Tracker"
+local TITLE = "Forever Lazy"
 local panel, standalone, category
 local built = false
 local refreshers = {}
@@ -202,7 +202,7 @@ local function BuildControls(parent)
     local t = content:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     t:SetPoint("TOPLEFT", 16, y); t:SetText(TITLE)
     y = y - 30
-    local intro = Label(content, "Listens to a friend's RestedXP step and points arrows at the quest and at them.")
+    local intro = Label(content, "Never think about where to go next: arrows, a quest route planner, guides and collections.")
     y = y - 24
 
     sections, cur = {}, nil
@@ -218,18 +218,14 @@ local function BuildControls(parent)
 
     ----------------------------------------------------------------- Arrows
     Header(content, "Arrows")
-    Radio(content, "Arrows shown:", "mode", {
-        { "both", "Quest + friend" }, { "quest", "Quest only" }, { "friend", "Friend only" }, { "off", "Off" } })
     Radio(content, "Arrow style:", "style", {
         { "minimap", "Classic" }, { "chevron", "Chevron" }, { "thick", "Thick" } })
-    ColorRow(content, "Quest arrow color", "colorQuest")
-    ColorRow(content, "Friend arrow color", "colorFriend")
+    ColorRow(content, "Route plan arrow color", "colorWaypoint")
+    ColorRow(content, "My quests arrow color", "colorMine")
     Slider(content, "Arrow size", 0.5, 3, 0.1, "%.1f", function() return DB().scale end,
         function(v) DB().scale = v; Changed() end)
     Slider(content, "Arrow opacity", 0.2, 1, 0.05, "%.2f", function() return DB().alpha end,
         function(v) DB().alpha = v; Changed() end)
-    Slider(content, "Extra quest arrows (nearest other targets)", 0, 2, 1, "%d", function() return DB().extraTargets end,
-        function(v) DB().extraTargets = v end)
     Slider(content, "Count as arrived within (yards)", 3, 40, 1, "%d", function() return DB().arrival end,
         function(v) DB().arrival = v end)
     Check(content, "Lock positions (uncheck to drag arrows and panel)", 16,
@@ -242,19 +238,8 @@ local function BuildControls(parent)
     Check(content, "Show distance", 16, function() return DB().showDistance end, function(v) DB().showDistance = v end)
     Radio(content, "Distance units:", "units", { { "yd", "Yards" }, { "m", "Meters" }, { "steps", "Steps" } })
 
-    ------------------------------------------------------------- Step panel
-    Header(content, "Step panel")
-    Check(content, "Show friend's current step in a box", 16,
-        function() return DB().showPanel end, function(v) DB().showPanel = v end)
-    Slider(content, "Panel size", 0.5, 2, 0.1, "%.1f", function() return DB().panelScale end,
-        function(v) DB().panelScale = v; Changed() end)
-
     ---------------------------------------------------------------- Alerts
     Header(content, "Alerts")
-    Check(content, "Chat message when friend's step changes", 16,
-        function() return DB().alertChat end, function(v) DB().alertChat = v end)
-    Check(content, "Sound when friend's step changes", 16,
-        function() return DB().alertSound end, function(v) DB().alertSound = v end)
     Check(content, "Sound when I arrive at the quest spot", 16,
         function() return DB().arrivalSound end, function(v) DB().arrivalSound = v end)
 
@@ -271,15 +256,33 @@ local function BuildControls(parent)
     Check(content, "When I am a ghost, point the arrow at my corpse (other arrows hide)", 16,
         function() return DB().ghostArrow ~= false end, function(v) DB().ghostArrow = v end)
 
-    Header(content, "Friend tracking")
-    Check(content, "Keep pointing at friend's last seen spot when too far away", 16,
-        function() return DB().followLastSeen end, function(v) DB().followLastSeen = v end)
-
-    ---------------------------------------------------------------- Map
-    Check(content, "Warn me if my friend hasn't moved for 3 minutes", 16,
-        function() return DB().stuckAlert end, function(v) DB().stuckAlert = v end)
+    ------------------------------------------------- RestedXP friend (optional)
+    -- everything that needs a friend running RestedXP lives here; the rest of the addon works without it
+    Header(content, "RestedXP friend (optional)")
+    Label(content, "Only for following a friend who runs RestedXP. Nothing else in the addon needs it.")
+    y = y - 22
+    Check(content, "Listen to a friend's RestedXP steps", 16,
+        function() return DB().rxpListen ~= false end, function(v) DB().rxpListen = v; Changed() end)
+    Radio(content, "Arrows shown:", "mode", {
+        { "both", "Quest + friend" }, { "quest", "Quest only" }, { "friend", "Friend only" }, { "off", "Off" } })
+    ColorRow(content, "Friend's quest arrow color", "colorQuest")
+    ColorRow(content, "Friend arrow color", "colorFriend")
+    Slider(content, "Extra quest arrows (nearest other targets)", 0, 2, 1, "%d", function() return DB().extraTargets end,
+        function(v) DB().extraTargets = v end)
+    Check(content, "Show friend's current step in a box", 16,
+        function() return DB().showPanel end, function(v) DB().showPanel = v end)
+    Slider(content, "Step panel size", 0.5, 2, 0.1, "%.1f", function() return DB().panelScale end,
+        function(v) DB().panelScale = v; Changed() end)
     Check(content, "Show earlier steps in the step panel", 16,
         function() return DB().showHistory end, function(v) DB().showHistory = v; Changed() end)
+    Check(content, "Chat message when friend's step changes", 16,
+        function() return DB().alertChat end, function(v) DB().alertChat = v end)
+    Check(content, "Sound when friend's step changes", 16,
+        function() return DB().alertSound end, function(v) DB().alertSound = v end)
+    Check(content, "Keep pointing at friend's last seen spot when too far away", 16,
+        function() return DB().followLastSeen end, function(v) DB().followLastSeen = v end)
+    Check(content, "Warn me if my friend hasn't moved for 3 minutes", 16,
+        function() return DB().stuckAlert end, function(v) DB().stuckAlert = v end)
     Label(content, "Several friends: right-click the step panel to switch, /lrxp friend <name> to pin.")
     y = y - 26
 
@@ -555,3 +558,93 @@ function addon:OpenOptions()
     panel:Show()
     AttachTo(panel, nil)
 end
+
+--------------------------------------------------------------------------------
+-- Macros the addon makes for you (account-wide, find them with /macro)
+--------------------------------------------------------------------------------
+local MACROS = {
+    { name = "LRXP Plan",       body = "/lrxp plan" },
+    { name = "LRXP Next",       body = "/lrxp way next" },
+    { name = "LRXP Arrows",     body = "/lrxp toggle" },
+    { name = "LRXP Books",      body = "/lrxp books" },
+    { name = "LRXP Book Arrow", body = "/lrxp arrow" },
+    { name = "LRXP Share",      body = "/lrxp books share" },
+}
+
+function addon.MakeMacros()
+    local say = addon.Print or print
+    if InCombatLockdown and InCombatLockdown() then say("macros can't be made in combat, try /lrxp macros again after the fight"); return end
+    if not (CreateMacro and GetMacroIndexByName) then return end
+    local made, updated = 0, 0
+    for _, m in ipairs(MACROS) do
+        local idx = GetMacroIndexByName(m.name)
+        if idx and idx > 0 then
+            local _, _, body = GetMacroInfo(idx)
+            if body ~= m.body then
+                EditMacro(idx, m.name, nil, m.body)
+                updated = updated + 1
+            end
+        else
+            local account = GetNumMacros()
+            if account >= (_G.MAX_ACCOUNT_MACROS or 120) then say("your macro list is full, some macros were not made"); break end
+            CreateMacro(m.name, 134400, m.body, false)       -- false: shared by all characters
+            made = made + 1
+        end
+    end
+    say(string.format("macros ready: %d new, %d updated. Drag them from /macro to your action bars: %s", made, updated,
+        "LRXP Plan, Next, Arrows, Books, Book Arrow, Share"))
+end
+
+function addon.RemoveMacros()
+    local say = addon.Print or print
+    if InCombatLockdown and InCombatLockdown() then say("not in combat, please"); return end
+    local n = 0
+    for _, m in ipairs(MACROS) do
+        local idx = GetMacroIndexByName and GetMacroIndexByName(m.name)
+        if idx and idx > 0 then DeleteMacro(idx); n = n + 1 end
+    end
+    say(string.format("%d addon macro%s removed", n, n == 1 and "" or "s"))
+end
+
+--------------------------------------------------------------------------------
+-- Welcome pop-up, the very first time the addon loads
+--------------------------------------------------------------------------------
+StaticPopupDialogs["LRXPT_WELCOME"] = {
+    text = "|cff4db8ffWelcome to Forever Lazy!|r\n\n"
+        .. "Arrows that point at your quests, your party and your next best XP. Click OK to open the options, "
+        .. "where you can turn features on and off.\n\n"
+        .. "I have also added a few shared macros (type |cffffd100/macro|r and look for |cffffd100LRXP|r) that you can drag to your action bars.\n\n"
+        .. "|cffaaaaaaTip: |cffffd100Plan my route|r|cffaaaaaa builds your levelling route, and |cffffd100/lrxp|r|cffaaaaaa opens the options any time.|r\n\n"
+        .. "|cffffd100Brought to you by Sam Skinison|r",
+    button1 = OKAY or "OK",
+    OnAccept = function()
+        if C_Timer and C_Timer.After then
+            C_Timer.After(0.2, function() addon:OpenOptions() end)
+        else
+            addon:OpenOptions()
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+local welcome = CreateFrame("Frame")
+welcome:RegisterEvent("PLAYER_ENTERING_WORLD")
+welcome:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+    if not C_Timer or not C_Timer.After then return end
+    C_Timer.After(4, function()
+        local root = addon.GetRoot and addon.GetRoot()
+        if not root or root.welcomed then return end
+        if InCombatLockdown and InCombatLockdown() then
+            -- not in the middle of a fight: try again after the next loading screen
+            welcome:RegisterEvent("PLAYER_ENTERING_WORLD")
+            return
+        end
+        root.welcomed = true
+        if root.autoMacros ~= false then pcall(addon.MakeMacros) end
+        StaticPopup_Show("LRXPT_WELCOME")
+    end)
+end)

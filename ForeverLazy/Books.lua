@@ -542,7 +542,7 @@ end
 local function SetupLDB()
     local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
     if not LDB or ldbObj then return end
-    ldbObj = LDB:NewDataObject("LazyRestedXP Books", {
+    ldbObj = LDB:NewDataObject("Forever Lazy Books", {
         type = "data source",
         label = "Books",
         text = string.format("%d/%d", CountDone(), #BOOKS),

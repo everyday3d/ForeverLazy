@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-label="Lazy RestedXP Tracker">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-label="Forever Lazy">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0f1b2d"/>
@@ -27,8 +27,8 @@
       <path d="M0 -62 L46 40 L0 14 L-46 40 Z" fill="#4db8ff" stroke="#d8f0ff" stroke-width="3" stroke-linejoin="round"/>
     </g>
   </g>
-  <text x="370" y="150" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="68" font-weight="700" fill="url(#gold)">Lazy RestedXP Tracker</text>
-  <text x="372" y="198" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="27" fill="#cfd8e8">Arrows, routes and guides for levelling in WoW Forever</text>
+  <text x="370" y="150" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="84" font-weight="700" fill="url(#gold)">Forever Lazy</text>
+  <text x="372" y="198" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="27" fill="#cfd8e8">Never think about where to go next</text>
   <g font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="19" fill="#0f1b2d" font-weight="600">
     <rect x="372" y="226" width="150" height="34" rx="17" fill="#6bd16b"/><text x="447" y="249" text-anchor="middle">Route planner</text>
     <rect x="534" y="226" width="120" height="34" rx="17" fill="#ffd94d"/><text x="594" y="249" text-anchor="middle">Guides</text>

@@ -1,4 +1,4 @@
--- Extras for Lazy RestedXP Tracker:
+-- Extras for Forever Lazy:
 --   own quest log arrow, waypoint routes, waypoint sharing, import/export,
 --   compass bar, minimap menu, named profiles, friend switching, self-test.
 local ADDON, ns = ...
@@ -49,6 +49,31 @@ end
 api.ReadQuestLog = ReadQuestLog
 
 local BuildGroup
+
+-- the wording of the objectives I have not finished yet (lower case), or nil when the game does not say
+local function UnfinishedTexts(id)
+    if not (C_QuestLog and C_QuestLog.GetQuestObjectives) then return nil end
+    local ok, objs = pcall(C_QuestLog.GetQuestObjectives, id)
+    if not ok or type(objs) ~= "table" or #objs == 0 then return nil end
+    local out = {}
+    for _, o in ipairs(objs) do
+        if not o.finished and o.text then out[#out + 1] = o.text:lower() end
+    end
+    return out
+end
+
+-- does this NPC, object or item belong to one of the open objectives? (matching on its name or its longer words)
+local function MatchesOpen(open, name)
+    if not open or #open == 0 or not name then return true end
+    local n = name:lower()
+    for _, t in ipairs(open) do
+        if t:find(n, 1, true) then return true end
+        for word in n:gmatch("%a+") do
+            if #word >= 5 and t:find(word, 1, true) then return true end
+        end
+    end
+    return false
+end
 
 -- Quest colour like the quest log: grey (too low), green, yellow, orange, red (too high)
 local function Tier(level, grey)
@@ -117,9 +142,38 @@ function BuildGroup(q)
         else
             local obj = QDB.QueryQuestSingle(q.id, "objectives")
             if type(obj) == "table" then
-                if obj[1] then for _, c in pairs(obj[1]) do if c[1] then api.AddNpcs(g.spawns, { c[1] }) end end end
-                if obj[2] then for _, c in pairs(obj[2]) do if c[1] then api.AddObjects(g.spawns, { c[1] }) end end end
-                if obj[3] then for _, c in pairs(obj[3]) do if c[1] then api.AddItemSources(g.spawns, c[1]) end end end
+                -- only the objectives still open count: a quest that says "talk to A, then B" points at B once A is done
+                local open = UnfinishedTexts(q.id)
+                local function pick(list, nameOf)
+                    local all, keep = {}, {}
+                    for _, c in pairs(list or {}) do
+                        if c[1] then
+                            all[#all + 1] = c[1]
+                            if MatchesOpen(open, nameOf(c[1])) then keep[#keep + 1] = c[1] end
+                        end
+                    end
+                    if #keep > 0 then return keep end
+                    return all
+                end
+                -- each spawn remembers which objective it belongs to, so a stop can say what to do there
+                local function tag(n0, name)
+                    for i = n0 + 1, #g.spawns do g.spawns[i].src = name end
+                end
+                for _, id in ipairs(pick(obj[1], function(i) return QDB.QueryNPCSingle(i, "name") end)) do
+                    local n0 = #g.spawns
+                    api.AddNpcs(g.spawns, { id })
+                    tag(n0, QDB.QueryNPCSingle(id, "name"))
+                end
+                for _, id in ipairs(pick(obj[2], function(i) return QDB.QueryObjectSingle(i, "name") end)) do
+                    local n0 = #g.spawns
+                    api.AddObjects(g.spawns, { id })
+                    tag(n0, QDB.QueryObjectSingle(id, "name"))
+                end
+                for _, id in ipairs(pick(obj[3], function(i) return QDB.QueryItemSingle(i, "name") end)) do
+                    local n0 = #g.spawns
+                    api.AddItemSources(g.spawns, id)
+                    tag(n0, QDB.QueryItemSingle(id, "name"))
+                end
             end
             local te = QDB.QueryQuestSingle(q.id, "triggerEnd")
             if type(te) == "table" and te[2] then api.AddSpawns(g.spawns, te[2]) end
@@ -722,7 +776,7 @@ function addon:PlanRoute(allZones, quiet, auto)
                     end
                     if #there > 0 then
                         local xp = (g.xp and g.xp > 0) and g.xp or 50
-                        local turn = { g = { label = "Turn in: " .. g.label }, spawns = Thin(there), locked = true,
+                        local turn = { g = { id = g.id, label = "Turn in: " .. g.label }, spawns = Thin(there), locked = true,
                                        turn = true, qid = g.id, w = useXP and (xp * 0.3) or 1 }
                         item.turnItem, item.qid = turn, g.id
                         pool[#pool + 1] = turn
@@ -814,7 +868,7 @@ function addon:PlanRoute(allZones, quiet, auto)
             end
             for _, d in ipairs(done) do
                 seq[#seq + 1] = { label = d.item.g.label, s = d.s, w = d.item.w, qid = d.item.qid, turn = d.item.turn,
-                                  id = d.item.g.id }
+                                  id = d.item.g.id, src = d.s.src }
                 if d.item.turnItem then d.item.turnItem.locked = false end
             end
             cur = bs
@@ -876,7 +930,7 @@ function addon:PlanRoute(allZones, quiet, auto)
         if join then
             if e.id and not last.qseen[e.id] then
                 last.qseen[e.id] = true
-                last.quests[#last.quests + 1] = { id = e.id, label = e.label }
+                last.quests[#last.quests + 1] = { id = e.id, label = e.label, src = e.src }
             end
         end
         if join then
@@ -890,7 +944,7 @@ function addon:PlanRoute(allZones, quiet, auto)
             stops[#stops + 1] = { s = e.s, names = { e.label }, byQuest = {}, qseen = {}, quests = {} }
             if e.id then
                 stops[#stops].qseen[e.id] = true
-                stops[#stops].quests[1] = { id = e.id, label = e.label }
+                stops[#stops].quests[1] = { id = e.id, label = e.label, src = e.src }
             end
             if e.qid and not e.turn then stops[#stops].byQuest[e.qid] = 1 end
         end
@@ -1002,7 +1056,7 @@ local function AddQuestToPlan(questId)
 
     table.insert(wps, bestPos + 1, { name = "", label = g.label, instance = bestS.instance, x = bestS.x, y = bestS.y,
                                      uiMapId = bestS.uiMapId, zx = bestS.zx, zy = bestS.zy,
-                                     quests = { { id = g.id, label = g.label } } })
+                                     quests = { { id = g.id, label = g.label, src = bestS.src } } })
     RenumberPlan(wps)
     ApplyFocus(wps)
     addon:RefreshPins()
@@ -1051,7 +1105,7 @@ local function ReplanForZone()
 end
 
 -- A quest got finished (ready to hand in) or handed in / dropped: move the plan on.
-local questState, questCheck
+local questState, questProgress, questCheck
 local function QuestChanged()
     questCheck = false
     local db = DB()
@@ -1059,13 +1113,28 @@ local function QuestChanged()
     local now = {}
     local okRead, log = pcall(ReadQuestLog)
     if not okRead or type(log) ~= "table" then return end
-    for _, q in ipairs(log) do if q.id then now[q.id] = q.complete and true or false end end
-    local old = questState
-    questState = now
+    local progress = {}
+    for _, q in ipairs(log) do
+        if q.id then
+            now[q.id] = q.complete and true or false
+            -- how many of its objectives are finished: one more means the next stop may be somewhere else
+            local n = 0
+            if C_QuestLog and C_QuestLog.GetQuestObjectives then
+                local okO, objs = pcall(C_QuestLog.GetQuestObjectives, q.id)
+                if okO and type(objs) == "table" then
+                    for _, o in ipairs(objs) do if o.finished then n = n + 1 end end
+                end
+            end
+            progress[q.id] = n
+        end
+    end
+    local old, oldProgress = questState, questProgress
+    questState, questProgress = now, progress
     if not old then return end                       -- first look, nothing to compare with
     local changed
     for id, done in pairs(now) do
         if done and old[id] == false then changed = true end      -- just finished
+        if oldProgress and oldProgress[id] and progress[id] > oldProgress[id] then changed = true end   -- an objective done
     end
     for id in pairs(old) do
         if now[id] == nil then changed = true end                 -- handed in or dropped
@@ -1090,9 +1159,10 @@ questWatch:SetScript("OnEvent", function()
 end)
 
 planEvents:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+planEvents:RegisterEvent("PLAYER_ENTERING_WORLD")      -- trams, boats and portals load a new area without the zone event
 local planOnEvent = planEvents:GetScript("OnEvent")
 planEvents:SetScript("OnEvent", function(self, event, ...)
-    if event == "ZONE_CHANGED_NEW_AREA" then
+    if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
         if C_Timer and C_Timer.After then
             C_Timer.After(3, function() pcall(ReplanForZone) end)       -- let the position settle
         end
@@ -1124,13 +1194,20 @@ local function GiverName(id, field)
 end
 
 -- "Defias Pillager slain: 3/8" becomes "Kill 5 more Defias Pillager (3/8)"
-local function ObjectiveLines(id)
+local function ObjectiveLines(id, src)
     local out = {}
     if not (C_QuestLog and C_QuestLog.GetQuestObjectives) then return out end
     local ok, objs = pcall(C_QuestLog.GetQuestObjectives, id)
     if not ok or type(objs) ~= "table" then return out end
+    -- only the objective this stop is for ("talk to X" at X's stop, not the one in another city)
+    local mine
+    if src then
+        for _, o in ipairs(objs) do
+            if not o.finished and o.text and MatchesOpen({ o.text:lower() }, src) then mine = true end
+        end
+    end
     for _, o in ipairs(objs) do
-        if not o.finished and o.text and o.text ~= "" then
+        if not o.finished and o.text and o.text ~= "" and (not mine or MatchesOpen({ o.text:lower() }, src)) then
             local have, need = o.numFulfilled, o.numRequired
             local name = o.text:match("^(.-):%s*%d+/%d+") or o.text
             local slain = name:find(" slain$") ~= nil
@@ -1172,7 +1249,7 @@ function addon.WaypointDetail(wp)
                 local npc = GiverName(q.id, "startedBy")
                 parts[#parts + 1] = "Pick up " .. title .. (npc and (" from " .. npc) or "")
             else
-                local lines = ObjectiveLines(q.id)
+                local lines = ObjectiveLines(q.id, q.src)
                 if #lines > 0 then
                     parts[#parts + 1] = table.concat(lines, ", ", 1, math.min(#lines, 2))
                 else
@@ -1344,6 +1421,43 @@ function addon:OpenQuestList()
     f:Show()
 end
 
+-- pick anyone in my party or raid for the friend arrow to follow
+function addon:OpenFollowMenu()
+    skipMenu = skipMenu or BuildSkipMenu()
+    local f = skipMenu
+    local items, seen = {}, {}
+    local function add(unit)
+        if UnitExists(unit) and not UnitIsUnit(unit, "player") then
+            local name = UnitName(unit)
+            if name and not seen[name] then
+                seen[name] = true
+                local _, cls = UnitClass(unit)
+                local c = cls and RAID_CLASS_COLORS and RAID_CLASS_COLORS[cls]
+                local hex = c and string.format("|cff%02x%02x%02x", c.r * 255, c.g * 255, c.b * 255) or "|cffffffff"
+                items[#items + 1] = { text = hex .. name .. "|r", fn = function() addon:FollowMember(name) end }
+            end
+        end
+    end
+    for i = 1, 4 do add("party" .. i) end
+    for i = 1, 40 do add("raid" .. i) end
+    if #items == 0 then Print("you are not in a group"); return end
+    items[#items + 1] = { text = "|cffaaaaaaStop pinning (follow whoever sends a step)|r", fn = function() addon:StopFollowing() end }
+    f.title:SetText("Follow who?")
+    for i, it in ipairs(items) do
+        local row = MenuRow(f, i)
+        row.fn = it.fn
+        row.fs:SetText(it.text)
+        row:Show()
+    end
+    for i = #items + 1, #f.rows do f.rows[i]:Hide() end
+    f:SetSize(320, 36 + #items * 20)
+    local x, y = GetCursorPosition()
+    local s = UIParent:GetEffectiveScale()
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / s - 10, y / s + 10)
+    f:Show()
+end
+
 -- right-click on the plan arrow
 local skipHooked = CreateFrame("Frame")
 skipHooked:RegisterEvent("PLAYER_LOGIN")
@@ -1383,6 +1497,92 @@ function addon:HandleExtraCommand(cmd, rest)
         db.ownQuests = not db.ownQuests
         mine.dirty = true
         Print("my quest log arrow " .. (db.ownQuests and "on" or "off"))
+        return true
+
+    elseif cmd == "follow" then
+        local arg = (rest or ""):gsub("^%s+", ""):gsub("%s+$", "")
+        if arg:lower() == "off" then
+            addon:StopFollowing()
+        elseif arg ~= "" then
+            addon:FollowMember(arg)
+        elseif UnitExists("target") and UnitIsPlayer("target") and not UnitIsUnit("target", "player")
+            and (UnitInParty("target") or UnitInRaid("target")) then
+            addon:FollowMember(UnitName("target"))
+        else
+            addon:OpenFollowMenu()
+        end
+        return true
+
+    elseif cmd == "why" then
+        -- explains where the plan's arrow comes from, for the quest at stop 1 (or "why all" for every quest in the log)
+        local db = DB()
+        local QDB = api.GetQuestie()
+        if not (QDB and api.QuestieReady()) then Print("needs Questie loaded and ready"); return true end
+        local zone = hbd:GetPlayerZone()
+        local px, py = hbd:GetPlayerWorldPosition()
+        local zi = zone and C_Map.GetMapInfo(zone)
+        Print(string.format("you are in %s (map %s)", zi and zi.name or "?", tostring(zone)))
+        local ids = {}
+        if (rest or ""):lower() == "all" then
+            for _, q in ipairs(ReadQuestLog()) do ids[#ids + 1] = q.id end
+        else
+            local w = db.waypoints[1]
+            if w then
+                Print(string.format("stop 1: %s at %s %.1f, %.1f%s", tostring(w.label or w.name), tostring(w.uiMapId and C_Map.GetMapInfo(w.uiMapId).name),
+                    (w.zx or 0) * 100, (w.zy or 0) * 100, w.detail and (" - " .. w.detail) or ""))
+                for _, q in ipairs(w.quests or {}) do ids[#ids + 1] = q.id end
+            else
+                Print("no stop 1, try /lrxp why all")
+            end
+        end
+        for _, id in ipairs(ids) do
+            local title = QDB.QueryQuestSingle(id, "name") or ("quest " .. id)
+            local open = UnfinishedTexts(id)
+            Print(string.format("%s (%d): open objectives: %s", title, id, open and (#open > 0 and table.concat(open, " | ") or "none") or "unknown"))
+            local obj = QDB.QueryQuestSingle(id, "objectives")
+            local function show(kind, list, nameOf, spawnsOf)
+                for _, c in pairs(list or {}) do
+                    if c[1] then
+                        local sp = {}
+                        spawnsOf(sp, c[1])
+                        local byMap = {}
+                        for _, s in ipairs(sp) do
+                            local n = s.uiMapId and C_Map.GetMapInfo(s.uiMapId) and C_Map.GetMapInfo(s.uiMapId).name or "?"
+                            byMap[n] = (byMap[n] or 0) + 1
+                        end
+                        local parts = {}
+                        for n, cnt in pairs(byMap) do parts[#parts + 1] = n .. " x" .. cnt end
+                        Print(string.format("  %s %s: %s%s", kind, tostring(nameOf(c[1])), #parts > 0 and table.concat(parts, ", ") or "NO SPAWNS",
+                            MatchesOpen(open, nameOf(c[1])) and "" or "  (not an open objective)"))
+                    end
+                end
+            end
+            if type(obj) == "table" then
+                show("npc", obj[1], function(i) return QDB.QueryNPCSingle(i, "name") end, function(sp, i) api.AddNpcs(sp, { i }) end)
+                show("object", obj[2], function(i) return QDB.QueryObjectSingle(i, "name") end, function(sp, i) api.AddObjects(sp, { i }) end)
+            else
+                Print("  Questie has no objectives for this quest")
+            end
+        end
+        return true
+
+    elseif cmd == "macros" or cmd == "macro" then
+        if (rest or ""):lower() == "remove" then addon.RemoveMacros() else addon.MakeMacros() end
+        return true
+
+    elseif cmd == "toggle" then
+        -- one key: arrows off, and back to what they were
+        local db = DB()
+        if db.mode ~= "off" then
+            db.lastMode = db.mode
+            db.mode = "off"
+        else
+            db.mode = db.lastMode or "both"
+        end
+        Print("arrows " .. (db.mode == "off" and "off" or ("on (" .. db.mode .. ")")))
+        addon:RefreshPins()
+        if addon.UpdateTomTom then addon:UpdateTomTom() end
+        if addon.RefreshOptions then addon.RefreshOptions() end
         return true
 
     elseif cmd == "skip" then
@@ -1554,6 +1754,61 @@ end
 --------------------------------------------------------------------------------
 -- Setup
 --------------------------------------------------------------------------------
+-- The follow arrow: points at one person in my group. It has nothing to do with RestedXP,
+-- the person does not need the addon (or anything else).
+local followArrow
+local FOLLOW_COLOR = { 0.85, 0.5, 1 }
+local followLast, followTimer = nil, 0
+
+function addon:FollowMember(name)
+    local short = name and name:match("^[^-]+")
+    local unit = short and api.FindUnit(short)
+    if not unit or unit == "player" then Print((short or "that player") .. " is not in your group"); return false end
+    DB().followName = short
+    followLast = nil
+    Print("following " .. short .. " with the purple arrow (right-click it to change)")
+    return true
+end
+
+function addon:StopFollowing()
+    DB().followName = nil
+    followLast = nil
+    if followArrow then followArrow:Hide() end
+    Print("follow arrow off")
+end
+
+local function UpdateFollow(dt)
+    local db = DB()
+    if not db or not followArrow then return end
+    followTimer = followTimer + dt
+    if followTimer < 0.05 then return end
+    followTimer = 0
+    local name = db.followName
+    if not name or api.ShouldHide() then followArrow:Hide(); return end
+    followArrow:Show()
+    followArrow:SetAlpha(db.alpha)
+    local unit = api.FindUnit(name)
+    if not unit then
+        followArrow.arrow:Hide()
+        followArrow.title:SetText(name)
+        followArrow.sub:SetText("|cffaaaaaaNot in your group|r")
+        return
+    end
+    local ux, uy, uinst = hbd:GetUnitWorldPosition(unit)
+    if ux then
+        followLast = { x = ux, y = uy, instance = uinst, t = GetTime() }
+        api.PointAt(followArrow, uinst, ux, uy, name)
+    elseif followLast and GetTime() - followLast.t < 600 then
+        followArrow:SetAlpha(db.alpha * 0.55)
+        api.PointAt(followArrow, followLast.instance, followLast.x, followLast.y, name,
+            string.format("last seen %ds ago - ", math.floor(GetTime() - followLast.t)))
+    else
+        followArrow.arrow:Hide()
+        followArrow.title:SetText(name)
+        followArrow.sub:SetText("|cffaaaaaaToo far away to track|r")
+    end
+end
+
 local setup = CreateFrame("Frame")
 setup:RegisterEvent("PLAYER_LOGIN")
 setup:SetScript("OnEvent", function()
@@ -1561,6 +1816,11 @@ setup:SetScript("OnEvent", function()
     mineArrow:Hide()
     corpseArrow = api.MakeArrow("CorpseArrow", 72, "corpse")
     corpseArrow:Hide()
+    followArrow = api.MakeArrow("FollowArrow", 64, "follow")
+    followArrow:Hide()
+    followArrow:SetScript("OnMouseUp", function(_, button)
+        if button == "RightButton" then addon:OpenFollowMenu() end
+    end)
     compass = MakeCompass()
     addon:ApplyAll()
 end)
@@ -1570,9 +1830,10 @@ driver:SetScript("OnUpdate", function(_, dt)
     UpdateMine(dt)
     UpdateCompass(dt)
     UpdateCorpse(dt)
+    UpdateFollow(dt)
 end)
 
--- style and position for the corpse arrow
+-- style and position for the corpse and follow arrows
 do
     local style, layout = addon.ApplyStyle, addon.ApplyLayout
     function addon:ApplyStyle()
@@ -1580,6 +1841,10 @@ do
         if corpseArrow then
             corpseArrow.arrow:SetTexture(api.StyleTexture())
             corpseArrow.arrow:SetVertexColor(unpack(CORPSE_COLOR))
+        end
+        if followArrow then
+            followArrow.arrow:SetTexture(api.StyleTexture())
+            followArrow.arrow:SetVertexColor(unpack(FOLLOW_COLOR))
         end
     end
     function addon:ApplyLayout()
@@ -1590,6 +1855,12 @@ do
             corpseArrow:ClearAllPoints()
             corpseArrow:SetPoint(p.point, UIParent, p.point, p.x, p.y)
             corpseArrow:SetScale(db.scale)
+        end
+        if followArrow and db then
+            local p = db.pos.follow or { point = "TOP", x = 0, y = -260 }
+            followArrow:ClearAllPoints()
+            followArrow:SetPoint(p.point, UIParent, p.point, p.x, p.y)
+            followArrow:SetScale(db.scale)
         end
     end
 end
