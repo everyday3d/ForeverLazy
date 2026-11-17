@@ -16,3 +16,5 @@ NextZone.lua
 Dungeons.lua
 Bag.lua
 ClassQuests.lua
+Boats.lua
+Services.lua

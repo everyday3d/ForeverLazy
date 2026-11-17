@@ -21,7 +21,11 @@ next stop of an XP-efficient route; the line under it says exactly what to do th
 Forever secrets, tracks your class quests, finds dungeon entrances for your quests and collects the world's
 library books.
 
-[Questie](https://www.curseforge.com/wow/addons/questie) is optional but powers the quest planning.
+> **[Questie](https://www.curseforge.com/wow/addons/questie) is highly recommended for added functionality.**
+> Forever Lazy runs without it, but the route planner, quest arrows, class quests, dungeon quests, service and
+> trainer search and the text under the arrow all use Questie's quest and NPC database. Without Questie you keep
+> the waypoints, books, follow arrow, boats, timers and the pet reminder.
+
 Nothing in the addon needs RestedXP (see [RestedXP friends](#restedxp-friends-optional)).
 
 ## Features
@@ -49,6 +53,8 @@ Nothing in the addon needs RestedXP (see [RestedXP friends](#restedxp-friends-op
 | **Class quests** | Finds the quests only your class can take, announces new ones as you level, and shows where to get them (`/lrxp class`). |
 | **Dungeons** | Which of your quests need a dungeon, where its entrance is, and which dungeons suit your level (`/lrxp dungeons`). |
 | **Next zone** | When you outgrow a zone it suggests where to go for your level (`/lrxp nextzone`). |
+| **Find a service** | The nearest innkeeper, repair vendor, flight master, banker, auctioneer, mailbox, stable master, spirit healer, battlemaster, class trainer or profession trainer, with the arrow on it (`/lazy inn`, `/lazy repair`, `/lazy cooking`...). |
+| **Boats and zeppelins** | `/lazy boat darnassus` plans the boat route and points at each dock. Docks the addon does not know yet are taught with `/lazy boat mark`. |
 
 ### Arrows
 
@@ -105,6 +111,9 @@ You do not need RestedXP installed yourself.
 | `/lrxp dungeons` `dungeons go [n]` | Dungeon quests and entrances |
 | `/lrxp bag` `bag all` `bag start` `bag done` | Cozy Sleeping Bag chain |
 | `/lrxp nextzone` `nextzone go` | Where to level next |
+| `/lazy inn` `repair` `flight` `bank` `ah` `mailbox` `stable` `spirit` `battlemaster` | The nearest one, add a number for the next (`/lazy inn 2`) |
+| `/lazy trainer` `/lazy cooking` | Class trainer, or a profession trainer (first aid, fishing, mining, ...) |
+| `/lazy boat <place>` `boat mark` `boat list` `boat stop` | Boat and zeppelin routes with the dock arrow |
 | `/lrxp books` `zone` `turnin` `list` `done` `share` `say` | Library book collection |
 | `/lrxp arrow` | Toggle the book waypoint arrow |
 | `/lrxp way <x> <y> [name]` `here` `list` `next` `remove <n>` `clear` | Waypoints |
@@ -124,7 +133,7 @@ expected, and any Lua error text.
 
 ## Notes
 
-- Quest data, dungeon entrances and class quests come from **Questie's** database, so those features need Questie.
+- Quest data, dungeon entrances, class quests and the service and trainer search come from **Questie's** database, so install Questie for the full experience.
 - It is under active development and some parts have only seen light testing in-game.
 - Level ranges for zones, the dungeon list and the secret-chain coordinates were collected from the community
   guides and may be slightly off. Open an issue if you find a bad spot.
