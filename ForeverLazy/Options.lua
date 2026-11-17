@@ -755,7 +755,7 @@ end
 addon.ShowWelcome = ShowWelcome
 
 local welcome = CreateFrame("Frame")
-welcome:RegisterEvent("PLAYER_ENTERING_WORLD")
+pcall(welcome.RegisterEvent, welcome, "PLAYER_ENTERING_WORLD")
 welcome:SetScript("OnEvent", function(self)
     self:UnregisterEvent("PLAYER_ENTERING_WORLD")
     if not C_Timer or not C_Timer.After then return end
@@ -764,7 +764,7 @@ welcome:SetScript("OnEvent", function(self)
         if not root or root.welcomed then return end
         if InCombatLockdown and InCombatLockdown() then
             -- not in the middle of a fight: try again after the next loading screen
-            welcome:RegisterEvent("PLAYER_ENTERING_WORLD")
+            pcall(welcome.RegisterEvent, welcome, "PLAYER_ENTERING_WORLD")
             return
         end
         root.welcomed = true
@@ -772,3 +772,6 @@ welcome:SetScript("OnEvent", function(self)
         ShowWelcome()
     end)
 end)
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Options.lua"] = true end end

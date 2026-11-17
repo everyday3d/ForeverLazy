@@ -276,7 +276,7 @@ function addon.DrawRouteLines()
 end
 
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("PLAYER_LOGIN")
+pcall(ev.RegisterEvent, ev, "PLAYER_LOGIN")
 ev:SetScript("OnEvent", function()
     if not C_Timer then return end
     C_Timer.After(3, function()
@@ -302,3 +302,6 @@ function addon:HandleExtraCommand(cmd, rest)
     end
     if prev then return prev(self, cmd, rest) end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["PlanWindow.lua"] = true end end

@@ -6,6 +6,7 @@
 --   bank: the materials your craft plan needs are lit up
 --   flight map: nearest new flight point, take me there
 --   boat NPC chat: mark this dock
+--   /lazy windows: which windows were found and what failed (for bug reports)
 -- Everything sits beside or below the game's windows, never on top of their own buttons.
 local ADDON, ns = ...
 local addon = ns.addon
@@ -15,8 +16,24 @@ local Print = addon.Print
 local function DB() return addon.GetDB() end
 local function On() local d = DB(); return d and d.uiButtons ~= false end
 
+-- errors are kept so /lazy windows can show them
+local problems = {}
+local built = {}
+local function Try(name, fn, ...)
+    local ok, err = pcall(fn, ...)
+    if ok then problems[name] = nil else problems[name] = tostring(err) end
+    return ok
+end
+
 local function Cmd(cmd, rest)
     if addon.HandleExtraCommand then addon:HandleExtraCommand(cmd, rest) end
+end
+
+-- the first window that exists, from a list of names this client might use
+local function FirstFrame(names)
+    for _, n in ipairs(names) do
+        if _G[n] then return _G[n], n end
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -124,7 +141,7 @@ function addon.ShowMenu(items, title)
     menu:Show()
 end
 
-local function Back(fn) return { text = "< Back", fn = function() addon:OpenMenu() end } end
+local function Back() return { text = "< Back", fn = function() addon:OpenMenu() end } end
 
 local function GoMenu()
     return {
@@ -182,6 +199,7 @@ local function SettingsMenu()
         { text = "Preset: Duo", fn = function() addon.ApplyPreset("duo") end },
         { text = "Preset: Everything", fn = function() addon.ApplyPreset("full") end },
         { text = "Is everything working? (check)", fn = function() Cmd("check") end },
+        { text = "Which windows did you find?", fn = function() Cmd("windows") end },
     }
 end
 
@@ -223,6 +241,7 @@ local function HookMinimap()
         GameTooltip:AddLine("Shift-click: options", 1, 1, 1)
         GameTooltip:Show()
     end)
+    built.minimap = "LRXPT_MinimapButton"
     return true
 end
 
@@ -259,8 +278,9 @@ local mapBuilt
 local function BuildMap()
     if mapBuilt or not On() then return end
     local wm = _G.WorldMapFrame
-    if not wm then return end
+    if not wm then problems.map = "no world map window"; return end
     mapBuilt = true
+    built.map = "WorldMapFrame"
     local host = wm.ScrollContainer or wm
     local box = CreateFrame("EditBox", nil, wm, "InputBoxTemplate")
     box:SetSize(150, 20)
@@ -303,8 +323,9 @@ end
 local questBar
 local function BuildQuestLog()
     if questBar or not On() or not addon.ModuleOn("plan") then return end
-    local f = _G.QuestLogFrame or _G.QuestLogPopupDetailFrame
-    if not f then return end
+    local f, name = FirstFrame({ "QuestLogFrame", "QuestLogPopupDetailFrame", "QuestMapFrame" })
+    if not f then problems.quest = "no quest log window found"; return end
+    built.quest = name
     questBar = BarUnder(f, {
         { "Plan my route", 110, function() addon:PlanRoute() end },
         { "Do this next", 100, function()
@@ -321,12 +342,19 @@ end
 --------------------------------------------------------------------------------
 -- Profession window: the craft plan panel
 --------------------------------------------------------------------------------
+local HighlightRecipes          -- defined further down, used by the panel above it
 local craftPanel
 local function RefreshCraftPanel()
     if not craftPanel or not craftPanel:IsShown() then return end
     local lines = addon.CraftPlanText and addon.CraftPlanText() or { "crafting is switched off" }
+    local h = addon.HighlightDiag
+    if h then
+        lines = { unpack(lines) }
+        lines[#lines + 1] = string.format("|cff888888list: %s, rows %s, plan pick %s, matched %s%s|r", tostring(h.scrollbox == "yes" and "found" or "NOT found"),
+            tostring(h.rows), tostring(h.best), tostring(h.matched), h.note and (" - " .. h.note) or "")
+    end
     craftPanel.text:SetText(table.concat(lines, "\n"))
-    craftPanel:SetHeight(math.max(80, 60 + craftPanel.text:GetStringHeight()))
+    craftPanel:SetHeight(math.max(96, 84 + craftPanel.text:GetStringHeight()))
 end
 
 local function BuildCraftPanel(frame)
@@ -347,23 +375,197 @@ local function BuildCraftPanel(frame)
     p.text = p:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     p.text:SetPoint("TOPLEFT", 10, -28)
     p.text:SetWidth(310); p.text:SetJustifyH("LEFT"); p.text:SetJustifyV("TOP")
-    local b1 = MakeButton(p, "Where to get it", 110, function() Cmd("craft", "go") end)
-    b1:SetPoint("BOTTOMLEFT", 8, 8)
-    local b2 = MakeButton(p, "Bank", 60, function() Cmd("craft", "bank") end)
+    p.diag = p:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    p.diag:SetPoint("BOTTOMLEFT", 10, 36)
+    p.diag:SetWidth(310); p.diag:SetJustifyH("LEFT")
+    local b0 = MakeButton(p, "Plan it", 58, function()
+        if addon.ReadProfession then addon.ReadProfession() end
+        if C_Timer then C_Timer.After(0.5, RefreshCraftPanel) else RefreshCraftPanel() end
+    end)
+    b0:SetPoint("BOTTOMLEFT", 8, 8)
+    -- opens the recommended recipe in the window itself: the game scrolls the list to it and shows it on the right
+    local bS = MakeButton(p, "Show it", 58, function()
+        local best = addon.CraftHighlights and addon.CraftHighlights()
+        if not best then Print("click Plan it first, so I know which recipe to show"); return end
+        local shown
+        if C_TradeSkillUI and C_TradeSkillUI.OpenRecipe then shown = pcall(C_TradeSkillUI.OpenRecipe, best) end
+        if not shown and _G.TradeSkillFrame and TradeSkillFrame.SelectRecipe then shown = pcall(TradeSkillFrame.SelectRecipe, TradeSkillFrame, best) end
+        if not shown and _G.ProfessionsFrame and ProfessionsFrame.CraftingPage and ProfessionsFrame.CraftingPage.SelectRecipe then
+            shown = pcall(ProfessionsFrame.CraftingPage.SelectRecipe, ProfessionsFrame.CraftingPage, best)
+        end
+        if not shown then Print("this window would not open that recipe for me"); return end
+        -- put the planned number in the window's own quantity box (it stops at what you can make)
+        local _, crafts = addon.CraftHighlights()
+        if crafts and C_Timer then
+            C_Timer.After(0.4, function()
+                local boxes = {
+                    _G.TradeSkillFrame and TradeSkillFrame.DetailsFrame and TradeSkillFrame.DetailsFrame.CreateMultipleInputBox,
+                    _G.ProfessionsFrame and ProfessionsFrame.CraftingPage and ProfessionsFrame.CraftingPage.CreateMultipleInputBox,
+                }
+                for _, box in pairs(boxes) do
+                    if box and box.SetValue then pcall(box.SetValue, box, crafts) end
+                end
+            end)
+        end
+    end)
+    bS:SetPoint("LEFT", b0, "RIGHT", 4, 0)
+    local b1 = MakeButton(p, "Where to get it", 100, function() Cmd("craft", "go") end)
+    b1:SetPoint("LEFT", bS, "RIGHT", 4, 0)
+    local b2 = MakeButton(p, "Bank", 46, function() Cmd("craft", "bank") end)
     b2:SetPoint("LEFT", b1, "RIGHT", 4, 0)
-    local b3 = MakeButton(p, "Refresh", 70, function() RefreshCraftPanel() end)
+    local b3 = MakeButton(p, "Clear", 46, function()
+        if addon.ClearWaypoints then pcall(addon.ClearWaypoints, addon) end
+        Print("arrow cleared")
+    end)
     b3:SetPoint("LEFT", b2, "RIGHT", 4, 0)
+    local acc = 0
+    p:SetScript("OnUpdate", function(_, dt)
+        acc = acc + dt
+        if acc > 0.4 then
+            acc = 0
+            Try("highlight", HighlightRecipes)
+            local h = addon.HighlightDiag
+            local msg
+            if problems.highlight then
+                msg = "recipe list: error " .. tostring(problems.highlight)
+            elseif h then
+                msg = string.format("recipe list: %s rows (%s), plan pick %s, matched %s%s", tostring(h.rows), tostring(h.source or "none found"),
+                    tostring(h.best), tostring(h.matched), h.note and (" - " .. h.note) or "")
+            else
+                msg = "recipe list: not scanned yet"
+            end
+            p.diag:SetText("|cff888888" .. msg .. "|r")
+        end
+    end)
     craftPanel = p
 end
 
-local function ShowCraft(frameName)
+local function ShowCraft(names)
     if not On() or not addon.ModuleOn("crafting") then return end
-    local f = _G[frameName]
-    if not f then return end
+    local f, name = FirstFrame(names)
+    if not f then problems.craft = "no profession window found (tried " .. table.concat(names, ", ") .. ")"; return end
+    built.craft = name
     BuildCraftPanel(f)
-    if C_Timer then C_Timer.After(1.2, RefreshCraftPanel) end
+    if C_Timer then C_Timer.After(0.8, function() if addon.ReadProfession then addon.ReadProfession() end; RefreshCraftPanel() end) end
 end
 
+--------------------------------------------------------------------------------
+-- Profession window: light up the recipes in its own list
+--   gold row + "craft N" = the one to craft next, soft gold = other recipes that still give skill-ups
+--------------------------------------------------------------------------------
+local function Mark(frame, kind, text)
+    if not frame.flMark then
+        frame.flMark = frame:CreateTexture(nil, "BACKGROUND", nil, 1)
+        frame.flMark:SetAllPoints()
+        -- the count sits in its own small frame above the row's own parts, so nothing can cover it
+        frame.flBadge = CreateFrame("Frame", nil, frame)
+        frame.flBadge:SetFrameLevel(frame:GetFrameLevel() + 20)
+        frame.flBadge:SetPoint("RIGHT", frame, "RIGHT", -4, 0)
+        frame.flBadge.bg = frame.flBadge:CreateTexture(nil, "BACKGROUND")
+        frame.flBadge.bg:SetAllPoints()
+        frame.flBadge.bg:SetColorTexture(0, 0, 0, 0.75)
+        frame.flBadge.text = frame.flBadge:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        frame.flBadge.text:SetPoint("CENTER")
+    end
+    if kind == "best" then
+        frame.flMark:SetColorTexture(1, 0.82, 0, 0.35)
+        frame.flBadge.text:SetText(text or "craft this")
+        frame.flBadge.text:SetTextColor(1, 0.9, 0.3)
+        frame.flBadge:SetSize(frame.flBadge.text:GetStringWidth() + 12, 18)
+        frame.flBadge:Show()
+    elseif kind == "useful" then
+        frame.flMark:SetColorTexture(1, 0.82, 0, 0.10)
+        frame.flBadge:Hide()
+    else
+        frame.flMark:SetColorTexture(0, 0, 0, 0)
+        frame.flBadge:Hide()
+    end
+end
+-- the recipe a list row stands for, from whichever way this client's rows keep it
+local function RowRecipeId(frame, elementData)
+    local d = frame.tradeSkillInfo or frame.recipeInfo
+    if not d then
+        local e = (frame.GetElementData and frame:GetElementData()) or elementData
+        if type(e) == "table" and e.GetData then e = e:GetData() end
+        if type(e) == "table" then
+            d = e.recipeInfo or (type(e.data) == "table" and (e.data.recipeInfo or e.data)) or e
+        end
+    end
+    if type(d) ~= "table" then return nil end
+    local id = d.recipeID or d.recipeId
+    if type(id) == "number" then return id end
+    return nil
+end
+
+-- every row of the recipe list that is on screen: the newer scroll list, the older button list, or any row found by looking
+local function Rows(diag)
+    local out = {}
+    local pf, tf = _G.ProfessionsFrame, _G.TradeSkillFrame
+    -- 1. the newer window's scroll list
+    local list = pf and pf.CraftingPage and pf.CraftingPage.RecipeList
+    local sb = list and (list.ScrollBox or list.scrollBox)
+    if sb and sb.ForEachFrame then
+        sb:ForEachFrame(function(frame, ed) out[#out + 1] = { f = frame, id = RowRecipeId(frame, ed) } end)
+        if #out > 0 then diag.source = "ProfessionsFrame scroll list" end
+    end
+    -- 2. the older window's buttons
+    if #out == 0 and tf then
+        local rl = tf.RecipeList
+        local buttons = rl and rl.buttons
+        if buttons then
+            for _, b in ipairs(buttons) do
+                if b:IsShown() then out[#out + 1] = { f = b, id = RowRecipeId(b) } end
+            end
+            if #out > 0 then diag.source = "TradeSkillFrame buttons" end
+        end
+    end
+    -- 3. look through the window for anything that holds a recipe
+    if #out == 0 then
+        local root = pf or tf
+        if root then
+            local function walk(f, depth)
+                if depth > 8 then return end
+                for _, child in ipairs({ f:GetChildren() }) do
+                    if child:IsShown() then
+                        local id = RowRecipeId(child)
+                        if id then out[#out + 1] = { f = child, id = id } end
+                        walk(child, depth + 1)
+                    end
+                end
+            end
+            pcall(walk, root, 0)
+            if #out > 0 then diag.source = "found by searching the window" end
+        end
+    end
+    return out
+end
+
+function HighlightRecipes()
+    local diag = {}
+    addon.HighlightDiag = diag
+    if not On() or not addon.ModuleOn("crafting") or not addon.CraftHighlights then diag.note = "off"; return end
+    diag.window = (_G.ProfessionsFrame and "ProfessionsFrame") or (_G.TradeSkillFrame and "TradeSkillFrame") or "none"
+    local rows = Rows(diag)
+    local best, crafts, useful = addon.CraftHighlights()
+    diag.best = best
+    diag.rows = #rows
+    local matched, ids = 0, {}
+    for _, r in ipairs(rows) do
+        if #ids < 3 then ids[#ids + 1] = tostring(r.id) end
+        if r.id and r.id == best then
+            matched = matched + 1
+            Mark(r.f, "best", crafts and ("craft " .. crafts) or "craft this")
+        elseif r.id and useful and useful[r.id] then
+            Mark(r.f, "useful")
+        else
+            Mark(r.f, nil)
+        end
+    end
+    diag.matched, diag.sampleIds = matched, table.concat(ids, ",")
+    if #rows == 0 then diag.note = "no recipe rows found in this window"
+    elseif not best then diag.note = "no recipe picked yet (click Plan it)" end
+    built.highlight = diag.source or "recipe list"
+end
 --------------------------------------------------------------------------------
 -- Bank: light up the materials my craft plan needs
 --------------------------------------------------------------------------------
@@ -399,8 +601,9 @@ end
 local taxiBar
 local function BuildTaxi()
     if taxiBar or not On() then return end
-    local f = _G.TaxiFrame
-    if not f then return end
+    local f, name = FirstFrame({ "TaxiFrame", "FlightMapFrame" })
+    if not f then problems.taxi = "no flight map window found"; return end
+    built.taxi = name
     taxiBar = BarUnder(f, {
         { "Nearest new flight point", 160, function() Cmd("fp") end },
         { "Take me to...", 100, function() Ask("Where to?", function(t) Cmd("go", t) end) end },
@@ -418,6 +621,7 @@ local function BuildGossip()
     if not f then return end
     if not gossipBar then
         gossipBar = BarUnder(f, { { "Mark this dock", 110, function() Cmd("boat", "mark") end } })
+        built.gossip = "GossipFrame"
     end
     local text = (GossipText() or ""):lower()
     local boat = text:find("berth", 1, true) or text:find("passage", 1, true) or text:find("zeppelin", 1, true) or text:find("ferry", 1, true)
@@ -429,30 +633,91 @@ end
 --------------------------------------------------------------------------------
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "TRADE_SKILL_SHOW", "TRADE_SKILL_UPDATE", "CRAFT_SHOW", "CRAFT_UPDATE", "BANKFRAME_OPENED",
-                     "TAXIMAP_OPENED", "GOSSIP_SHOW", "BAG_UPDATE_DELAYED" }) do
+                     "TAXIMAP_OPENED", "GOSSIP_SHOW", "BAG_UPDATE_DELAYED", "TRADE_SKILL_LIST_UPDATE",
+                     "TRADE_SKILL_DATA_SOURCE_CHANGED", "ADDON_LOADED" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
-ev:SetScript("OnEvent", function(_, event)
+ev:SetScript("OnEvent", function(_, event, arg1)
     if not C_Timer then return end
     if event == "PLAYER_LOGIN" then
         C_Timer.After(3, function()
-            pcall(HookMinimap)
+            Try("minimap", HookMinimap)
             local wm = _G.WorldMapFrame
-            if wm and wm.HookScript then wm:HookScript("OnShow", function() pcall(BuildMap) end) end
+            if wm and wm.HookScript then
+                wm:HookScript("OnShow", function()
+                    Try("map", BuildMap)
+                    if not _G.QuestLogFrame then Try("quest", BuildQuestLog) end
+                end)
+            end
             local ql = _G.QuestLogFrame
-            if ql and ql.HookScript then ql:HookScript("OnShow", function() pcall(BuildQuestLog) end) end
+            if ql and ql.HookScript then ql:HookScript("OnShow", function() Try("quest", BuildQuestLog) end) end
         end)
+    elseif event == "ADDON_LOADED" then
+        -- the professions window is loaded the first time it is needed: attach then
+        if arg1 == "Blizzard_Professions" or arg1 == "Blizzard_TradeSkillUI" then
+            C_Timer.After(0.5, function()
+                local pf = _G.ProfessionsFrame or _G.TradeSkillFrame
+                if pf and pf.HookScript then
+                    pf:HookScript("OnShow", function()
+                        if addon.ReadProfession then addon.ReadProfession() end
+                        Try("craft", ShowCraft, { "ProfessionsFrame", "TradeSkillFrame" })
+                    end)
+                end
+            end)
+        end
     elseif event == "TRADE_SKILL_SHOW" then
-        C_Timer.After(0.2, function() pcall(ShowCraft, "TradeSkillFrame") end)
+        C_Timer.After(0.2, function() Try("craft", ShowCraft, { "TradeSkillFrame", "ProfessionsFrame" }) end)
+    elseif event == "TRADE_SKILL_DATA_SOURCE_CHANGED" or event == "TRADE_SKILL_LIST_UPDATE" then
+        C_Timer.After(1.2, function() pcall(RefreshCraftPanel) end)
     elseif event == "TRADE_SKILL_UPDATE" or event == "CRAFT_UPDATE" then
         C_Timer.After(1.2, function() pcall(RefreshCraftPanel) end)
     elseif event == "CRAFT_SHOW" then
-        C_Timer.After(0.2, function() pcall(ShowCraft, "CraftFrame") end)
+        C_Timer.After(0.2, function() Try("craft", ShowCraft, { "CraftFrame", "ProfessionsFrame" }) end)
     elseif event == "BANKFRAME_OPENED" or event == "BAG_UPDATE_DELAYED" then
-        C_Timer.After(0.5, function() pcall(GlowBank) end)
+        C_Timer.After(0.5, function() Try("bank", GlowBank) end)
     elseif event == "TAXIMAP_OPENED" then
-        C_Timer.After(0.2, function() pcall(BuildTaxi) end)
+        C_Timer.After(0.2, function() Try("taxi", BuildTaxi) end)
     elseif event == "GOSSIP_SHOW" then
-        C_Timer.After(0.2, function() pcall(BuildGossip) end)
+        C_Timer.After(0.2, function() Try("gossip", BuildGossip) end)
     end
 end)
+
+--------------------------------------------------------------------------------
+-- /lazy windows: which windows were found, and what failed (for bug reports)
+--------------------------------------------------------------------------------
+local prev = addon.HandleExtraCommand
+function addon:HandleExtraCommand(cmd, rest)
+    if (cmd or ""):lower() == "windows" then
+        local function has(n) return _G[n] and "yes" or "no" end
+        Print("buttons in the windows: " .. (On() and "on" or "OFF in the options"))
+        Print(string.format("  windows: map %s, quest log %s, quest map %s, old profession %s, new profession %s, bank %s, flight map %s, new flight map %s, gossip %s, minimap button %s",
+            has("WorldMapFrame"), has("QuestLogFrame"), has("QuestMapFrame"), has("TradeSkillFrame"), has("ProfessionsFrame"),
+            has("BankFrame"), has("TaxiFrame"), has("FlightMapFrame"), has("GossipFrame"), has("LRXPT_MinimapButton")))
+        Print(string.format("  old profession API %s, new profession API %s",
+            GetTradeSkillLine and "yes" or "no", (C_TradeSkillUI and C_TradeSkillUI.GetAllRecipeIDs) and "yes" or "no"))
+        local d = addon.CraftDiag
+        if d then
+            Print(string.format("  last recipe read: profession %s, %s recipes listed, %s learned read%s", tostring(d.profession), tostring(d.total or "?"),
+                tostring(d.recipes or 0), d.note and (" - " .. d.note) or ""))
+        else
+            Print("  no recipe read yet (open a profession window)")
+        end
+        local h = addon.HighlightDiag
+        if h then
+            Print(string.format("  recipe list: window %s, source %s, rows seen %s, plan pick %s, matched %s, sample ids %s%s",
+                tostring(h.window), tostring(h.source), tostring(h.rows), tostring(h.best),
+                tostring(h.matched), tostring(h.sampleIds), h.note and (" - " .. h.note) or ""))
+        end
+        local any
+        for k, v in pairs(built) do Print("  built on " .. k .. ": " .. tostring(v)); any = true end
+        if not any then Print("  nothing built yet (open a window, then try again)") end
+        local bad
+        for k, v in pairs(problems) do Print("  |cffff5555problem|r " .. k .. ": " .. v); bad = true end
+        if not bad then Print("  no errors recorded") end
+        return true
+    end
+    if prev then return prev(self, cmd, rest) end
+end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["UI.lua"] = true end end

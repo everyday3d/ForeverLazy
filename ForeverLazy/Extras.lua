@@ -1146,7 +1146,7 @@ local function AddQuestToPlan(questId)
 end
 
 local planEvents = CreateFrame("Frame")
-planEvents:RegisterEvent("QUEST_ACCEPTED")
+pcall(planEvents.RegisterEvent, planEvents, "QUEST_ACCEPTED")
 planEvents:SetScript("OnEvent", function(_, _, a, b)
     local id = tonumber(b) or tonumber(a)     -- classic: (logIndex, questId), newer: (questId)
     if not id then return end
@@ -1238,7 +1238,7 @@ questWatch:SetScript("OnEvent", function()
     C_Timer.After(1.5, function() pcall(QuestChanged); questCheck = false end)
 end)
 
-planEvents:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+pcall(planEvents.RegisterEvent, planEvents, "ZONE_CHANGED_NEW_AREA")
 planEvents:RegisterEvent("PLAYER_ENTERING_WORLD")      -- trams, boats and portals load a new area without the zone event
 local planOnEvent = planEvents:GetScript("OnEvent")
 planEvents:SetScript("OnEvent", function(self, event, ...)
@@ -1563,7 +1563,7 @@ end
 
 -- right-click on the plan arrow
 local skipHooked = CreateFrame("Frame")
-skipHooked:RegisterEvent("PLAYER_LOGIN")
+pcall(skipHooked.RegisterEvent, skipHooked, "PLAYER_LOGIN")
 skipHooked:SetScript("OnEvent", function()
     if not C_Timer or not C_Timer.After then return end
     C_Timer.After(2, function()
@@ -1797,7 +1797,7 @@ local CORPSE_COLOR = { 1, 0.35, 0.35 }
 
 -- remember where I died, in case the game can't tell me where the corpse is
 local deathFrame = CreateFrame("Frame")
-deathFrame:RegisterEvent("PLAYER_DEAD")
+pcall(deathFrame.RegisterEvent, deathFrame, "PLAYER_DEAD")
 deathFrame:SetScript("OnEvent", function()
     local x, y, inst = hbd:GetPlayerWorldPosition()
     -- died inside a dungeon or raid? then the corpse run starts at its entrance
@@ -1914,7 +1914,7 @@ local function UpdateFollow(dt)
 end
 
 local setup = CreateFrame("Frame")
-setup:RegisterEvent("PLAYER_LOGIN")
+pcall(setup.RegisterEvent, setup, "PLAYER_LOGIN")
 setup:SetScript("OnEvent", function()
     mineArrow = api.MakeArrow("MineArrow", 64, "mine")
     mineArrow:Hide()
@@ -1968,3 +1968,6 @@ do
         end
     end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Extras.lua"] = true end end

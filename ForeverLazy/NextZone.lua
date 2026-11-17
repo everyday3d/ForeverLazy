@@ -5,7 +5,8 @@
 local ADDON, ns = ...
 local addon = ns.addon
 local Print = addon.Print
-local hbd = ns.api.hbd
+local api = ns.api
+local hbd = api.hbd
 
 local function DB() return addon.GetDB() end
 
@@ -136,8 +137,8 @@ local function Check(level)
 end
 
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("PLAYER_LEVEL_UP")
-ev:RegisterEvent("QUEST_TURNED_IN")
+pcall(ev.RegisterEvent, ev, "PLAYER_LEVEL_UP")
+pcall(ev.RegisterEvent, ev, "QUEST_TURNED_IN")
 ev:SetScript("OnEvent", function(_, event, newLevel)
     local level = event == "PLAYER_LEVEL_UP" and tonumber(newLevel) or nil
     if C_Timer and C_Timer.After then
@@ -166,3 +167,6 @@ end
 
 -- used by the journey planner
 api.NextZone = { zones = ZONES, mapId = MapId }
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["NextZone.lua"] = true end end

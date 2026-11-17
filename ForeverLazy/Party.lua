@@ -202,9 +202,9 @@ end
 --------------------------------------------------------------------------------
 local pending
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("GROUP_ROSTER_UPDATE")
-ev:RegisterEvent("QUEST_ACCEPTED")
-ev:RegisterEvent("QUEST_REMOVED")
+pcall(ev.RegisterEvent, ev, "GROUP_ROSTER_UPDATE")
+pcall(ev.RegisterEvent, ev, "QUEST_ACCEPTED")
+pcall(ev.RegisterEvent, ev, "QUEST_REMOVED")
 ev:SetScript("OnEvent", function(_, event)
     if not C_Timer or not C_Timer.After then return end
     if event == "GROUP_ROSTER_UPDATE" then
@@ -280,7 +280,7 @@ end
 
 -- when the leader changes (or someone joins), the leader sends the plan again
 local roster = CreateFrame("Frame")
-roster:RegisterEvent("GROUP_ROSTER_UPDATE")
+pcall(roster.RegisterEvent, roster, "GROUP_ROSTER_UPDATE")
 local announcedWith
 roster:SetScript("OnEvent", function()
     if not C_Timer then return end
@@ -299,3 +299,6 @@ roster:SetScript("OnEvent", function()
     C_Timer.After(4, check)
     C_Timer.After(14, check)           -- their quest list may take a moment to arrive
 end)
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Party.lua"] = true end end

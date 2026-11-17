@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.3 (pre-release)
+- **Fixes found by testing in the game:** crafting no longer stops on an event this client does not have, the window buttons file loads again, and the missing item functions are replaced.
+- The craft plan reads your recipes from the newer professions window, lights up the recipe to craft next in the window's list, and has **Plan it** and **Show it** buttons.
+- `/lazy check` names any file that failed to load, `/lazy windows` reports which windows were found, and a command that hits an error shows it in chat.
+- The next-zone data is shared correctly again (journey, trips and Lazy Mode's zone step).
+
 ## 0.8.2 (pre-release)
 - **Buttons and menus in the game windows**: a menu on the minimap button, a search box on the world map, buttons under the quest log, a craft plan beside the profession window, bank highlights, flight map and boat NPC buttons.
 - Numbered stop markers on the route drawn on the world map.

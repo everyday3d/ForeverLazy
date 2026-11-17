@@ -273,6 +273,11 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.8.3", {
+        "Fixes for this client: crafting and the window buttons now load, and the craft plan reads your recipes.",
+        "The recommended recipe lights up in the profession window, with a Show it button.",
+        "/lazy check now names any file that failed to load, and errors in commands show in chat.",
+    } },
     { "0.8.2", {
         "Buttons and menus in the game windows: a menu on the minimap button, a search box on the world map, quest log buttons, a craft plan beside your profession window.",
         "Numbered stop markers on the route drawn on the world map.",
@@ -327,7 +332,7 @@ function addon.ShowWhatsNew() ShowNew(Version()) end
 -- When these show by themselves
 --------------------------------------------------------------------------------
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+pcall(ev.RegisterEvent, ev, "PLAYER_ENTERING_WORLD")
 ev:SetScript("OnEvent", function(self)
     self:UnregisterEvent("PLAYER_ENTERING_WORLD")
     if not C_Timer then return end
@@ -356,3 +361,6 @@ function addon:HandleExtraCommand(cmd, rest)
     elseif word == "welcome" then if addon.ShowWelcome then addon.ShowWelcome() end; return true end
     if prev then return prev(self, cmd, rest) end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Help.lua"] = true end end

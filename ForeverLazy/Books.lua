@@ -259,7 +259,7 @@ end
 
 -- Picking a book up shows in the loot messages: "You receive item: [Title]."
 local lootFrame = CreateFrame("Frame")
-lootFrame:RegisterEvent("CHAT_MSG_LOOT")
+pcall(lootFrame.RegisterEvent, lootFrame, "CHAT_MSG_LOOT")
 lootFrame:SetScript("OnEvent", function(_, _, msg, _, _, _, _, _, _, _, _, _, _, guid)
     if type(msg) ~= "string" then return end
     if guid and UnitGUID and guid ~= UnitGUID("player") then return end
@@ -387,8 +387,8 @@ local function CheckZone()
 end
 
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("PLAYER_ENTERING_WORLD")
-ev:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+pcall(ev.RegisterEvent, ev, "PLAYER_ENTERING_WORLD")
+pcall(ev.RegisterEvent, ev, "ZONE_CHANGED_NEW_AREA")
 ev:SetScript("OnEvent", function(_, event)
     -- the map is not always ready the instant the event fires
     if C_Timer and C_Timer.After then
@@ -568,7 +568,7 @@ local function SetupLDB()
 end
 
 local ldbFrame = CreateFrame("Frame")
-ldbFrame:RegisterEvent("PLAYER_LOGIN")
+pcall(ldbFrame.RegisterEvent, ldbFrame, "PLAYER_LOGIN")
 ldbFrame:SetScript("OnEvent", function()
     if C_Timer and C_Timer.After then
         C_Timer.After(1, function() pcall(SetupLDB); pcall(addon.BooksChanged) end)
@@ -613,3 +613,6 @@ function addon:HandleExtraCommand(cmd, rest)
     end
     if prev then return prev(self, cmd, rest) end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Books.lua"] = true end end

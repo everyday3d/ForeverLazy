@@ -5,6 +5,27 @@
 
 local ADDON, ns = ...
 local PREFIX = "RXPGComms"
+-- item and bag functions: newer clients moved them into C_Item / C_Container, so bring the old names back when they are missing
+if C_Item then
+    if not GetItemInfo and C_Item.GetItemInfo then GetItemInfo = C_Item.GetItemInfo end
+    if not GetItemCount and C_Item.GetItemCount then GetItemCount = C_Item.GetItemCount end
+    if not GetItemIcon and C_Item.GetItemIconByID then GetItemIcon = C_Item.GetItemIconByID end
+    if not IsEquippableItem and C_Item.IsEquippableItem then IsEquippableItem = C_Item.IsEquippableItem end
+    if not IsUsableItem and C_Item.IsUsableItem then IsUsableItem = C_Item.IsUsableItem end
+end
+if C_Container then
+    if not GetItemCooldown and C_Container.GetItemCooldown then
+        -- some versions return start, duration, enabled, others one table: hand back the first form either way
+        GetItemCooldown = function(id)
+            local a, b, c = C_Container.GetItemCooldown(id)
+            if type(a) == "table" then return a.startTime or a.start or 0, a.duration or 0, a.isEnabled end
+            return a, b, c
+        end
+    end
+    if not GetContainerNumSlots and C_Container.GetContainerNumSlots then GetContainerNumSlots = C_Container.GetContainerNumSlots end
+    if not GetContainerNumFreeSlots and C_Container.GetContainerNumFreeSlots then GetContainerNumFreeSlots = C_Container.GetContainerNumFreeSlots end
+end
+if not GetCoinTextureString and C_CurrencyInfo and C_CurrencyInfo.GetCoinTextureString then GetCoinTextureString = C_CurrencyInfo.GetCoinTextureString end
 local MEDIA = "Interface\\AddOns\\ForeverLazy\\media\\"
 
 local LibStub = _G.LibStub
@@ -1189,8 +1210,8 @@ end
 -- Setup + slash commands
 --------------------------------------------------------------------------------
 local init = CreateFrame("Frame")
-init:RegisterEvent("PLAYER_LOGIN")
-init:RegisterEvent("GROUP_ROSTER_UPDATE")
+pcall(init.RegisterEvent, init, "PLAYER_LOGIN")
+pcall(init.RegisterEvent, init, "GROUP_ROSTER_UPDATE")
 init:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         InitSavedVars()
@@ -1271,9 +1292,16 @@ SlashCmdList["LAZYRXPT"] = function(msg)
         for i, c in ipairs(state.chosen) do Print(i .. ": " .. c.label) end
     elseif cmd == "" or cmd == "options" or cmd == "config" then
         addon:OpenOptions()
-    elseif addon.HandleExtraCommand and addon:HandleExtraCommand(cmd, rest) then
+    elseif addon.HandleExtraCommand and (function()
+            local ok, res = pcall(addon.HandleExtraCommand, addon, cmd, rest)
+            if not ok then Print("|cffff5555error in /" .. tostring(cmd) .. ":|r " .. tostring(res)); return true end
+            return res
+        end)() then
         -- handled in Extras.lua
     else
         Print("commands: /lrxp (options) | both | quest | friend | off | lock | unlock | scale <n> | reset | panel | minimap | way | status | test <text>")
     end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["ForeverLazy.lua"] = true end end

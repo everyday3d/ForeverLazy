@@ -187,8 +187,8 @@ end
 -- Events and command
 --------------------------------------------------------------------------------
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("PLAYER_LOGIN")
-ev:RegisterEvent("TAXIMAP_OPENED")
+pcall(ev.RegisterEvent, ev, "PLAYER_LOGIN")
+pcall(ev.RegisterEvent, ev, "TAXIMAP_OPENED")
 pcall(ev.RegisterEvent, ev, "CONFIRM_BINDER")
 pcall(ev.RegisterEvent, ev, "HEARTHSTONE_BOUND")
 ev:SetScript("OnEvent", function(_, event)
@@ -243,3 +243,6 @@ function api.HearthPoint()
     local h = Store("hearth")
     if h.map then return { name = h.name, map = h.map, zx = h.zx, zy = h.zy } end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Travel.lua"] = true end end

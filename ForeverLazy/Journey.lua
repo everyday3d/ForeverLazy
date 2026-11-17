@@ -183,7 +183,7 @@ end
 -- A word when a stretch is finished
 --------------------------------------------------------------------------------
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("PLAYER_LEVEL_UP")
+pcall(ev.RegisterEvent, ev, "PLAYER_LEVEL_UP")
 ev:SetScript("OnEvent", function(_, _, newLevel)
     local db = DB()
     if not db or db.journeyHint == false or not addon.ModuleOn("zones") then return end
@@ -225,3 +225,6 @@ function addon:HandleExtraCommand(cmd, rest)
     end
     if prevHandler then return prevHandler(self, cmd, rest) end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Journey.lua"] = true end end

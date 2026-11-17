@@ -127,9 +127,9 @@ local function Update()
 end
 
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("PLAYER_LOGIN")
-ev:RegisterEvent("UNIT_PET")
-ev:RegisterEvent("PET_BAR_UPDATE")
+pcall(ev.RegisterEvent, ev, "PLAYER_LOGIN")
+pcall(ev.RegisterEvent, ev, "UNIT_PET")
+pcall(ev.RegisterEvent, ev, "PET_BAR_UPDATE")
 pcall(ev.RegisterEvent, ev, "UNIT_HAPPINESS")
 ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
@@ -175,3 +175,6 @@ function addon:HandleExtraCommand(cmd, rest)
     end
     if prev then return prev(self, cmd, rest) end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Pet.lua"] = true end end

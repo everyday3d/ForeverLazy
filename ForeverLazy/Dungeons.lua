@@ -262,7 +262,7 @@ end
 --------------------------------------------------------------------------------
 local hinted = {}
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+pcall(ev.RegisterEvent, ev, "ZONE_CHANGED_NEW_AREA")
 ev:SetScript("OnEvent", function()
     if not C_Timer or not C_Timer.After then return end
     C_Timer.After(4, function()
@@ -294,3 +294,6 @@ function api.DungeonFind(text)
         if key:find(k, 1, true) and #rec.entrances > 0 then return rec end
     end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Dungeons.lua"] = true end end

@@ -280,8 +280,8 @@ local function Arrived()
 end
 
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("ZONE_CHANGED_NEW_AREA")
-ev:RegisterEvent("PLAYER_ENTERING_WORLD")
+pcall(ev.RegisterEvent, ev, "ZONE_CHANGED_NEW_AREA")
+pcall(ev.RegisterEvent, ev, "PLAYER_ENTERING_WORLD")
 ev:SetScript("OnEvent", function(_, event)
     if not C_Timer or not C_Timer.After then return end
     if event == "PLAYER_ENTERING_WORLD" then C_Timer.After(20, function() pcall(ScanSeeds) end) end
@@ -377,3 +377,6 @@ function api.BoatLinks()
     end
     return out
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Boats.lua"] = true end end

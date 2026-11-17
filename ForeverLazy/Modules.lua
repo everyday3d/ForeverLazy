@@ -4,6 +4,7 @@ local ADDON, ns = ...
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
+local hbd = api.hbd
 
 local function DB() return addon.GetDB() end
 
@@ -161,7 +162,14 @@ function addon.CheckInstall()
         { "class quests", api.ClassGivers }, { "dungeon entrances", api.DungeonEntrance }, { "duo mode", addon.DuoRole },
         { "quest items", addon.RefreshQuestItems }, { "crafting", addon.CraftNeeds }, { "dock sharing", addon.NetShareDock },
         { "next zone", api.NextZone }, { "follow arrow", addon.FollowMember },
+        { "menu and buttons (UI.lua)", addon.ShowMenu }, { "tour and settings sharing (Help.lua)", addon.StartTour },
     }
+    local FILES = { "ForeverLazy.lua", "Options.lua", "Extras.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
+        "ClassQuests.lua", "Boats.lua", "Services.lua", "FlightData.lua", "Travel.lua", "Party.lua", "Quests.lua", "PlanWindow.lua", "Journey.lua",
+        "Community.lua", "Crafting.lua", "Gather.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Modules.lua" }
+    for _, f in ipairs(FILES) do
+        check("file loaded: " .. f, addon.loaded and addon.loaded[f], "this file stopped on a Lua error while loading. Turn errors on with /console scriptErrors 1, then /reload")
+    end
     for _, p in ipairs(parts) do check("part loaded: " .. p[1], p[2] ~= nil, "its file did not load, check for a Lua error and the .toc list") end
     local fails = 0
     for _, r in ipairs(results) do if not r.ok then fails = fails + 1 end end
@@ -181,3 +189,6 @@ function addon:HandleExtraCommand(cmd, rest)
     end
     if prevCheck then return prevCheck(self, cmd, rest) end
 end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Modules.lua"] = true end end

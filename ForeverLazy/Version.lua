@@ -37,7 +37,7 @@ addon:RegisterComm(PREFIX, "OnVersion")
 
 local pending
 local ev = CreateFrame("Frame")
-ev:RegisterEvent("GROUP_ROSTER_UPDATE")
+pcall(ev.RegisterEvent, ev, "GROUP_ROSTER_UPDATE")
 ev:SetScript("OnEvent", function()
     if pending or not C_Timer then return end
     pending = true
@@ -47,3 +47,6 @@ ev:SetScript("OnEvent", function()
         if ch then addon:SendCommMessage(PREFIX, MyVersion(), ch) end
     end)
 end)
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Version.lua"] = true end end
