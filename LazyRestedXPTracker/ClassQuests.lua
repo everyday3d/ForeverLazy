@@ -113,8 +113,11 @@ local function Quests(now)
             local need = QDB.QueryQuestSingle(id, "requiredLevel") or 0
             local ok = false
             if now then
-                local okd, doable = pcall(QDB.IsDoable, id)
-                ok = okd and doable and true or false
+                -- Questie's "doable" does not check my level, so do that here
+                if need <= lvl then
+                    local okd, doable = pcall(QDB.IsDoable, id)
+                    ok = okd and doable and true or false
+                end
             else
                 ok = need > lvl and need <= lvl + 4 and HasRace(QDB.QueryQuestSingle(id, "requiredRaces"))
             end

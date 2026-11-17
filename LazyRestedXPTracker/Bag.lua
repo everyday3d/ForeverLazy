@@ -59,6 +59,25 @@ local HORDE = {
     ALLIANCE[6],
 }
 
+-- what to do at each spot (shown under the arrow), and for Alliance the towns to use on the way
+ALLIANCE[1].todo = "Outdoors: click the Burned-Out Remains in the broken cart."
+ALLIANCE[2].todo = "Burned tower: click the Burned-Out Corpse at its foot. If you cannot see it, look inside the tower."
+ALLIANCE[3].todo = "Outdoors: click the Pocket Litter on the crate in the camp."
+ALLIANCE[4].todo = "Climb the hill north of the camp and jump onto the Mound of Dirt. Falling into the ravine sends you back."
+ALLIANCE[5].todo = "On the dam: drop to the ledge below, use the carved heads facing the Wetlands as steps up to the eagle figurine, click it."
+ALLIANCE[6].todo = "Climb Thoradin's Wall, do the cart and wall jumps, click the bag on the wall, then loot the satchel below it."
+ALLIANCE[2].legs = {
+    { map = MAPS.Westfall, x = 56.4, y = 47.5, title = "Sentinel Hill, Westfall",
+      detail = "Travel to Booty Bay: take the gryphon from the Sentinel Hill flight master (about 3 minutes), or run via Duskwood." },
+    { map = 1434, npc = 2496, title = "Booty Bay, Stranglethorn Vale",
+      detail = "Travel to Ratchet: go to the docks and board The Maiden's Fancy (the dock guards tell you which boat goes where)." },
+}
+HORDE[1].todo = "Inside the burnt scouting tower: click the Burned-Out Remains."
+HORDE[2].todo = "Outdoors: click the Burned-Out Remains in the cart wreckage."
+HORDE[3].todo = ALLIANCE[3].todo
+HORDE[5].todo = ALLIANCE[5].todo
+HORDE[6].todo = ALLIANCE[6].todo
+
 local function Steps()
     return (UnitFactionGroup and UnitFactionGroup("player") == "Horde") and HORDE or ALLIANCE
 end
@@ -116,14 +135,34 @@ local function Place(force)
         if removed then Renumber(wps); addon:RefreshPins() end
         return
     end
+    -- in the zone of the spot: the spot itself. In a zone on the way: the boat or flight point to use there.
     local zone = hbd:GetPlayerZone()
-    if not force then
-        if zone ~= step.map then
-            if removed then Renumber(wps); addon:RefreshPins() end
-            return
+    local stop
+    if zone == step.map then
+        stop = { map = step.map, x = step.x, y = step.y, title = step.title, detail = step.todo }
+    elseif step.legs then
+        for _, leg in ipairs(step.legs) do
+            if leg.map == zone then stop = leg end
         end
     end
-    local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(step.x / 100, step.y / 100, step.map)
+    if not stop and force then
+        stop = { map = step.map, x = step.x, y = step.y, title = step.title, detail = step.todo }
+    end
+    if not stop then
+        if removed then Renumber(wps); addon:RefreshPins() end
+        return
+    end
+    local wx, wy, inst, zx, zy, uiMapId
+    if stop.npc then
+        -- position taken from Questie's data for a known NPC (the town's landmark)
+        local sp = {}
+        api.AddNpcs(sp, { stop.npc })
+        local s = sp[1]
+        if s then wx, wy, inst, zx, zy, uiMapId = s.x, s.y, s.instance, s.zx, s.zy, s.uiMapId end
+    else
+        wx, wy, inst = hbd:GetWorldCoordinatesFromZone(stop.x / 100, stop.y / 100, stop.map)
+        zx, zy, uiMapId = stop.x / 100, stop.y / 100, stop.map
+    end
     if not wx then
         if removed then Renumber(wps); addon:RefreshPins() end
         return
@@ -136,9 +175,9 @@ local function Place(force)
             return
         end
     end
-    local label = "Sleeping bag: " .. step.title
+    local label = "Sleeping bag: " .. stop.title
     table.insert(wps, 1, { name = "", label = label, bag = true, instance = inst, x = wx, y = wy,
-                           uiMapId = step.map, zx = step.x / 100, zy = step.y / 100 })
+                           uiMapId = uiMapId, zx = zx, zy = zy, detail = stop.detail })
     Renumber(wps)
     wps[1].name = "1. " .. label
     addon:RefreshPins()

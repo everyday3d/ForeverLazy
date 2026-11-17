@@ -584,8 +584,38 @@ local function Thin(list, gap, max)
     return out
 end
 
+-- A quest I chose to do now (right-click menu): its stops go to the front until it is handed in, then the plan carries on.
+local function ApplyFocus(wps)
+    local db = DB()
+    local f = db.planFocus
+    if not f or not wps then return end
+    local inLog = false
+    for _, q in ipairs(ReadQuestLog()) do if q.id == f.id then inLog = true; break end end
+    if inLog then
+        f.seen = true
+    elseif f.seen then
+        db.planFocus = nil                  -- done (handed in, or dropped): back to the plan
+        return
+    end
+    local moving, rest = {}, {}
+    for _, w in ipairs(wps) do
+        local has = false
+        for _, q in ipairs(w.quests or {}) do if q.id == f.id then has = true end end
+        if has then moving[#moving + 1] = w else rest[#rest + 1] = w end
+    end
+    if #moving == 0 then return end
+    local out, i = {}, 1
+    while rest[i] and rest[i].bag do out[#out + 1] = rest[i]; i = i + 1 end
+    for _, w in ipairs(moving) do out[#out + 1] = w end
+    for k = i, #rest do out[#out + 1] = rest[k] end
+    for k = 1, #wps do wps[k] = out[k] end
+    for k, w in ipairs(wps) do
+        if w.label then w.name = k .. ". " .. w.label end
+    end
+end
+
 local lastPlanZone, lastPlanAll
-local planActive     -- a plan is being followed (it refills itself when it runs out)
+local planActive    -- a plan is being followed (it refills itself when it runs out)
 
 -- Quests I can pick up in this zone (Questie already works out which ones I may take), worth doing
 -- by colour, nearest givers first. Used when none of my own quests are here.
@@ -599,9 +629,10 @@ local function CollectGivers(zoneId, pinst, from)
     local out = {}
     for id in pairs(avail) do
         local level = QDB.QueryQuestSingle(id, "questLevel")
+        local need = QDB.QueryQuestSingle(id, "requiredLevel") or 0     -- Questie can list quests above my level
         local g = { id = id, level = level, complete = false, grey = IsGrey(QDB, level) }
         g.tier = Tier(level, g.grey)
-        if not g.grey and Wanted(g) then
+        if need <= (UnitLevel("player") or 1) and not g.grey and Wanted(g) then
             local by = QDB.QueryQuestSingle(id, "startedBy")
             local sp, here = {}, {}
             if by then api.AddNpcs(sp, by[1]); api.AddObjects(sp, by[2]) end
@@ -664,7 +695,9 @@ function addon:PlanRoute(allZones, quiet, auto)
     local here0 = { x = px, y = py }
     local pool, elsewhere, otherZone, greyCount, totalXP = {}, 0, 0, mine.skipped or 0, 0
     for _, g in ipairs(mine.groups) do
-        if skipGrey and g.grey then
+        if db.planSkip and g.id and db.planSkip[g.id] then
+            -- skipped by me from the arrow's right-click menu
+        elseif skipGrey and g.grey then
             greyCount = greyCount + 1
         else
             local here, onContinent = {}, false
@@ -706,9 +739,11 @@ function addon:PlanRoute(allZones, quiet, auto)
     if #pool == 0 and not allZones and zoneId then
         -- nothing of mine is here: point at the quest givers in this zone instead
         for _, g in ipairs(CollectGivers(zoneId, pinst, here0)) do
-            pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) }
-            totalXP = totalXP + (g.xp or 0)
-            pickup = true
+            if not (db.planSkip and db.planSkip[g.id]) then
+                pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) }
+                totalXP = totalXP + (g.xp or 0)
+                pickup = true
+            end
         end
     end
     if not allZones and zoneId and db.planClass ~= false and api.ClassGivers then
@@ -716,7 +751,7 @@ function addon:PlanRoute(allZones, quiet, auto)
         local have = {}
         for _, it in ipairs(pool) do if it.g.id then have[it.g.id] = true end end
         for _, g in ipairs(api.ClassGivers(zoneId, pinst, here0)) do
-            if not have[g.id] then
+            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) then
                 pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) * 1.5 }
                 totalXP = totalXP + (g.xp or 0)
             end
@@ -778,7 +813,8 @@ function addon:PlanRoute(allZones, quiet, auto)
                 end
             end
             for _, d in ipairs(done) do
-                seq[#seq + 1] = { label = d.item.g.label, s = d.s, w = d.item.w, qid = d.item.qid, turn = d.item.turn }
+                seq[#seq + 1] = { label = d.item.g.label, s = d.s, w = d.item.w, qid = d.item.qid, turn = d.item.turn,
+                                  id = d.item.g.id }
                 if d.item.turnItem then d.item.turnItem.locked = false end
             end
             cur = bs
@@ -835,7 +871,15 @@ function addon:PlanRoute(allZones, quiet, auto)
     local stops = {}
     for _, e in ipairs(seq) do
         local last = stops[#stops]
-        if last and Dist(last.s, e.s) < 40 then
+        local join = last and Dist(last.s, e.s) < 40
+        local target = join and last or nil
+        if join then
+            if e.id and not last.qseen[e.id] then
+                last.qseen[e.id] = true
+                last.quests[#last.quests + 1] = { id = e.id, label = e.label }
+            end
+        end
+        if join then
             if e.turn and last.byQuest[e.qid] then
                 last.names[last.byQuest[e.qid]] = e.label        -- same spot: do it, then hand it in
             else
@@ -843,7 +887,11 @@ function addon:PlanRoute(allZones, quiet, auto)
                 if e.qid and not e.turn then last.byQuest[e.qid] = #last.names end
             end
         else
-            stops[#stops + 1] = { s = e.s, names = { e.label }, byQuest = {} }
+            stops[#stops + 1] = { s = e.s, names = { e.label }, byQuest = {}, qseen = {}, quests = {} }
+            if e.id then
+                stops[#stops].qseen[e.id] = true
+                stops[#stops].quests[1] = { id = e.id, label = e.label }
+            end
             if e.qid and not e.turn then stops[#stops].byQuest[e.qid] = 1 end
         end
     end
@@ -856,10 +904,12 @@ function addon:PlanRoute(allZones, quiet, auto)
         local label = table.concat(st.names, " + ")
         if #label > 80 then label = label:sub(1, 77) .. "..." end
         list[#list + 1] = { name = i .. ". " .. label, label = label, instance = st.s.instance, x = st.s.x, y = st.s.y,
-                            uiMapId = st.s.uiMapId, zx = st.s.zx, zy = st.s.zy }
+                            uiMapId = st.s.uiMapId, zx = st.s.zx, zy = st.s.zy, quests = st.quests }
     end
 
     db.waypoints = list
+    ApplyFocus(db.waypoints)
+    list = db.waypoints
     planActive = true
     if db.ownQuests then
         -- the plan replaces the "nearest/selected quest" arrow, two arrows would disagree
@@ -911,6 +961,7 @@ local function AddQuestToPlan(questId)
     if not q then return end
     local g = BuildGroup(q)
     if not Wanted(g, db.planSkipGrey == false) then return end   -- grey, or orange/red and not done: not worth a stop
+    if db.planSkip and db.planSkip[g.id] then return end         -- I skipped this one
 
     -- candidate spots on this continent, in the zone I am in
     local start = { x = px, y = py }
@@ -950,8 +1001,10 @@ local function AddQuestToPlan(questId)
     end
 
     table.insert(wps, bestPos + 1, { name = "", label = g.label, instance = bestS.instance, x = bestS.x, y = bestS.y,
-                                     uiMapId = bestS.uiMapId, zx = bestS.zx, zy = bestS.zy })
+                                     uiMapId = bestS.uiMapId, zx = bestS.zx, zy = bestS.zy,
+                                     quests = { { id = g.id, label = g.label } } })
     RenumberPlan(wps)
+    ApplyFocus(wps)
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
     Print(string.format("added %s to your plan as stop %d%s", g.label, bestPos + 1,
@@ -1048,6 +1101,265 @@ planEvents:SetScript("OnEvent", function(self, event, ...)
     return planOnEvent(self, event, ...)
 end)
 
+--------------------------------------------------------------------------------
+-- The line under the plan arrow: what to do at this stop
+--------------------------------------------------------------------------------
+local function PlainTitle(label)
+    local t = label or "?"
+    t = t:gsub("^Turn in: ", ""):gsub("^Pick up: ", ""):gsub("^Class quest: ", "")
+    return t
+end
+
+local npcNames = {}
+local function GiverName(id, field)
+    local key = id .. field
+    if npcNames[key] ~= nil then return npcNames[key] or nil end
+    local name
+    local QDB = api.GetQuestie()
+    local by = QDB and QDB.QueryQuestSingle(id, field)
+    if by and by[1] and by[1][1] then name = QDB.QueryNPCSingle(by[1][1], "name") end
+    if not name and by and by[2] and by[2][1] then name = QDB.QueryObjectSingle(by[2][1], "name") end
+    npcNames[key] = name or false
+    return name
+end
+
+-- "Defias Pillager slain: 3/8" becomes "Kill 5 more Defias Pillager (3/8)"
+local function ObjectiveLines(id)
+    local out = {}
+    if not (C_QuestLog and C_QuestLog.GetQuestObjectives) then return out end
+    local ok, objs = pcall(C_QuestLog.GetQuestObjectives, id)
+    if not ok or type(objs) ~= "table" then return out end
+    for _, o in ipairs(objs) do
+        if not o.finished and o.text and o.text ~= "" then
+            local have, need = o.numFulfilled, o.numRequired
+            local name = o.text:match("^(.-):%s*%d+/%d+") or o.text
+            local slain = name:find(" slain$") ~= nil
+            name = name:gsub(" slain$", "")
+            local multi = have and need and need > 1
+            local line
+            if slain then
+                -- a real kill objective
+                line = multi and string.format("Kill %d more %s (%d/%d)", need - have, name, have, need) or ("Kill " .. name)
+            elseif o.type == "item" then
+                line = multi and string.format("Collect %d more %s (%d/%d)", need - have, name, have, need) or ("Get " .. name)
+            else
+                -- talk to, explore, use, escort...: the quest's own wording says it best
+                line = multi and string.format("%s (%d/%d)", name, have, need) or name
+            end
+            out[#out + 1] = line
+        end
+    end
+    return out
+end
+
+local detailCache = setmetatable({}, { __mode = "k" })
+function addon.WaypointDetail(wp)
+    if not wp then return nil end
+    local c = detailCache[wp]
+    local now = GetTime()
+    if c and now - c.t < 1 then return c.text end
+    local text = wp.detail
+    if wp.quests and #wp.quests > 0 then
+        local parts = {}
+        for i, q in ipairs(wp.quests) do
+            if i > 2 then parts[#parts + 1] = string.format("+%d more", #wp.quests - 2); break end
+            local title = PlainTitle(q.label)
+            local lbl = q.label or ""
+            if lbl:find("^Turn in:") then
+                local npc = GiverName(q.id, "finishedBy")
+                parts[#parts + 1] = "Turn in " .. title .. (npc and (" to " .. npc) or "")
+            elseif lbl:find("^Pick up:") or lbl:find("^Class quest:") then
+                local npc = GiverName(q.id, "startedBy")
+                parts[#parts + 1] = "Pick up " .. title .. (npc and (" from " .. npc) or "")
+            else
+                local lines = ObjectiveLines(q.id)
+                if #lines > 0 then
+                    parts[#parts + 1] = table.concat(lines, ", ", 1, math.min(#lines, 2))
+                else
+                    parts[#parts + 1] = title
+                end
+            end
+        end
+        text = table.concat(parts, "; ")
+    end
+    detailCache[wp] = { t = now, text = text }
+    return text
+end
+
+--------------------------------------------------------------------------------
+-- Right-click the plan arrow to skip a quest (or just this stop)
+--------------------------------------------------------------------------------
+local function SkippedCount()
+    local n = 0
+    for _ in pairs(DB().planSkip or {}) do n = n + 1 end
+    return n
+end
+
+local function ReplanAfterSkip()
+    local db = DB()
+    addon:PlanRoute(lastPlanAll and true or false, true)
+    local wps = db.waypoints
+    if wps and wps[1] and wps[1].label then
+        Print("plan updated. Next: " .. wps[1].name)
+    else
+        Print("nothing left in the plan")
+    end
+end
+
+local function SkipQuest(id, label)
+    local db = DB()
+    db.planSkip = db.planSkip or {}
+    db.planSkip[id] = PlainTitle(label)
+    Print("skipping " .. PlainTitle(label) .. " (/lrxp skip clear brings skipped quests back)")
+    ReplanAfterSkip()
+end
+
+local skipMenu, skipCatcher
+local function BuildSkipMenu()
+    local f = CreateFrame("Frame", "LRXPT_SkipMenu", UIParent)
+    f:SetFrameStrata("FULLSCREEN_DIALOG")
+    f:SetClampedToScreen(true)
+    f:EnableMouse(true)
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
+    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.title:SetPoint("TOPLEFT", 10, -8)
+    f.title:SetWidth(300); f.title:SetJustifyH("LEFT")
+    f.rows = {}
+    skipCatcher = CreateFrame("Button", nil, UIParent)
+    skipCatcher:SetAllPoints(UIParent)
+    skipCatcher:SetFrameStrata("FULLSCREEN")
+    skipCatcher:Hide()
+    skipCatcher:RegisterForClicks("AnyUp")
+    skipCatcher:SetScript("OnClick", function() f:Hide() end)
+    f:SetScript("OnShow", function() skipCatcher:Show() end)
+    f:SetScript("OnHide", function() skipCatcher:Hide() end)
+    table.insert(UISpecialFrames, "LRXPT_SkipMenu")
+    f:Hide()
+    return f
+end
+
+local function MenuRow(f, i)
+    local b = f.rows[i]
+    if b then return b end
+    b = CreateFrame("Button", nil, f)
+    b:SetSize(300, 20)
+    b:SetPoint("TOPLEFT", 10, -26 - (i - 1) * 20)
+    b.fs = b:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    b.fs:SetPoint("LEFT", 2, 0)
+    b.fs:SetWidth(296); b.fs:SetJustifyH("LEFT")
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints(); hl:SetColorTexture(1, 1, 1, 0.15)
+    b:SetScript("OnClick", function(self)
+        f:Hide()
+        if self.fn then self.fn() end
+    end)
+    f.rows[i] = b
+    return b
+end
+
+function addon:OpenSkipMenu()
+    local db = DB()
+    local wp = db.waypoints[1]
+    if not (wp and wp.label) then Print("no plan stop to skip. /lrxp plan builds a plan"); return end
+    skipMenu = skipMenu or BuildSkipMenu()
+    local f = skipMenu
+    f.title:SetText(wp.name or wp.label)
+    local items = {}
+    for _, q in ipairs(wp.quests or {}) do
+        items[#items + 1] = { text = "Skip quest: " .. PlainTitle(q.label), fn = function() SkipQuest(q.id, q.label) end }
+    end
+    items[#items + 1] = { text = "Do a quest from the plan now...", fn = function() addon:OpenQuestList() end }
+    if db.planFocus then
+        items[#items + 1] = { text = "Back to the plan (stop doing " .. tostring(db.planFocus.label) .. ")", fn = function()
+            db.planFocus = nil
+            Print("back to the plan")
+            ReplanAfterSkip()
+        end }
+    end
+    items[#items + 1] = { text = "Skip this stop for now", fn = function()
+        addon:RemoveWaypoint(1)
+        local nxt = db.waypoints[1]
+        Print(nxt and ("skipped. Next: " .. (nxt.name or "?")) or "skipped. That was the last stop")
+    end }
+    if SkippedCount() > 0 then
+        items[#items + 1] = { text = string.format("Bring back %d skipped quest%s", SkippedCount(), SkippedCount() == 1 and "" or "s"),
+                              fn = function() db.planSkip = nil; Print("skipped quests are back in"); ReplanAfterSkip() end }
+    end
+    for i, it in ipairs(items) do
+        local row = MenuRow(f, i)
+        row.fn = it.fn
+        row.fs:SetText(it.text)
+        row:Show()
+    end
+    for i = #items + 1, #f.rows do f.rows[i]:Hide() end
+    f:SetSize(320, 36 + #items * 20)
+    local x, y = GetCursorPosition()
+    local s = UIParent:GetEffectiveScale()
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / s - 10, y / s + 10)
+    f:Show()
+end
+
+-- pick any quest in the plan to do next, whatever its place in the order
+function addon:OpenQuestList()
+    local db = DB()
+    skipMenu = skipMenu or BuildSkipMenu()
+    local f = skipMenu
+    local items, seen = {}, {}
+    for _, w in ipairs(db.waypoints) do
+        for _, q in ipairs(w.quests or {}) do
+            if q.id and not seen[q.id] then
+                seen[q.id] = true
+                local lbl = q.label or ""
+                local kind = lbl:find("^Turn in:") and "turn in" or ((lbl:find("^Pick up:") or lbl:find("^Class quest:")) and "pick up" or "do")
+                local mark = (db.planFocus and db.planFocus.id == q.id) and "|cff55ff55> |r" or ""
+                items[#items + 1] = { text = mark .. PlainTitle(lbl) .. "  |cffaaaaaa(" .. kind .. ")|r", fn = function()
+                    db.planFocus = { id = q.id, label = PlainTitle(lbl) }
+                    ApplyFocus(db.waypoints)
+                    addon:RefreshPins()
+                    if addon.RefreshOptions then addon.RefreshOptions() end
+                    local first = db.waypoints[1]
+                    Print("doing " .. PlainTitle(lbl) .. " first, then back to the plan" .. (first and (". Next: " .. first.name) or ""))
+                end }
+                if #items >= 14 then break end
+            end
+        end
+        if #items >= 14 then break end
+    end
+    if #items == 0 then Print("no quests in the plan. /lrxp plan builds one"); return end
+    f.title:SetText("Do which quest now?")
+    for i, it in ipairs(items) do
+        local row = MenuRow(f, i)
+        row.fn = it.fn
+        row.fs:SetText(it.text)
+        row:Show()
+    end
+    for i = #items + 1, #f.rows do f.rows[i]:Hide() end
+    f:SetSize(320, 36 + #items * 20)
+    local x, y = GetCursorPosition()
+    local s = UIParent:GetEffectiveScale()
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / s - 10, y / s + 10)
+    f:Show()
+end
+
+-- right-click on the plan arrow
+local skipHooked = CreateFrame("Frame")
+skipHooked:RegisterEvent("PLAYER_LOGIN")
+skipHooked:SetScript("OnEvent", function()
+    if not C_Timer or not C_Timer.After then return end
+    C_Timer.After(2, function()
+        local f = api.arrows and api.arrows.waypoint
+        if f then
+            f:EnableMouse(true)
+            f:SetScript("OnMouseUp", function(_, button)
+                if button == "RightButton" then addon:OpenSkipMenu() end
+            end)
+        end
+    end)
+end)
+
 local function ProfileNames()
     local names = {}
     for n in pairs(addon.GetRoot().profiles) do names[#names + 1] = n end
@@ -1071,6 +1383,22 @@ function addon:HandleExtraCommand(cmd, rest)
         db.ownQuests = not db.ownQuests
         mine.dirty = true
         Print("my quest log arrow " .. (db.ownQuests and "on" or "off"))
+        return true
+
+    elseif cmd == "skip" then
+        local db = DB()
+        if (rest or ""):lower() == "clear" then
+            db.planSkip = nil
+            Print("skipped quests are back in")
+            if db.waypoints[1] and db.waypoints[1].label then ReplanAfterSkip() end
+        else
+            local n = 0
+            for _, title in pairs(db.planSkip or {}) do
+                n = n + 1
+                Print("  skipped: " .. tostring(title))
+            end
+            Print(n == 0 and "no quests skipped. Right-click the plan arrow to skip one" or "/lrxp skip clear brings them back")
+        end
         return true
 
     elseif cmd == "plan" or cmd == "route!" then

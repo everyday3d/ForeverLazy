@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.5.7-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.5.8-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
@@ -50,6 +50,8 @@ unlocks most of the planning features.
 - **Nothing to do here?** It routes you to the nearest hub of **quest givers** instead and fills in the objectives as you accept quests
 - **Class quests** you can take are slotted in with extra weight
 - A gold **?** over the arrow marks a turn-in, a gold **!** marks a quest to pick up
+- **Says what to do**: the line under the arrow reads your quest log (*Kill 5 more Defias Pillager (3/8)*, *Turn in X to Y*)
+- **Right-click the arrow** to skip a quest or stop, or to pick any quest in the plan to do next. The plan picks up again once it is handed in
 
 ### Guides and suggestions
 
@@ -75,7 +77,7 @@ for people who do not have the addon.
 
 ## Install
 
-1. Download this repository (**Code → Download ZIP**) or clone it.
+1. Download this repository (**Code â†’ Download ZIP**) or clone it.
 2. Copy the **`LazyRestedXPTracker`** folder (the one inside the repo) into:
    `World of Warcraft\_forever_\Interface\AddOns\`
 3. Start the game. Adding the addon the first time needs a full restart, later updates only need `/reload`.

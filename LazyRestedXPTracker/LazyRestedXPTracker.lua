@@ -738,7 +738,7 @@ local function PointAt(f, instance, tx, ty, title, subPrefix)
     if not px or pinst ~= instance then
         f.arrow:Hide()
         f.title:SetText(db.showText and title or "")
-        f.sub:SetText("|cffaaaaaaDifferent zone or area|r")
+        f.sub:SetText((subPrefix or "") .. "|cffaaaaaaDifferent zone or area|r")
         return nil
     end
     local angle, dist = hbd:GetWorldVector(instance, px, py, tx, ty)
@@ -756,11 +756,11 @@ local function PointAt(f, instance, tx, ty, title, subPrefix)
     end
     f.title:SetText(db.showText and (title or "") or "")
     if dist and dist < db.arrival then
-        f.sub:SetText("|cff55ff55You are here|r")
+        f.sub:SetText((subPrefix or "") .. "|cff55ff55You are here|r")
     elseif db.showDistance then
         f.sub:SetText((subPrefix or "") .. FormatDist(dist or 0))
     else
-        f.sub:SetText("")
+        f.sub:SetText(subPrefix or "")
     end
     return dist
 end
@@ -870,7 +870,13 @@ local function UpdateWaypointArrow(show)
     elseif wp.label and (wp.label:find("Pick up:", 1, true) or wp.label:find("Class quest:", 1, true)) then mark = "!" end
     f.marker:SetText(mark or "?")
     f.marker:SetShown(mark ~= nil)
-    local dist = PointAt(f, wp.instance, wp.x, wp.y, wp.name)
+    -- the line under the arrow says what to do at this stop (kill / collect / turn in / how to get there)
+    local detail = wp.detail
+    if addon.WaypointDetail then
+        local ok, d = pcall(addon.WaypointDetail, wp)
+        if ok and d then detail = d end
+    end
+    local dist = PointAt(f, wp.instance, wp.x, wp.y, wp.name, detail and ("|cffffffff" .. detail .. "|r\n") or nil)
     if dist and dist < db.arrival and wpArrived ~= wp then
         wpArrived = wp
         if db.arrivalSound then PlayAlert((_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878) end
