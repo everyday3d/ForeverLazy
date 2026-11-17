@@ -217,7 +217,54 @@ local function BuildControls(parent)
     topY = y
 
     ----------------------------------------------------------------- Arrows
+    ---------------------------------------------------------------- Modules
+    Header(content, "Presets")
+    Label(content, "One click sets which modules are on. Change any of them below afterwards.")
+    y = y - 22
+    Button(content, "Minimal", 16, 90, function() if addon.ApplyPreset then addon.ApplyPreset("minimal") end end, false)
+    Button(content, "Leveler", 116, 90, function() if addon.ApplyPreset then addon.ApplyPreset("leveler") end end, false)
+    Button(content, "Duo", 216, 90, function() if addon.ApplyPreset then addon.ApplyPreset("duo") end end, false)
+    Button(content, "Everything", 316, 110, function() if addon.ApplyPreset then addon.ApplyPreset("full") end end, true)
+
+    Header(content, "Modules")
+    Label(content, "Switch off the parts you do not want. A module that is off does nothing, and its commands say so.")
+    y = y - 22
+    for _, m in ipairs(addon.MODULES or {}) do
+        Check(content, m[2], 16,
+            function() return addon.ModuleOn(m[1]) end,
+            function(v)
+                local db = DB()
+                db.modules = db.modules or {}
+                db.modules[m[1]] = v and true or false
+                if addon.ModulesChanged then addon.ModulesChanged() end
+            end)
+    end
+
+    ---------------------------------------------------------------- Journey
+    ---------------------------------------------------------------- Lazy mode
+    Header(content, "Lazy mode")
+    Label(content, "One press and the arrow points at the best next thing: vendor, trainer, your plan, or the next zone.")
+    y = y - 22
+    Button(content, "Do the next thing now", 16, 190, function() if addon.LazyNow then addon.LazyNow() end end, true)
+    Check(content, "Keep going: pick the next thing by itself when I reach it", 16,
+        function() return DB().lazyKeepGoing == true end, function(v) DB().lazyKeepGoing = v end)
+    Label(content, "Also: /lazy now, the macro LRXP Now (/lrxp macros), or a key under Key Bindings > Forever Lazy.")
+    y = y - 26
+    Header(content, "Journey")
+    Label(content, "Which zones to level in, in order, from your level to 60. It is kept for each character.")
+    y = y - 22
+    Button(content, "Generate my journey", 16, 170, function() if addon.JourneyGenerate then addon.JourneyGenerate() end end, false)
+    Button(content, "Regenerate", 196, 110, function() if addon.JourneyRegenerate then addon.JourneyRegenerate() end end, false)
+    Button(content, "Show it", 316, 90, function() if addon.JourneyShow then addon.JourneyShow() end end, true)
+    Check(content, "Include dungeons that fit each stretch", 16,
+        function() return DB().journeyDungeons ~= false end, function(v) DB().journeyDungeons = v end)
+    Check(content, "Tell me when I have outgrown a stop and where to go next", 16,
+        function() return DB().journeyHint ~= false end, function(v) DB().journeyHint = v end)
+
+    ----------------------------------------------------------------- Arrows
     Header(content, "Arrows")
+    Check(content, "Simple arrows: one main arrow (plus the ghost and follow arrows). Everything else shows on the compass.", 16,
+        function() return DB().simpleArrows ~= false end, function(v) DB().simpleArrows = v; Changed() end)
     Radio(content, "Arrow style:", "style", {
         { "minimap", "Classic" }, { "chevron", "Chevron" }, { "thick", "Thick" } })
     ColorRow(content, "Route plan arrow color", "colorWaypoint")
@@ -333,6 +380,28 @@ local function BuildControls(parent)
         function() return DB().classAlert ~= false end, function(v) DB().classAlert = v end)
     Check(content, "Put class quest givers in my plan when they are in this zone", 16,
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
+    Check(content, "Draw my plan's route on the world map", 16,
+        function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
+    Check(content, "Share boat docks I teach with my guild and group (hidden addon messages, nothing shows in chat)", 16,
+        function() return DB().community == true end, function(v) DB().community = v end)
+    Check(content, "When I open a profession window, tell me the best next craft", 16,
+        function() return DB().craftHint ~= false end, function(v) DB().craftHint = v end)
+    Check(content, "Show a button for quest items I need to use", 16,
+        function() return DB().questItemButton ~= false end, function(v) DB().questItemButton = v; if addon.RefreshQuestItems then addon.RefreshQuestItems() end end)
+    Check(content, "Tell me what comes next after I hand in a quest in a chain", 16,
+        function() return DB().chainHint ~= false end, function(v) DB().chainHint = v end)
+    Check(content, "Mark the best quest reward (likely upgrade, or highest vendor price)", 16,
+        function() return DB().rewardPick ~= false end, function(v) DB().rewardPick = v end)
+    Check(content, "Leave group quests out of my plan while I am solo", 16,
+        function() return DB().planSkipGroup ~= false end, function(v) DB().planSkipGroup = v end)
+    Check(content, "Favour quests I share with someone in my group", 16,
+        function() return DB().planShared ~= false end, function(v) DB().planShared = v end)
+    Check(content, "Tell me when my hearthstone would save a long walk", 16,
+        function() return DB().hearthNudge ~= false end, function(v) DB().hearthNudge = v end)
+    Check(content, "In duo mode, show my partner on the compass (even when the arrows are off)", 16,
+        function() return DB().duoCompass ~= false end, function(v) DB().duoCompass = v end)
+    Radio(content, "Marker for my partner on the compass:", "compassIcon", {
+        { 3, "Diamond" }, { 1, "Star" }, { 2, "Circle" }, { 4, "Triangle" }, { 5, "Moon" } })
     Check(content, "Compass bar at the top of the screen", 16,
         function() return DB().compassBar end, function(v) DB().compassBar = v end)
     Check(content, "Accept waypoints my party sends me", 16,
@@ -564,6 +633,7 @@ end
 --------------------------------------------------------------------------------
 local MACROS = {
     { name = "LRXP Plan",       body = "/lrxp plan" },
+    { name = "LRXP Now",        body = "/lazy now" },
     { name = "LRXP Next",       body = "/lrxp way next" },
     { name = "LRXP Arrows",     body = "/lrxp toggle" },
     { name = "LRXP Books",      body = "/lrxp books" },

@@ -338,7 +338,7 @@ function RefreshBookPins()
     if addon.BooksChanged then pcall(addon.BooksChanged) end
     if not hbdp then return end
     pcall(hbdp.RemoveAllWorldMapIcons, hbdp, bookRef)
-    if DB().bookPins == false then return end
+    if DB().bookPins == false or not addon.ModuleOn("books") then return end
     for i, e in ipairs(BOOKS) do
         local w = Entry(e)
         if w then
@@ -366,6 +366,7 @@ addon.RefreshBookPins = RefreshBookPins
 
 local function CheckZone()
     local db = DB()
+    if not addon.ModuleOn("books") then return end
     if db.bookAlert == false and not db.bookAuto then return end
     local zoneId = hbd:GetPlayerZone()
     if not zoneId or told[zoneId] then return end

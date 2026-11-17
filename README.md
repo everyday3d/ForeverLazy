@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.6.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.7.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
@@ -55,6 +55,27 @@ Nothing in the addon needs RestedXP (see [RestedXP friends](#restedxp-friends-op
 | **Next zone** | When you outgrow a zone it suggests where to go for your level (`/lrxp nextzone`). |
 | **Find a service** | The nearest innkeeper, repair vendor, flight master, banker, auctioneer, mailbox, stable master, spirit healer, battlemaster, class trainer or profession trainer, with the arrow on it (`/lazy inn`, `/lazy repair`, `/lazy cooking`...). |
 | **Boats and zeppelins** | `/lazy boat darnassus` plans the boat route and points at each dock. Docks the addon does not know yet are taught with `/lazy boat mark`. |
+
+### Lazy Mode: one press, the best next thing
+
+`/lazy now` (or a key, a macro, or the button in the options) points the arrow at the single best next thing:
+a vendor when your bags are full or your gear is damaged, your trainer when a visit is due, your plan's next stop,
+or the next zone of your journey. Turn on **Keep going** and it picks the next one by itself when you arrive.
+
+### More guides and helpers
+
+| | |
+|---|---|
+| **Journey** | A saved zone-by-zone route from your level to 60, with dungeons that fit (`/lazy journey`, **Generate** and **Regenerate** buttons in the options). |
+| **Crafting** | Reads the recipes you know (including enchanting), says what to craft next, counts your **bags and bank**, and tells you where to get what is missing (`/lazy craft`). |
+| **Gathering and fishing** | A route through the nearest herb or ore nodes (`/lazy herb peacebloom`, `/lazy gather`) and the nearest fishing pools (`/lazy fish`). |
+| **Quest helpers** | A button for quest items, what comes next in a quest chain, a pick for the best quest reward, and the best place to farm a quest item (`/lazy farm`). |
+| **Hearth and flight points** | An arrow to your hearthstone inn, a nudge when it would save a long walk, and the nearest flight point you have not found (`/lazy hearth`, `/lazy fp`). |
+| **Duo mode** | Two players with the addon in a group of two: the party leader's plan is followed by the other, shared quests count extra, and your partner is on the compass. Starts by itself. |
+| **Plan window** | A movable list of the plan's stops, with the route drawn on the world map (`/lazy window`). |
+| **Modules and presets** | Every part can be switched off in the options. **Minimal**, **Leveler**, **Duo** and **Everything** presets set them in one click. |
+| **Simple arrows** | One main arrow. Friends, quest targets and your partner show on the compass instead, so the screen stays clean. |
+| **Check** | `/lazy check` tells you if everything loaded and is working. Paste it into a bug report. |
 
 ### Arrows
 
@@ -134,8 +155,19 @@ orgrimmar, undercity. A route that is not working for you can be fixed the same 
 | `/lrxp way <x> <y> [name]` `here` `list` `next` `remove <n>` `clear` | Waypoints |
 | `/lrxp own` `compass` | Toggle the "my quests" arrow and the compass bar |
 | `/lrxp pet` `pet test` | Hunter pet reminder |
-| `/lrxp flight` | Flight times learned so far |
+| `/lazy flighttimes` | Flight times learned so far |
 | `/lrxp macros` `macros remove` | Make or remove the addon's macros |
+| `/lazy now` | Lazy Mode: point at the best next thing |
+| `/lazy journey` `generate` `regenerate` `go <n>` | Your zone-by-zone route to 60 |
+| `/lazy craft [profession] [goal]` `craft go` `craft bank` | Crafting plan, materials, bank |
+| `/lazy herb <name>` `ore <name>` `gather` `fish` | Gathering routes and fishing spots |
+| `/lazy hearth` `hearth set` `fp` `fp list` | Hearthstone inn and flight points |
+| `/lazy chain` `farm` | Quest chain follow-up, best place to farm |
+| `/lazy window` | The plan window |
+| `/lazy party` `shareplan` `acceptplan` `duo` | Group features |
+| `/lazy net on` `off` | Share boat docks with your guild and group (hidden messages) |
+| `/lazy preset minimal` `leveler` `duo` `full` | Switch modules in one go |
+| `/lazy check` | Is everything loaded and working |
 | `/lrxp toggle` | Turn the RestedXP friend arrows off and back on |
 | `/lrxp both` `quest` `friend` `off` | Choose which RestedXP friend arrows show |
 | `/lrxp lock` `unlock` `scale <n>` `reset` | Move, resize and reset the arrows |

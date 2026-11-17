@@ -124,7 +124,7 @@ end
 local lastHint
 local function Check(level)
     local db = DB()
-    if not db or db.nextZoneHint == false then return end
+    if not db or db.nextZoneHint == false or not addon.ModuleOn("zones") then return end
     level = level or UnitLevel("player")
     local name = CurrentZoneName()
     local z = name and BY_NAME[name]
@@ -163,3 +163,6 @@ function addon:HandleExtraCommand(cmd, rest)
     end
     if prev then return prev(self, cmd, rest) end
 end
+
+-- used by the journey planner
+api.NextZone = { zones = ZONES, mapId = MapId }

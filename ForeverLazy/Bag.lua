@@ -95,6 +95,7 @@ end
 
 -- returns the number of the spot I should go to (1-6), or nil when the chain is not under way
 local function Current()
+    if not addon.ModuleOn("bag") then return nil end
     local st = State()
     if st.done then return nil end
     if GetItemCount and GetItemCount("Cozy Sleeping Bag") > 0 then st.done = true; return nil end

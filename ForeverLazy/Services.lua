@@ -180,3 +180,36 @@ function addon:HandleExtraCommand(cmd, rest)
     end
     if prev then return prev(self, cmd, rest) end
 end
+
+-- lets the module switch (Modules.lua) know which commands belong here
+function api.IsServiceCommand(cmd, rest)
+    local word = (cmd or ""):lower()
+    local arg = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
+    if SERVICES[word] or word == "classtrainer" or word == "trainer" or word == "trainers" then return true end
+    if word == "class" and (arg:gsub("%s*%d+$", "")) == "trainer" then return true end
+    local what = ((word .. " " .. arg):gsub("%s*%d+$", ""))
+    for _, p in ipairs(PROFESSIONS) do
+        for _, w in ipairs(p[1]) do
+            if what == w or what == w .. " trainer" then return true end
+        end
+    end
+    return false
+end
+
+-- used by Lazy Mode: the nearest one of a kind, or nil
+function api.FindService(word)
+    local T = Mod("Townsfolk")
+    local QDB = api.GetQuestie()
+    if not (T and QDB and api.QuestieReady and api.QuestieReady()) then return nil end
+    local ids, object
+    if word == "classtrainer" then
+        ids = ClassTrainers(T)
+    else
+        local svc = SERVICES[word]
+        if not svc then return nil end
+        ids, object = svc.get(T), svc.object
+    end
+    if not ids or #ids == 0 then return nil end
+    local list = Nearest(QDB, ids, object, 1)
+    return list[1]
+end

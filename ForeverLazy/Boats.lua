@@ -175,7 +175,7 @@ local function DockFor(node, to)
         local map = MapIdByName(k.zone)
         if map then return { map = map, zx = k.x / 100, zy = k.y / 100 } end
     end
-    return seeds[node]
+    return seeds[node] or (addon.CommunityDock and addon.CommunityDock(node, to))
 end
 
 --------------------------------------------------------------------------------
@@ -245,7 +245,7 @@ end
 
 -- moved on to the next port
 local function Arrived()
-    if not trip then return end
+    if not trip or not addon.ModuleOn("boats") then return end
     local here = NodeHere()
     if not here then return end
     for idx = trip.idx + 1, #trip.path do
@@ -320,6 +320,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if not key then Print("tell me which port: /lazy boat mark auberdine"); return true end
         if not zx then Print("I can't read your position here"); return true end
         Docks()[key] = { map = map, zx = zx, zy = zy }
+        if addon.NetShareDock then addon.NetShareDock(key, map, zx, zy) end
         Print(string.format("remembered the %s dock at %.1f, %.1f", NODES[key].name, zx * 100, zy * 100))
         if trip then Show() end
     else

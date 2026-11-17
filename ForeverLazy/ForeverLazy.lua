@@ -37,7 +37,7 @@ local DEFAULTS = {
     colorMine = { 1, 0.5, 0.9 },
     ownQuests = false,        -- arrow for my own quest log
     animate = true,
-    compassBar = false,
+    compassBar = true,
     showHistory = true,
     stuckAlert = true,
     acceptShared = true,
@@ -51,6 +51,8 @@ local DEFAULTS = {
     hideCombat = false,
     hideResting = false,
     hideTaxi = true,
+    compassIcon = 3,          -- marker for my partner on the compass: 1 star, 2 circle, 3 diamond, 4 triangle, 5 moon
+    simpleArrows = true,      -- one main arrow; everything else shows on the compass
     showPanel = false,        -- only useful with a RestedXP friend
     rxpListen = false,        -- RestedXP is optional: off until switched on in the options
     panelScale = 1,
@@ -76,6 +78,12 @@ addon.DEFAULTS = DEFAULTS
 
 local function Print(msg) print("|cff33ccffForeverLazy:|r " .. tostring(msg)) end
 addon.Print = Print
+
+-- each module can be switched off in the options: db.modules[key] == false means off
+function addon.ModuleOn(key)
+    local d = addon.GetDB and addon.GetDB()
+    return not (d and d.modules and d.modules[key] == false)
+end
 
 local function Strip(s)
     if not s then return "" end
@@ -855,7 +863,7 @@ end
 local wpArrived
 local function UpdateWaypointArrow(show)
     local f = arrows.waypoint
-    local wp = db.waypoints[1]
+    local wp = db.waypoints[1] or (db.simpleArrows ~= false and addon.SimpleTarget and addon.SimpleTarget()) or nil
     if not show or not wp or db.waypointArrowOff then f:Hide(); return end
     f:Show()
     f:SetAlpha(db.alpha)
@@ -919,8 +927,9 @@ driver:SetScript("OnUpdate", function(_, dt)
         if #state.groups > 0 then addon:Recompute() end
     end
     local show = db.mode ~= "off" and not ShouldHide() and db.rxpListen ~= false
-    UpdateQuestArrows(show)
-    UpdateFriendArrow(show)
+    local simple = db.simpleArrows ~= false      -- simple arrows: only the one main arrow (plus ghost and follow)
+    UpdateQuestArrows(show and not simple)
+    UpdateFriendArrow(show and not simple)
     UpdateWaypointArrow(not ShouldHide())
     if addon.panel then
         addon.panel:SetShown(db.showPanel and state.stepText ~= nil and not ShouldHide() and db.rxpListen ~= false)

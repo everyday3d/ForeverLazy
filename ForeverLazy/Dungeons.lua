@@ -22,6 +22,8 @@ local LEVELS = {
     ["Stratholme"] = { 56, 61 },
 }
 
+api.DungeonLevels = LEVELS
+
 local function Zone()
     local ql = _G.QuestieLoader
     if not ql then return nil end
@@ -266,7 +268,7 @@ ev:SetScript("OnEvent", function()
     C_Timer.After(4, function()
         pcall(function()
             local db = DB()
-            if not db or db.dungeonHint == false then return end
+            if not db or db.dungeonHint == false or not addon.ModuleOn("dungeons") then return end
             if IsInInstance and IsInInstance() then return end
             local here = hbd:GetPlayerZone()
             if not here then return end

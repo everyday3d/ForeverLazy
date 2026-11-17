@@ -79,6 +79,7 @@ end
 local function Update()
     local db = DB()
     if not db or not isHunter then return end
+    if not addon.ModuleOn("pet") then if frame then frame:Hide() end; return end
     if not frame then frame = MakeFrame(); Place() end
 
     local testing = GetTime() < testUntil

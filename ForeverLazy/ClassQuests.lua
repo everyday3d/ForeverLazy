@@ -138,6 +138,7 @@ end
 -- for the route planner: quests I can take now whose giver is in this zone
 function api.ClassGivers(zoneId, pinst, from)
     local out = {}
+    if not addon.ModuleOn("classq") then return out end
     for _, q in ipairs(Quests(true)) do
         local here, near, nearSpawn = {}, nil, nil
         for _, s in ipairs(q.spawns) do
@@ -230,7 +231,7 @@ end
 
 local function Announce(silent)
     local db = DB()
-    if not list or not db then return end
+    if not list or not db or not addon.ModuleOn("classq") then return end
     local seen = Seen()
     local fresh = {}
     for _, q in ipairs(Quests(true)) do

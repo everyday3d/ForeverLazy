@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Forever Lazy
 ## Notes: Never think about where to go next. Arrows, an XP-weighted quest route planner, quest-chain guides, class quests, dungeons and library books for WoW Forever.
-## Version: 0.6.0
+## Version: 0.7.0
 ## SavedVariables: LRXPTDB
 ## OptionalDeps: Questie, QuestieDB, TomTom
 
@@ -18,3 +18,14 @@ Bag.lua
 ClassQuests.lua
 Boats.lua
 Services.lua
+Travel.lua
+Party.lua
+Quests.lua
+PlanWindow.lua
+Journey.lua
+Community.lua
+Crafting.lua
+Gather.lua
+Version.lua
+LazyMode.lua
+Modules.lua

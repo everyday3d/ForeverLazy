@@ -30,17 +30,17 @@ local function ReadQuestLog()
                     watched = C_QuestLog.IsQuestWatched(info.questID) and true or false
                 end
                 out[#out + 1] = { id = info.questID, title = info.title or "Quest", complete = done and true or false,
-                                  watched = watched, level = info.level }
+                                  watched = watched, level = info.level, group = info.suggestedGroup }
             end
         end
     elseif GetNumQuestLogEntries and GetQuestLogTitle then
         local n = GetNumQuestLogEntries()
         for i = 1, n do
-            local title, qLevel, _, isHeader, _, isComplete, _, questId = GetQuestLogTitle(i)
+            local title, qLevel, suggested, isHeader, _, isComplete, _, questId = GetQuestLogTitle(i)
             if title and not isHeader and questId then
                 local watched = IsQuestWatched and IsQuestWatched(i) and true or false
                 out[#out + 1] = { id = questId, title = title, complete = (isComplete == 1 or isComplete == true),
-                                  watched = watched, level = qLevel }
+                                  watched = watched, level = qLevel, group = tonumber(suggested) }
             end
         end
     end
@@ -133,7 +133,7 @@ function BuildGroup(q)
         local level = q.level
         if not level or level == 0 then level = QDB.QueryQuestSingle(q.id, "questLevel") end
         local g = { label = (q.complete and "Turn in: " or "") .. q.title, spawns = {}, complete = q.complete,
-                    id = q.id, watched = q.watched, level = level,
+                    id = q.id, watched = q.watched, level = level, group = q.group,
                     xp = QuestXPNow(q.id), grey = IsGrey(QDB, level) }
         g.tier = Tier(level, g.grey)
         if q.complete then
@@ -255,6 +255,7 @@ local function UpdateMine(dt)
         mine.lastPick = 0
     end
     if now - mine.lastPick > 0.5 then PickMine(); mine.lastPick = now end
+    if db.simpleArrows ~= false then mineArrow:Hide(); return end
     mineArrow:Show()
     mineArrow:SetAlpha(db.alpha)
     if not api.QuestieReady() then
@@ -296,12 +297,22 @@ local function MakeCompass()
         m:SetSize(10, 18)
         m.tex = m:CreateTexture(nil, "OVERLAY")
         m.tex:SetAllPoints()
+        m.icon = m:CreateTexture(nil, "OVERLAY")
+        m.icon:SetSize(16, 16)
+        m.icon:SetPoint("CENTER")
+        m.icon:Hide()
+        m.letter = m:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        m.letter:SetPoint("CENTER", 0, 0)
+        m.letter:SetShadowOffset(1, -1)
         m:Hide()
         f.markers[i] = m
     end
     f:Hide()
     return f
 end
+
+-- the marker my partner gets on the compass (raid target icons: 1 star, 2 circle, 3 diamond, 4 triangle, 5 moon)
+local function PartnerIcon() return (DB() and DB().compassIcon) or 3 end
 
 local function CompassSources()
     local db = DB()
@@ -316,14 +327,45 @@ local function CompassSources()
     end
     if mode == "friend" or mode == "both" then
         local lk = state.lastKnown
-        if lk and GetTime() - lk.t < 3 then out[#out + 1] = { lk.instance, lk.x, lk.y, db.colorFriend } end
+        if lk and GetTime() - lk.t < 3 then out[#out + 1] = { lk.instance, lk.x, lk.y, db.colorFriend, nil, 4 } end
     end
+    -- the person I follow with the purple arrow
+    local fp = addon.FollowPosition and addon.FollowPosition()
+    if fp and addon.ModuleOn("follow") and GetTime() - fp.t < 3 then out[#out + 1] = { fp.instance, fp.x, fp.y, { 0.85, 0.5, 1 }, nil, PartnerIcon() } end
     local wp = db.waypoints[1]
     if wp then out[#out + 1] = { wp.instance, wp.x, wp.y, db.colorWaypoint } end
     if db.ownQuests and mine.chosen then
         out[#out + 1] = { mine.chosen.spawn.instance, mine.chosen.spawn.x, mine.chosen.spawn.y, db.colorMine }
     end
     return out
+end
+
+-- simple arrows: with no plan stop, the one main arrow points at the friend's quest target, else my own quest
+function addon.SimpleTarget()
+    local db = DB()
+    if not db then return nil end
+    if db.rxpListen == true and (db.mode == "quest" or db.mode == "both") and state.chosen and state.chosen[1] then
+        local c = state.chosen[1]
+        return { instance = c.spawn.instance, x = c.spawn.x, y = c.spawn.y, name = c.label }
+    end
+    if db.ownQuests and mine.chosen then
+        return { instance = mine.chosen.spawn.instance, x = mine.chosen.spawn.x, y = mine.chosen.spawn.y, name = mine.chosen.label }
+    end
+    return nil
+end
+
+-- duo mode: my partner is on the compass as an F, even when the compass bar and the arrows are off
+local function DuoPartnerSource()
+    local db = DB()
+    if db.duoCompass == false or not (addon.DuoRole and addon.DuoRole()) then return nil end
+    if (GetNumGroupMembers and GetNumGroupMembers() or 0) ~= 2 then return nil end
+    for i = 1, 4 do
+        local u = "party" .. i
+        if UnitExists(u) and not UnitIsUnit(u, "player") then
+            local x, y, inst = hbd:GetUnitWorldPosition(u)
+            if x then return { inst, x, y, { 0.85, 0.5, 1 }, nil, PartnerIcon() } end
+        end
+    end
 end
 
 local compassTimer = 0
@@ -333,7 +375,9 @@ local function UpdateCompass(dt)
     compassTimer = compassTimer + dt
     if compassTimer < 0.05 then return end
     compassTimer = 0
-    if not db.compassBar or db.mode == "off" or api.ShouldHide() then compass:Hide(); return end
+    local partner = DuoPartnerSource()
+    local normal = db.compassBar and db.mode ~= "off"
+    if (not normal and not partner) or api.ShouldHide() then compass:Hide(); return end
     compass:Show()
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     local facing = GetPlayerFacing()
@@ -341,7 +385,9 @@ local function UpdateCompass(dt)
     if not px or not facing then return end
     local half = compass:GetWidth() / 2 - 8
     local n = 0
-    for _, s in ipairs(CompassSources()) do
+    local sources = normal and CompassSources() or {}
+    if partner then sources[#sources + 1] = partner end
+    for _, s in ipairs(sources) do
         if s[1] == pinst and n < #compass.markers then
             local angle = hbd:GetWorldVector(pinst, px, py, s[2], s[3])
             if angle then
@@ -351,7 +397,24 @@ local function UpdateCompass(dt)
                     local m = compass.markers[n]
                     m:ClearAllPoints()
                     m:SetPoint("CENTER", compass, "CENTER", -rel / (math.pi / 2) * half, 0)
-                    m.tex:SetColorTexture(unpack(s[4]))
+                    m.icon:Hide()
+                    m.letter:SetText("")
+                    if s[6] then
+                        -- a person: a raid target marker instead of a block
+                        m.tex:SetColorTexture(0, 0, 0, 0)
+                        m.icon:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons")
+                        if SetRaidTargetIconTexture then SetRaidTargetIconTexture(m.icon, s[6]) end
+                        m.icon:Show()
+                        m:SetSize(16, 18)
+                    elseif s[5] then
+                        m.tex:SetColorTexture(0, 0, 0, 0)
+                        m.letter:SetText(s[5])
+                        m.letter:SetTextColor(s[4][1], s[4][2], s[4][3])
+                        m:SetSize(14, 18)
+                    else
+                        m.tex:SetColorTexture(unpack(s[4]))
+                        m:SetSize(10, 18)
+                    end
                     m:Show()
                 end
             end
@@ -740,6 +803,15 @@ function addon:PlanRoute(allZones, quiet, auto)
         local xp = g.xp or 0
         if xp <= 0 then xp = 50 end          -- no XP data: assume a small quest
         if not g.complete then xp = xp * 0.7 end
+        -- a quest a friend in my group has too is worth more: we can do it together
+        if db.planShared ~= false and addon.sharedQuests and g.id then
+            local sh = addon.sharedQuests[g.id]
+            if addon.DuoRole and addon.DuoRole() then
+                xp = xp * (sh and 1.6 or 0.8)          -- duo mode: quests we both have are worth much more
+            elseif sh then
+                xp = xp * 1.3
+            end
+        end
         return xp
     end
 
@@ -748,9 +820,13 @@ function addon:PlanRoute(allZones, quiet, auto)
     lastPlanZone, lastPlanAll = zoneId, allZones and not auto
     local here0 = { x = px, y = py }
     local pool, elsewhere, otherZone, greyCount, totalXP = {}, 0, 0, mine.skipped or 0, 0
+    local groupSkipped = 0
     for _, g in ipairs(mine.groups) do
         if db.planSkip and g.id and db.planSkip[g.id] then
             -- skipped by me from the arrow's right-click menu
+        elseif g.group and g.group > 1 and not g.complete and db.planSkipGroup ~= false and g.tier ~= "green"
+            and (GetNumGroupMembers and GetNumGroupMembers() or 0) < 2 then
+            groupSkipped = groupSkipped + 1       -- meant for a group and I am on my own (green ones are fine alone)
         elseif skipGrey and g.grey then
             greyCount = greyCount + 1
         else
@@ -868,7 +944,7 @@ function addon:PlanRoute(allZones, quiet, auto)
             end
             for _, d in ipairs(done) do
                 seq[#seq + 1] = { label = d.item.g.label, s = d.s, w = d.item.w, qid = d.item.qid, turn = d.item.turn,
-                                  id = d.item.g.id, src = d.s.src }
+                                  id = d.item.g.id, src = d.s.src, grp = d.item.g.group, tier = d.item.g.tier }
                 if d.item.turnItem then d.item.turnItem.locked = false end
             end
             cur = bs
@@ -930,7 +1006,7 @@ function addon:PlanRoute(allZones, quiet, auto)
         if join then
             if e.id and not last.qseen[e.id] then
                 last.qseen[e.id] = true
-                last.quests[#last.quests + 1] = { id = e.id, label = e.label, src = e.src }
+                last.quests[#last.quests + 1] = { id = e.id, label = e.label, src = e.src, grp = e.grp, tier = e.tier }
             end
         end
         if join then
@@ -944,7 +1020,7 @@ function addon:PlanRoute(allZones, quiet, auto)
             stops[#stops + 1] = { s = e.s, names = { e.label }, byQuest = {}, qseen = {}, quests = {} }
             if e.id then
                 stops[#stops].qseen[e.id] = true
-                stops[#stops].quests[1] = { id = e.id, label = e.label, src = e.src }
+                stops[#stops].quests[1] = { id = e.id, label = e.label, src = e.src, grp = e.grp, tier = e.tier }
             end
             if e.qid and not e.turn then stops[#stops].byQuest[e.qid] = 1 end
         end
@@ -976,6 +1052,10 @@ function addon:PlanRoute(allZones, quiet, auto)
     Print(string.format("planned %d stop%s for %d quest%s, about %d yards of walking%s. First: %s",
         #list, #list == 1 and "" or "s", questCount, questCount == 1 and "" or "s", total,
         totalXP > 0 and string.format(", about %d XP in total", totalXP) or "", list[1].name))
+    if groupSkipped > 0 then
+        Print(string.format("%d group quest%s left out because you are solo (they come back when you join a group)",
+            groupSkipped, groupSkipped == 1 and "" or "s"))
+    end
     if pickup then
         Print("none of your quests are in this zone: pick up the quests at the nearest quest givers (!), then the plan fills in with their objectives")
     end
@@ -1056,7 +1136,7 @@ local function AddQuestToPlan(questId)
 
     table.insert(wps, bestPos + 1, { name = "", label = g.label, instance = bestS.instance, x = bestS.x, y = bestS.y,
                                      uiMapId = bestS.uiMapId, zx = bestS.zx, zy = bestS.zy,
-                                     quests = { { id = g.id, label = g.label, src = bestS.src } } })
+                                     quests = { { id = g.id, label = g.label, src = bestS.src, grp = g.group, tier = g.tier } } })
     RenumberPlan(wps)
     ApplyFocus(wps)
     addon:RefreshPins()
@@ -1250,11 +1330,21 @@ function addon.WaypointDetail(wp)
                 parts[#parts + 1] = "Pick up " .. title .. (npc and (" from " .. npc) or "")
             else
                 local lines = ObjectiveLines(q.id, q.src)
+                local part
                 if #lines > 0 then
-                    parts[#parts + 1] = table.concat(lines, ", ", 1, math.min(#lines, 2))
+                    part = table.concat(lines, ", ", 1, math.min(#lines, 2))
                 else
-                    parts[#parts + 1] = title
+                    part = title
                 end
+                -- meant for a group: say so, and say when a green one can be done alone
+                if q.grp and q.grp > 1 then
+                    if q.tier == "green" and (GetNumGroupMembers and GetNumGroupMembers() or 0) < 2 then
+                        part = part .. " [group quest, but green: you can likely solo it]"
+                    else
+                        part = part .. " [group quest]"
+                    end
+                end
+                parts[#parts + 1] = part
             end
         end
         text = table.concat(parts, "; ")
@@ -1289,6 +1379,19 @@ local function SkipQuest(id, label)
     db.planSkip[id] = PlainTitle(label)
     Print("skipping " .. PlainTitle(label) .. " (/lrxp skip clear brings skipped quests back)")
     ReplanAfterSkip()
+end
+
+addon.SkipQuest = SkipQuest
+
+-- do this quest next (the plan window and the right-click menu both use it)
+function addon:FocusQuest(id, label)
+    local db = DB()
+    db.planFocus = { id = id, label = PlainTitle(label) }
+    ApplyFocus(db.waypoints)
+    addon:RefreshPins()
+    if addon.RefreshOptions then addon.RefreshOptions() end
+    local first = db.waypoints[1]
+    Print("doing " .. PlainTitle(label) .. " first, then back to the plan" .. (first and (". Next: " .. first.name) or ""))
 end
 
 local skipMenu, skipCatcher
@@ -1759,6 +1862,7 @@ end
 local followArrow
 local FOLLOW_COLOR = { 0.85, 0.5, 1 }
 local followLast, followTimer = nil, 0
+function addon.FollowPosition() return followLast end
 
 function addon:FollowMember(name)
     local short = name and name:match("^[^-]+")
@@ -1784,7 +1888,7 @@ local function UpdateFollow(dt)
     if followTimer < 0.05 then return end
     followTimer = 0
     local name = db.followName
-    if not name or api.ShouldHide() then followArrow:Hide(); return end
+    if not name or api.ShouldHide() or not addon.ModuleOn("follow") then followArrow:Hide(); return end
     followArrow:Show()
     followArrow:SetAlpha(db.alpha)
     local unit = api.FindUnit(name)

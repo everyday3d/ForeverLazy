@@ -124,7 +124,7 @@ driver:SetScript("OnUpdate", function(_, dt)
             ride = { start = GetTime(), origin = p and p.origin, dest = p and p.dest }
         end
         ride.lostAt = nil
-        if db.flightTimer == false then return end
+        if db.flightTimer == false or not addon.ModuleOn("flight") then return end
         if not frame then frame = MakeFrame(); Place() end
         local elapsed = GetTime() - ride.start
         local rec = ride.origin and ride.dest and Times()[Key(ride.origin, ride.dest)]
@@ -151,7 +151,7 @@ end
 
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
-    if cmd == "flight" then
+    if cmd == "flighttimes" or cmd == "flighttime" then
         local list = {}
         for k, v in pairs(Times()) do list[#list + 1] = { k = k, v = v } end
         table.sort(list, function(a, b) return a.k < b.k end)
