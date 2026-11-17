@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.11.1
+- **Fix: the measured XP per hour was too high.** A big quest hand-in after a long walk used to count as 30 seconds of play. The time since your last XP now counts, up to 15 minutes. If your Coach or guide shows a pace that looks far too high, `/lazy pace reset` clears the old numbers (your drop counts and quest times are kept).
+
 ## 0.11.0
 - **The Coach** (`/lazy coach`, "Ask the Coach" in the menus): compares doing the quests here, the best grind and other zones by measured XP per hour, and says what is best right now, with a button for each that sets it up. Every line says what it rests on. The guide shows what the Coach says.
 - **Real quest spots**: with the Hive on, the addon records the map square where each quest objective counted up (and shares it with other Hive players). Once a quest has enough sightings, the plan and arrow use those places instead of the original game's spawn data. An option turns it off. Grind advice can now point at where you killed a mob most.

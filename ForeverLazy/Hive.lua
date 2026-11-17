@@ -59,8 +59,9 @@ local function OnXP()
     lastT = now
     if gain <= 0 then return end
     session.xp = session.xp + gain
-    -- a gap of more than 3 minutes means I was doing something else: count 30 seconds for this gain
-    local secs = (dt <= 180) and dt or 30
+    -- the time since my last XP counts, up to 15 minutes (walking to a quest giver is part of earning that XP);
+    -- a longer gap means I was away, and counts as 15 minutes at most
+    local secs = math.min(math.max(dt, 5), 900)
     local zone = GetRealZoneText and GetRealZoneText() or "?"
     if zone == "" then zone = "?" end
     local h = Root().xp
@@ -845,6 +846,11 @@ function addon:HandleExtraCommand(cmd, rest)
             session.xp, math.floor(session.xp / mins * 60), session.quests, session.quests == 1 and "" or "s",
             session.kills, session.kills == 1 and "" or "s",
             gold and string.format(", %s%s", gold >= 0 and "+" or "-", (GetCoinTextureString and GetCoinTextureString(math.abs(gold))) or tostring(math.abs(gold))) or ""))
+        return true
+    end
+    if word == "pace" and arg:lower() == "reset" then
+        Root().xp[CharKey()] = {}
+        Print("your measured pace was cleared; it starts again from now")
         return true
     end
     if word == "pace" and arg:lower() == "quests" then

@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.11.1", {
+        "Fix: the measured XP per hour was too high (a big quest hand-in after a long walk counted as 30 seconds). The time since your last XP now counts, up to 15 minutes. /lazy pace reset clears the old numbers.",
+    } },
     { "0.11.0", {
         "The Coach (/lazy coach, or Ask the Coach in the menus): compares doing the quests here, the best grind and other zones by measured XP per hour and tells you the best thing to do now, with a button to set it up.",
         "Real quest spots: with the Hive on, the addon learns where quest objectives are really done and the plan uses those places instead of the original data. Grind advice can point at where you killed a mob most.",

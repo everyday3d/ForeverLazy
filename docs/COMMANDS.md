@@ -67,3 +67,4 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy hive who` `rares` `rare` | Other players per zone, reported rares, and an arrow to the nearest rare |
 | `/lazy grind` | The best mobs to grind in this zone near your level, by XP per hour |
 | `/lazy coach` `coach say` | The Coach: the best thing to do now by measured XP per hour (a window, or a few lines in chat) |
+| `/lazy pace reset` | Clear your measured XP per hour and start measuring again (drop counts and quest times are kept) |
