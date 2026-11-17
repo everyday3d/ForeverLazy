@@ -1,0 +1,18 @@
+## Interface: 16001
+## Title: Lazy RestedXP Tracker
+## Notes: Listens to a party member's RestedXP guide step and points arrows at their quest location and at them. Does not need RestedXP installed.
+## Version: 0.5.7
+## SavedVariables: LRXPTDB
+## OptionalDeps: Questie, QuestieDB, TomTom
+
+libs\libs.xml
+LazyRestedXPTracker.lua
+Options.lua
+Extras.lua
+Books.lua
+Pet.lua
+Flight.lua
+NextZone.lua
+Dungeons.lua
+Bag.lua
+ClassQuests.lua

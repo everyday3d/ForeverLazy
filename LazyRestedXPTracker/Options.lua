@@ -1,0 +1,557 @@
+-- Options panel for Lazy RestedXP Tracker
+local ADDON, ns = ...
+local addon = ns.addon
+
+local TITLE = "Lazy RestedXP Tracker"
+local panel, standalone, category
+local built = false
+local refreshers = {}
+
+local function DB() return addon.GetDB() end
+local function Changed() addon:ApplyAll() end
+
+local function Refresh() for _, r in ipairs(refreshers) do r() end end
+addon.RefreshOptions = Refresh
+
+-- layout cursor
+local y
+
+-- Collapsible groups: every control made after a Header belongs to that group.
+-- Controls remember where they sit inside their group, and Layout() puts the
+-- groups one under the other, hiding the controls of collapsed ones.
+local sections = {}
+local shared = {}    -- the one scrolling page and its content, reused by every Settings page
+local cur            -- group being built
+local topY           -- where the first group starts
+local Layout         -- defined in BuildControls
+
+local function Track(obj, x, yy)
+    if cur then cur.items[#cur.items + 1] = { obj = obj, x = x, y = yy - cur.bodyY } end
+end
+
+local function IsOpen(title)
+    local t = DB().optOpen
+    if t == nil then return sections[1] ~= nil and sections[1].title == title end
+    return t[title] == true
+end
+
+local function SetOpen(title, open)
+    local t = DB().optOpen
+    if t == nil then
+        t = {}
+        if sections[1] then t[sections[1].title] = true end
+        DB().optOpen = t
+    end
+    t[title] = open and true or false
+end
+
+local function Header(parent, text)
+    if cur then cur.bodyEnd = y end
+    y = y - 12
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(480, 24)
+    b:SetPoint("TOPLEFT", 16, y)
+    b.fs = b:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    b.fs:SetPoint("LEFT", 0, 0)
+    local hl = b:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints(); hl:SetColorTexture(1, 1, 1, 0.08)
+    y = y - 26
+    cur = { title = text, header = b, bodyY = y, items = {} }
+    sections[#sections + 1] = cur
+    local mine = cur
+    b:SetScript("OnClick", function()
+        if shared.split then return end
+        SetOpen(mine.title, not IsOpen(mine.title))
+        if Layout then Layout() end
+    end)
+end
+
+local function Label(parent, text, x)
+    local fs = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    fs:SetPoint("TOPLEFT", x or 16, y)
+    fs:SetText(text)
+    Track(fs, x or 16, y)
+    return fs
+end
+
+local checkId = 0
+local function Check(parent, text, x, get, set, advance)
+    checkId = checkId + 1
+    local name = "LRXPT_Check" .. checkId
+    local cb = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
+    cb:SetPoint("TOPLEFT", x or 16, y)
+    Track(cb, x or 16, y)
+    local fs = _G[name .. "Text"]
+    if fs then fs:SetText(text) end
+    cb.Refresh = function() cb:SetChecked(get()) end
+    cb:SetScript("OnClick", function(self) set(self:GetChecked() and true or false) end)
+    refreshers[#refreshers + 1] = cb.Refresh
+    if advance ~= false then y = y - 26 end
+    return cb
+end
+
+local sliderId = 0
+local function Slider(parent, text, minV, maxV, step, fmt, get, set)
+    sliderId = sliderId + 1
+    local name = "LRXPT_Slider" .. sliderId
+    y = y - 14
+    local s = CreateFrame("Slider", name, parent, "OptionsSliderTemplate")
+    s:SetPoint("TOPLEFT", 24, y)
+    Track(s, 24, y)
+    s:SetWidth(240)
+    s:SetMinMaxValues(minV, maxV)
+    s:SetValueStep(step)
+    if s.SetObeyStepOnDrag then s:SetObeyStepOnDrag(true) end
+    _G[name .. "Low"]:SetText(string.format(fmt, minV))
+    _G[name .. "High"]:SetText(string.format(fmt, maxV))
+    local title = _G[name .. "Text"]
+    s.Refresh = function()
+        s.refreshing = true
+        s:SetValue(get())
+        title:SetText(text .. ": " .. string.format(fmt, get()))
+        s.refreshing = false
+    end
+    s:SetScript("OnValueChanged", function(self, v)
+        if self.refreshing then return end
+        v = math.floor(v / step + 0.5) * step
+        set(v)
+        title:SetText(text .. ": " .. string.format(fmt, v))
+    end)
+    refreshers[#refreshers + 1] = s.Refresh
+    y = y - 34
+    return s
+end
+
+local function Button(parent, text, x, w, onClick, advance)
+    local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
+    b:SetPoint("TOPLEFT", x, y)
+    Track(b, x, y)
+    b:SetSize(w, 24)
+    b:SetText(text)
+    b:SetScript("OnClick", onClick)
+    if advance then y = y - 32 end
+    return b
+end
+
+-- Row of mutually exclusive choices drawn as check buttons
+local function Radio(parent, labelText, key, choices)
+    Label(parent, labelText)
+    y = y - 22
+    local boxes = {}
+    local col = 0
+    for _, ch in ipairs(choices) do
+        local value, text = ch[1], ch[2]
+        local cb = Check(parent, text, 16 + col * 150, function() return DB()[key] == value end,
+            function() DB()[key] = value; for _, b in ipairs(boxes) do b.Refresh() end; Changed() end, false)
+        boxes[#boxes + 1] = cb
+        col = col + 1
+        if col == 3 then col = 0; y = y - 26 end
+    end
+    if col ~= 0 then y = y - 26 end
+end
+
+local function OpenPicker(get, set)
+    local r, g, b = unpack(get())
+    if ColorPickerFrame.SetupColorPickerAndShow then
+        ColorPickerFrame:SetupColorPickerAndShow({
+            r = r, g = g, b = b, hasOpacity = false,
+            swatchFunc = function() set({ ColorPickerFrame:GetColorRGB() }) end,
+            cancelFunc = function(prev) set({ prev.r, prev.g, prev.b }) end,
+        })
+    else
+        ColorPickerFrame.hasOpacity = false
+        ColorPickerFrame.previousValues = { r = r, g = g, b = b }
+        ColorPickerFrame.func = function() set({ ColorPickerFrame:GetColorRGB() }) end
+        ColorPickerFrame.cancelFunc = function(prev) set({ prev.r, prev.g, prev.b }) end
+        ColorPickerFrame:SetColorRGB(r, g, b)
+        ColorPickerFrame:Hide()
+        ColorPickerFrame:Show()
+    end
+end
+
+local function ColorRow(parent, text, key)
+    local b = CreateFrame("Button", nil, parent)
+    b:SetSize(22, 22)
+    b:SetPoint("TOPLEFT", 20, y)
+    Track(b, 20, y)
+    local border = b:CreateTexture(nil, "BACKGROUND")
+    border:SetAllPoints(); border:SetColorTexture(1, 1, 1, 1)
+    local sw = b:CreateTexture(nil, "ARTWORK")
+    sw:SetPoint("TOPLEFT", 2, -2); sw:SetPoint("BOTTOMRIGHT", -2, 2)
+    b.Refresh = function() sw:SetColorTexture(unpack(DB()[key])) end
+    b:SetScript("OnClick", function()
+        OpenPicker(function() return DB()[key] end,
+            function(c) DB()[key] = c; b.Refresh(); Changed() end)
+    end)
+    local fs = b:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    fs:SetPoint("LEFT", b, "RIGHT", 8, 0)
+    fs:SetText(text)
+    refreshers[#refreshers + 1] = b.Refresh
+    y = y - 30
+end
+
+local function BuildControls(parent)
+    local scroll = CreateFrame("ScrollFrame", "LRXPT_OptionsScroll", parent, "UIPanelScrollFrameTemplate")
+    scroll:SetPoint("TOPLEFT", 4, -4)
+    scroll:SetPoint("BOTTOMRIGHT", -28, 4)
+    local content = CreateFrame("Frame", nil, scroll)
+    content:SetSize(520, 1500)
+    scroll:SetScrollChild(content)
+
+    y = -10
+    local t = content:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    t:SetPoint("TOPLEFT", 16, y); t:SetText(TITLE)
+    y = y - 30
+    local intro = Label(content, "Listens to a friend's RestedXP step and points arrows at the quest and at them.")
+    y = y - 24
+
+    sections, cur = {}, nil
+    local function setAll(open)
+        for _, s in ipairs(sections) do SetOpen(s.title, open) end
+        Layout()
+    end
+    local b1 = Button(content, "Expand all", 16, 100, function() setAll(true) end, false)
+    local b2 = Button(content, "Collapse all", 126, 100, function() setAll(false) end, true)
+    shared.scroll, shared.content = scroll, content
+    shared.top = { t, intro, b1, b2 }
+    topY = y
+
+    ----------------------------------------------------------------- Arrows
+    Header(content, "Arrows")
+    Radio(content, "Arrows shown:", "mode", {
+        { "both", "Quest + friend" }, { "quest", "Quest only" }, { "friend", "Friend only" }, { "off", "Off" } })
+    Radio(content, "Arrow style:", "style", {
+        { "minimap", "Classic" }, { "chevron", "Chevron" }, { "thick", "Thick" } })
+    ColorRow(content, "Quest arrow color", "colorQuest")
+    ColorRow(content, "Friend arrow color", "colorFriend")
+    Slider(content, "Arrow size", 0.5, 3, 0.1, "%.1f", function() return DB().scale end,
+        function(v) DB().scale = v; Changed() end)
+    Slider(content, "Arrow opacity", 0.2, 1, 0.05, "%.2f", function() return DB().alpha end,
+        function(v) DB().alpha = v; Changed() end)
+    Slider(content, "Extra quest arrows (nearest other targets)", 0, 2, 1, "%d", function() return DB().extraTargets end,
+        function(v) DB().extraTargets = v end)
+    Slider(content, "Count as arrived within (yards)", 3, 40, 1, "%d", function() return DB().arrival end,
+        function(v) DB().arrival = v end)
+    Check(content, "Lock positions (uncheck to drag arrows and panel)", 16,
+        function() return DB().locked end, function(v) DB().locked = v end)
+
+    ---------------------------------------------------------------- Display
+    Header(content, "Text")
+    Check(content, "Show quest / player name under arrow", 16,
+        function() return DB().showText end, function(v) DB().showText = v end)
+    Check(content, "Show distance", 16, function() return DB().showDistance end, function(v) DB().showDistance = v end)
+    Radio(content, "Distance units:", "units", { { "yd", "Yards" }, { "m", "Meters" }, { "steps", "Steps" } })
+
+    ------------------------------------------------------------- Step panel
+    Header(content, "Step panel")
+    Check(content, "Show friend's current step in a box", 16,
+        function() return DB().showPanel end, function(v) DB().showPanel = v end)
+    Slider(content, "Panel size", 0.5, 2, 0.1, "%.1f", function() return DB().panelScale end,
+        function(v) DB().panelScale = v; Changed() end)
+
+    ---------------------------------------------------------------- Alerts
+    Header(content, "Alerts")
+    Check(content, "Chat message when friend's step changes", 16,
+        function() return DB().alertChat end, function(v) DB().alertChat = v end)
+    Check(content, "Sound when friend's step changes", 16,
+        function() return DB().alertSound end, function(v) DB().alertSound = v end)
+    Check(content, "Sound when I arrive at the quest spot", 16,
+        function() return DB().arrivalSound end, function(v) DB().arrivalSound = v end)
+
+    ------------------------------------------------------------- Visibility
+    Header(content, "Hide arrows")
+    Check(content, "In combat", 16, function() return DB().hideCombat end, function(v) DB().hideCombat = v end)
+    Check(content, "In cities and inns (resting)", 16,
+        function() return DB().hideResting end, function(v) DB().hideResting = v end)
+    Check(content, "On a flight path", 16, function() return DB().hideTaxi end, function(v) DB().hideTaxi = v end)
+    Check(content, "Inside a dungeon or raid (the ghost arrow to your corpse still shows)", 16,
+        function() return DB().hideInstance ~= false end, function(v) DB().hideInstance = v end)
+
+    ------------------------------------------------------------- Following
+    Check(content, "When I am a ghost, point the arrow at my corpse (other arrows hide)", 16,
+        function() return DB().ghostArrow ~= false end, function(v) DB().ghostArrow = v end)
+
+    Header(content, "Friend tracking")
+    Check(content, "Keep pointing at friend's last seen spot when too far away", 16,
+        function() return DB().followLastSeen end, function(v) DB().followLastSeen = v end)
+
+    ---------------------------------------------------------------- Map
+    Check(content, "Warn me if my friend hasn't moved for 3 minutes", 16,
+        function() return DB().stuckAlert end, function(v) DB().stuckAlert = v end)
+    Check(content, "Show earlier steps in the step panel", 16,
+        function() return DB().showHistory end, function(v) DB().showHistory = v; Changed() end)
+    Label(content, "Several friends: right-click the step panel to switch, /lrxp friend <name> to pin.")
+    y = y - 26
+
+    Header(content, "My own quests")
+    Check(content, "Show an arrow for my own quest log (turn-ins and objectives)", 16,
+        function() return DB().ownQuests end, function(v) DB().ownQuests = v; Changed() end)
+    Check(content, "Skip grey quests, and red ones unless they are just a turn-in", 16,
+        function() return DB().questColorFilter ~= false end,
+        function(v) DB().questColorFilter = v; Changed() end)
+    Check(content, "Follow the quest I have selected or tracked (otherwise the nearest of all)", 16,
+        function() return DB().ownFocus ~= false end, function(v) DB().ownFocus = v; Changed() end)
+    ColorRow(content, "My quests arrow color", "colorMine")
+    Button(content, "Plan my route (replaces waypoints)", 16, 240, function() addon:PlanRoute() end, true)
+    Label(content, "Same as /lrxp plan. Orders your quest spots into a walking route, one waypoint each.")
+    y = y - 26
+    Check(content, "Plan for XP: do the quests that give the most XP for the walking first", 16,
+        function() return DB().planXP ~= false end, function(v) DB().planXP = v end)
+    Check(content, "Keep the plan to the zone I'm in (/lrxp plan all ignores this)", 16,
+        function() return DB().planZoneOnly ~= false end, function(v) DB().planZoneOnly = v end)
+    Check(content, "Leave grey (too low level) quests out of the plan", 16,
+        function() return DB().planSkipGrey ~= false end, function(v) DB().planSkipGrey = v end)
+    Check(content, "When I take a new quest, add it to the plan where it costs the least walking", 16,
+        function() return DB().planAuto ~= false end, function(v) DB().planAuto = v end)
+
+    Header(content, "Hunter pet")
+    Check(content, "Remind me when my pet needs feeding", 16,
+        function() return DB().petRemind ~= false end, function(v) DB().petRemind = v end)
+    Check(content, "Only remind when it is unhappy (not when it is just content)", 16,
+        function() return DB().petOnlyUnhappy == true end, function(v) DB().petOnlyUnhappy = v end)
+    Check(content, "Also remind me when I have no pet out or it is dead", 16,
+        function() return DB().petMissing == true end, function(v) DB().petMissing = v end)
+    Check(content, "Play a sound with the reminder", 16,
+        function() return DB().petSound == true end, function(v) DB().petSound = v end)
+    Button(content, "Test the pet reminder", 16, 170, function() addon:HandleExtraCommand("pet", "test") end, true)
+
+    Header(content, "Extras")
+    Check(content, "Animate arrows (pulse when near, dim when facing away)", 16,
+        function() return DB().animate end, function(v) DB().animate = v end)
+    Check(content, "Flight timer: show how long a flight takes (learns each route the first time)", 16,
+        function() return DB().flightTimer ~= false end, function(v) DB().flightTimer = v end)
+    Check(content, "Suggest the next zone when I have outgrown the one I am in", 16,
+        function() return DB().nextZoneHint ~= false end, function(v) DB().nextZoneHint = v end)
+    Check(content, "Tell me when I reach a dungeon entrance my quests need", 16,
+        function() return DB().dungeonHint ~= false end, function(v) DB().dungeonHint = v end)
+    Check(content, "Cozy Sleeping Bag chain: guide me, and make its next spot stop 1 in the zone it is in", 16,
+        function() return DB().bagGuide ~= false end, function(v) DB().bagGuide = v end)
+    Check(content, "Tell me when a new class quest opens up", 16,
+        function() return DB().classAlert ~= false end, function(v) DB().classAlert = v end)
+    Check(content, "Put class quest givers in my plan when they are in this zone", 16,
+        function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
+    Check(content, "Compass bar at the top of the screen", 16,
+        function() return DB().compassBar end, function(v) DB().compassBar = v end)
+    Check(content, "Accept waypoints my party sends me", 16,
+        function() return DB().acceptShared end, function(v) DB().acceptShared = v end)
+    Label(content, "Shift + click the friend arrow to tell the party 'On my way!'.")
+    y = y - 26
+    Button(content, "Run self-test", 16, 120, function() addon:RunSelfTest() end, false)
+    Button(content, "Share waypoint", 146, 120, function() addon:ShareWaypoint() end, false)
+    Button(content, "Export", 276, 80, function() addon:OpenIO("export") end, false)
+    Button(content, "Import", 366, 80, function() addon:OpenIO("import") end, true)
+    Label(content, "Routes: /lrxp route save|load|delete <name>.  Profiles: /lrxp profile list|new|use|delete.")
+    y = y - 26
+
+    Header(content, "My waypoints")
+    Label(content, "Set one with /lrxp way <x> <y> [name], /lrxp way here, or Ctrl + right-click on the world map.")
+    y = y - 26
+    ColorRow(content, "Waypoint arrow color", "colorWaypoint")
+    Check(content, "Remove a waypoint automatically when I arrive", 16,
+        function() return DB().waypointAutoClear end, function(v) DB().waypointAutoClear = v end)
+    Button(content, "Drop at my position", 16, 150, function() addon:DropWaypointHere() end, false)
+    Button(content, "Skip active", 176, 110, function() addon:RemoveWaypoint(1) end, false)
+    Button(content, "Clear all", 296, 100, function() addon:ClearWaypoints() end, true)
+    Label(content, "List them with /lrxp way list, make one active with /lrxp way <number>.")
+    y = y - 26
+
+    Header(content, "Library books")
+    Label(content, "Sets a waypoint for every known library book, nearest first. Replaces your current waypoints.")
+    y = y - 26
+    Check(content, "Tell me in chat when I enter a zone that has books", 16,
+        function() return DB().bookAlert ~= false end, function(v) DB().bookAlert = v end)
+    Check(content, "Automatically add that zone's books as waypoints (keeps my other waypoints)", 16,
+        function() return DB().bookAuto == true end, function(v) DB().bookAuto = v end)
+    Check(content, "Leave out zones that are too high for my level (All books and auto)", 16,
+        function() return DB().bookLevelFilter ~= false end, function(v) DB().bookLevelFilter = v end)
+    Check(content, "Show every book on the world map (book = to find, green tick = collected)", 16,
+        function() return DB().bookPins ~= false end,
+        function(v) DB().bookPins = v; if addon.RefreshBookPins then addon.RefreshBookPins() end end)
+    Button(content, "Mark nearest as collected", 16, 190, function() addon:HandleExtraCommand("books", "done") end, false)
+    Button(content, "Mark nearest as not collected", 216, 210, function() addon:HandleExtraCommand("books", "undone") end, false)
+    Button(content, "Clear collected list", 436, 150, function() addon:HandleExtraCommand("books", "reset") end, true)
+    Button(content, "This zone (even collected)", 16, 190, function() addon:HandleExtraCommand("books", "zone all") end, true)
+    Button(content, "All books", 16, 100, function() addon:HandleExtraCommand("books", "") end, false)
+    Button(content, "This zone only", 126, 130, function() addon:HandleExtraCommand("books", "zone") end, false)
+    Button(content, "Go to librarian", 266, 130, function() addon:HandleExtraCommand("books", "turnin") end, false)
+    Button(content, "List books", 406, 100, function() addon:HandleExtraCommand("books", "list") end, true)
+    Button(content, "Offer route to party", 16, 160, function() addon:HandleExtraCommand("books", "share") end, false)
+    Button(content, "Post this zone in party chat", 186, 190, function() addon:HandleExtraCommand("books", "say") end, true)
+    Label(content, "Offer: party members with this addon get a prompt to load it. Post: plain /way lines anyone can use.")
+    y = y - 26
+    Label(content, "Same as /lrxp books, books zone, books turnin, books list, books share, books say, books accept.")
+    y = y - 26
+
+    Header(content, "Map pins")
+    Check(content, "Quest pins on the world map", 16,
+        function() return DB().mapPins end, function(v) DB().mapPins = v; Changed() end)
+    Check(content, "Quest pins on the minimap", 16,
+        function() return DB().minimapPins end, function(v) DB().minimapPins = v; Changed() end)
+    Check(content, "Also set a TomTom waypoint (needs TomTom)", 16,
+        function() return DB().tomtom end, function(v) DB().tomtom = v; Changed() end)
+    Check(content, "Show minimap button", 16,
+        function() return DB().minimapButton end, function(v) DB().minimapButton = v; Changed() end)
+
+    -------------------------------------------------------------- Profiles
+    Header(content, "Settings")
+    Check(content, "Use separate settings for this character", 16,
+        function() return addon.GetRoot().useChar end,
+        function(v)
+            addon.GetRoot().useChar = v
+            addon:SelectProfile()
+            Changed()
+            Refresh()
+        end)
+
+    y = y - 6
+    Button(content, "Reset positions", 16, 130, function()
+        local d = DB()
+        d.pos = {}
+        for k, v in pairs(addon.DEFAULTS.pos) do d.pos[k] = { point = v.point, x = v.x, y = v.y } end
+        Changed()
+    end, false)
+    Button(content, "Test quest arrow", 156, 130, function()
+        addon:SetStepText(nil, "Accept Buzzbox 827")
+        addon.Print("simulated step: Accept Buzzbox 827")
+    end, false)
+    Button(content, "Test kill arrow", 296, 130, function()
+        addon:SetStepText(nil, "Kill Mottled Boar")
+        addon.Print("simulated step: Kill Mottled Boar")
+    end, true)
+
+    Label(content, "Slash commands: /lrxp (opens this), /lrxp status, /lrxp test <text>")
+    y = y - 30
+    cur.bodyEnd = y
+
+    -- one long page with fold-away groups (used when the Settings window has no sub-categories)
+    Layout = function()
+        shared.split = false
+        for _, w in ipairs(shared.top) do w:Show() end
+        local pos = topY
+        for _, s in ipairs(sections) do
+            local open = IsOpen(s.title)
+            pos = pos - 12
+            s.header:Show()
+            s.header:ClearAllPoints()
+            s.header:SetPoint("TOPLEFT", 16, pos)
+            s.header.fs:SetText((open and "[-]  " or "[+]  ") .. s.title)
+            local body = pos - 26
+            for _, it in ipairs(s.items) do
+                if open then
+                    it.obj:ClearAllPoints()
+                    it.obj:SetPoint("TOPLEFT", it.x, body + it.y)
+                    it.obj:Show()
+                else
+                    it.obj:Hide()
+                end
+            end
+            pos = open and (body - (s.bodyY - s.bodyEnd)) or body
+        end
+        content:SetHeight(-pos + 10)
+    end
+end
+
+-- one group at a time, each shown on its own page in the Settings list
+local function LayoutSplit(sec)
+    shared.split = true
+    for _, w in ipairs(shared.top) do w:Hide() end
+    for _, s in ipairs(sections) do
+        if s == sec then
+            s.header:Show()
+            s.header:ClearAllPoints()
+            s.header:SetPoint("TOPLEFT", 16, -10)
+            s.header.fs:SetText(s.title)
+            local body = -10 - 26
+            for _, it in ipairs(s.items) do
+                it.obj:ClearAllPoints()
+                it.obj:SetPoint("TOPLEFT", it.x, body + it.y)
+                it.obj:Show()
+            end
+            shared.content:SetHeight(-(body - (s.bodyY - s.bodyEnd)) + 10)
+        else
+            s.header:Hide()
+            for _, it in ipairs(s.items) do it.obj:Hide() end
+        end
+    end
+end
+
+-- put the shared scrolling page onto a Settings page and show the right group
+local function AttachTo(page, sec)
+    local scroll = shared.scroll
+    scroll:SetParent(page)
+    scroll:ClearAllPoints()
+    scroll:SetPoint("TOPLEFT", 4, -4)
+    scroll:SetPoint("BOTTOMRIGHT", -28, 4)
+    scroll:Show()
+    if sec then LayoutSplit(sec) else Layout() end
+    scroll:SetVerticalScroll(0)
+    Refresh()
+end
+
+local function Build()
+    if built then return end
+    built = true
+    panel = CreateFrame("Frame", "LRXPT_OptionsPanel")
+    panel:Hide()      -- a new frame counts as shown; the Settings window needs to Show() it to fire OnShow
+    panel.name = TITLE
+    BuildControls(panel)
+    panel:SetScript("OnShow", function() AttachTo(panel, nil) end)
+
+    if _G.Settings and Settings.RegisterCanvasLayoutCategory then
+        category = Settings.RegisterCanvasLayoutCategory(panel, TITLE)
+        Settings.RegisterAddOnCategory(category)
+
+        -- every group gets its own entry under the addon name in the list on the left
+        if Settings.RegisterCanvasLayoutSubcategory and #sections > 1 then
+            local ok = pcall(function()
+                for i = 2, #sections do
+                    local sec = sections[i]
+                    local page = CreateFrame("Frame")
+                    page:Hide()
+                    page.name = sec.title
+                    page:SetScript("OnShow", function(self) AttachTo(self, sec) end)
+                    Settings.RegisterCanvasLayoutSubcategory(category, page, sec.title)
+                end
+            end)
+            if ok then
+                panel:SetScript("OnShow", function() AttachTo(panel, sections[1]) end)
+            end
+        end
+    elseif _G.InterfaceOptions_AddCategory then
+        InterfaceOptions_AddCategory(panel)
+    end
+end
+
+function addon:OpenOptions()
+    Build()
+    if category and Settings and Settings.OpenToCategory then
+        local id = category.GetID and category:GetID() or category.ID
+        if pcall(Settings.OpenToCategory, id) then return end
+    end
+    if _G.InterfaceOptionsFrame_OpenToCategory and not category then
+        InterfaceOptionsFrame_OpenToCategory(panel)
+        InterfaceOptionsFrame_OpenToCategory(panel)
+        return
+    end
+    if not standalone then
+        standalone = CreateFrame("Frame", "LRXPT_OptionsWindow", UIParent, "BasicFrameTemplateWithInset")
+        standalone:SetSize(560, 560)
+        standalone:SetPoint("CENTER")
+        standalone:SetMovable(true)
+        standalone:EnableMouse(true)
+        standalone:RegisterForDrag("LeftButton")
+        standalone:SetScript("OnDragStart", standalone.StartMoving)
+        standalone:SetScript("OnDragStop", standalone.StopMovingOrSizing)
+        if standalone.TitleText then standalone.TitleText:SetText(TITLE) end
+        panel:SetParent(standalone)
+        panel:ClearAllPoints()
+        panel:SetPoint("TOPLEFT", 4, -24)
+        panel:SetPoint("BOTTOMRIGHT", -4, 4)
+        tinsert(UISpecialFrames, "LRXPT_OptionsWindow")
+        -- the stand-alone window shows everything on one page with fold-away groups
+        panel:SetScript("OnShow", function() AttachTo(panel, nil) end)
+    end
+    standalone:SetShown(not standalone:IsShown())
+    panel:Show()
+    AttachTo(panel, nil)
+end

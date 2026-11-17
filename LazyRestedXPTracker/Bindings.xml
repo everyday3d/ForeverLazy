@@ -1,0 +1,6 @@
+<Bindings>
+	<Binding name="LRXPT_CYCLE" header="LRXPT">LRXPT_CycleMode()</Binding>
+	<Binding name="LRXPT_OPTIONS">LRXPT_ToggleOptions()</Binding>
+	<Binding name="LRXPT_PANEL">LRXPT_TogglePanel()</Binding>
+	<Binding name="LRXPT_WAYPOINT">LRXPT_DropWaypoint()</Binding>
+</Bindings>
