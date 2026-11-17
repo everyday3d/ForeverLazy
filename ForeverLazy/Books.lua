@@ -113,6 +113,14 @@ local RefreshBookPins   -- defined below
 
 local function SetDone(e, value)
     DoneTable()[BookKey(e)] = value or nil
+    if value then
+        -- a collected book is no longer a stop: drop its waypoint so it is not drawn as a book on the map
+        local wps = DB().waypoints
+        for i = #wps, 1, -1 do
+            if wps[i].book == BookKey(e) then table.remove(wps, i) end
+        end
+        if addon.RefreshPins then addon:RefreshPins() end
+    end
     if RefreshBookPins then RefreshBookPins() end
 end
 
@@ -265,12 +273,32 @@ lootFrame:SetScript("OnEvent", function(_, _, msg, _, _, _, _, _, _, _, _, _, _,
     if guid and UnitGUID and guid ~= UnitGUID("player") then return end
     local item = msg:match("%[(.-)%]")
     if not item then return end
+    local function norm(s) return (s:lower():gsub("[^%w]", "")) end
+    local want = norm(item)
     for _, e in ipairs(BOOKS) do
-        if BookKey(e):lower() == item:lower() and not IsDone(e) then
+        local key = norm(BookKey(e))
+        -- same title, ignoring capitals and punctuation (or one inside the other)
+        if not IsDone(e) and (key == want or (#want > 8 and (key:find(want, 1, true) or want:find(key, 1, true)))) then
             SetDone(e, true)
             Print(string.format("%s marked as collected", BookKey(e)))
             return
         end
+    end
+    -- the title did not match any I know: if I was standing at a book's spot, that was the book
+    if not msg:lower():find("you receive") then return end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return end
+    local best, bestD
+    for _, e in ipairs(BOOKS) do
+        local w = Entry(e)
+        if w and not IsDone(e) and w.instance == pinst then
+            local d = math.sqrt((w.x - px) ^ 2 + (w.y - py) ^ 2)
+            if d <= 30 and (not bestD or d < bestD) then best, bestD = e, d end
+        end
+    end
+    if best then
+        SetDone(best, true)
+        Print(string.format("%s marked as collected (you picked up %s right at its spot)", BookKey(best), item))
     end
 end)
 
@@ -542,7 +570,7 @@ end
 
 local function SetupLDB()
     local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
-    if not LDB or ldbObj then return end
+    if not LDB or ldbObj or DB().ldbBooks ~= true then return end
     ldbObj = LDB:NewDataObject("Forever Lazy Books", {
         type = "data source",
         label = "Books",

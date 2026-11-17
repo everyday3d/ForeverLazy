@@ -273,6 +273,12 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.8.7", {
+        "One Forever Lazy button for Titan Panel and other bars: an icon, your next stop, and the whole menu when you hover.",
+        "Your route is drawn on the minimap too, and trips are drawn on the world map and minimap with flights, boats and walks in different colours.",
+        "A far-off stop: Lazy Mode sends you to a flight master and says where to fly, and the flight map rings that destination.",
+        "Lazy Mode skips the trainer when there is nothing to learn. Collected library books turn into a green tick.",
+    } },
     { "0.8.6", {
         "A Sam Kinison minimap button.",
         "The services menu on the arrow adapts: in a city it offers every service in the city, in the open world only those within a walk.",

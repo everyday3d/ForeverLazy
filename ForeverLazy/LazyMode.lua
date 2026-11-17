@@ -44,26 +44,68 @@ local function LowestDurability()
     return lowest, broken
 end
 
--- a trainer visit is due on every even level from 4 until I have been to one at that level
-local function TrainerDue()
+-- A trainer visit. Even levels are when most classes get new skills, but the trainer's own window says what is
+-- really left: how many skills can be learned now, what the cheapest costs, and the level the next ones need.
+-- That is remembered on every class trainer visit, so later the visit is skipped when there is nothing to learn.
+local function TrainerKey() return (UnitName("player") or "?") .. "-" .. (GetRealmName and GetRealmName() or "?") end
+
+local function ReadTrainer()
+    if IsTradeskillTrainer and IsTradeskillTrainer() then return end        -- a profession trainer says nothing about my class
+    local count = GetNumTrainerServices and GetNumTrainerServices()
+    if not count then return end
     local lvl = UnitLevel("player") or 1
-    local even = lvl - lvl % 2
-    if even < 4 then return false end
+    local avail, minCost, nextLevel = 0, nil, nil
+    for i = 1, count do
+        local name, _, category = GetTrainerServiceInfo(i)
+        if name and category == "available" then
+            avail = avail + 1
+            local cost = GetTrainerServiceCost and GetTrainerServiceCost(i)
+            if type(cost) == "table" then cost = cost[1] end
+            if type(cost) == "number" and (not minCost or cost < minCost) then minCost = cost end
+        elseif name and category == "unavailable" and GetTrainerServiceLevelReq then
+            local ok, req = pcall(GetTrainerServiceLevelReq, i)
+            if ok and type(req) == "number" and req > lvl and (not nextLevel or req < nextLevel) then nextLevel = req end
+        end
+    end
     local root = addon.GetRoot()
     root.trained = root.trained or {}
-    local key = (UnitName("player") or "?") .. "-" .. (GetRealmName and GetRealmName() or "?")
+    root.trainerInfo = root.trainerInfo or {}
+    local key = TrainerKey()
+    root.trained[key] = lvl
+    root.trainerInfo[key] = { level = lvl, avail = avail, minCost = minCost, nextLevel = nextLevel }
+end
+
+local function TrainerDue()
+    local lvl = UnitLevel("player") or 1
+    if lvl < 4 then return false end
+    local root = addon.GetRoot()
+    root.trained = root.trained or {}
+    local key = TrainerKey()
+    local info = root.trainerInfo and root.trainerInfo[key]
+    if info then
+        -- skills I could learn but could not afford earlier: due again once I have the money
+        if (info.avail or 0) > 0 then
+            return (GetMoney and GetMoney() or 0) >= (info.minCost or 0)
+        end
+        -- nothing to learn at the last visit: due only once I have reached the level the next skills need
+        if info.nextLevel then return lvl >= info.nextLevel and (info.level or 0) < info.nextLevel end
+        -- the window did not say, so fall back on every even level
+    end
+    local even = lvl - lvl % 2
+    if even < 4 then return false end
     return (root.trained[key] or 0) < even
 end
 
 local trainEv = CreateFrame("Frame")
 pcall(trainEv.RegisterEvent, trainEv, "TRAINER_SHOW")
+pcall(trainEv.RegisterEvent, trainEv, "TRAINER_UPDATE")
 trainEv:SetScript("OnEvent", function()
-    local root = addon.GetRoot()
-    root.trained = root.trained or {}
-    local key = (UnitName("player") or "?") .. "-" .. (GetRealmName and GetRealmName() or "?")
-    root.trained[key] = UnitLevel("player") or 0
+    if C_Timer and C_Timer.After then
+        C_Timer.After(0.3, function() pcall(ReadTrainer) end)     -- the list fills a moment after the window opens
+    else
+        pcall(ReadTrainer)
+    end
 end)
-
 --------------------------------------------------------------------------------
 -- Deciding
 --------------------------------------------------------------------------------
@@ -106,8 +148,19 @@ local function Decide()
         if not (db.waypoints[1] and db.waypoints[1].label) and api.QuestieReady and api.QuestieReady() then
             addon:PlanRoute(false, true)              -- nothing planned yet: plan now
         end
+        -- a trip is already under way (flight, boat, walk): say what to do now
+        local tripTo, tripLeg = nil, nil
+        if addon.GoStatus then tripTo, tripLeg = addon.GoStatus() end
+        if tripTo then return { say = "on the way to " .. tripTo .. ": " .. tostring(tripLeg) } end
         local w = db.waypoints[1]
         if w and w.label then
+            -- a stop far away: if flying gets me there quicker, send me to a flight master and say where to fly
+            if w.uiMapId and w.zx and w.x and addon.ModuleOn("go") and addon.GoWithFlight then
+                local px, py, pinst = hbd:GetPlayerWorldPosition()
+                if px and w.instance == pinst and math.sqrt((w.x - px) ^ 2 + (w.y - py) ^ 2) > 1500 then
+                    return { flightTrip = { w.uiMapId, w.zx, w.zy, tostring(w.name or w.label) }, say = "that stop is a long way off" }
+                end
+            end
             return { follow = true, say = "next stop of your plan: " .. tostring(w.name or w.label) }
         end
     end
@@ -124,6 +177,11 @@ end
 
 local function Now()
     local d = Decide()
+    if d.flightTrip then
+        if addon.GoWithFlight(d.flightTrip[1], d.flightTrip[2], d.flightTrip[3], d.flightTrip[4]) then return end
+        Print("lazy mode: next stop of your plan: " .. d.flightTrip[4])
+        return
+    end
     if d.map and d.trip and addon.GoTo and addon.ModuleOn("go") then
         Print("lazy mode: " .. d.say)
         addon.GoTo(d.map, d.zx, d.zy, d.trip)       -- far away: plan the whole trip

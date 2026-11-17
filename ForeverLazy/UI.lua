@@ -693,6 +693,152 @@ local function BuildTaxi()
     })
 end
 
+-- The flight map: ring the flight point the trip wants me to fly to, and say it at the top of the map.
+local function Norm(s) return (tostring(s or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")) end
+local function SameFlightPoint(a, b)
+    a, b = Norm(a), Norm(b)
+    if a == "" or b == "" then return false end
+    if a == b then return true end
+    return a:match("^[^,]+") == b:match("^[^,]+")
+end
+
+-- every flight point button on the map, whichever kind of window this is: { frame, name }
+local function TaxiPoints()
+    local out = {}
+    if _G.FlightMapFrame and FlightMapFrame.EnumerateAllPins then
+        pcall(function()
+            for pin in FlightMapFrame:EnumerateAllPins() do
+                local d = pin.taxiNodeData
+                local nm = (d and d.name) or pin.name
+                if nm then out[#out + 1] = { pin, nm } end
+            end
+        end)
+    end
+    if #out == 0 and NumTaxiNodes and TaxiNodeName then
+        for i = 1, (NumTaxiNodes() or 0) do
+            local b = _G["TaxiButton" .. i]
+            if b then out[#out + 1] = { b, TaxiNodeName(i) } end
+        end
+    end
+    return out
+end
+
+local taxiHint
+local function TaxiHighlight()
+    local win = (_G.FlightMapFrame and FlightMapFrame:IsShown() and FlightMapFrame) or (_G.TaxiFrame and TaxiFrame:IsShown() and TaxiFrame)
+    local target = addon.GoFlightTarget and addon.GoFlightTarget()
+    if not win or not target then
+        if taxiHint then taxiHint:Hide() end
+        return
+    end
+    if not taxiHint then
+        taxiHint = CreateFrame("Frame", nil, UIParent)
+        taxiHint:SetSize(360, 26)
+        taxiHint:SetFrameStrata("FULLSCREEN_DIALOG")
+        local bg = taxiHint:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0, 0, 0, 0.8)
+        taxiHint.text = taxiHint:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        taxiHint.text:SetPoint("CENTER")
+    end
+    taxiHint:ClearAllPoints()
+    taxiHint:SetPoint("BOTTOM", win, "TOP", 0, 4)
+    taxiHint.text:SetText("Forever Lazy: fly to " .. (target:match("^[^,]+") or target))
+    taxiHint:SetWidth(math.max(260, taxiHint.text:GetStringWidth() + 30))
+    taxiHint:Show()
+    local pulse = 0.6 + 0.4 * math.sin(GetTime() * 6)
+    for _, p in ipairs(TaxiPoints()) do
+        local btn = p[1]
+        if not btn.flRing then
+            btn.flRing = btn:CreateTexture(nil, "OVERLAY")
+            btn.flRing:SetTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+            btn.flRing:SetBlendMode("ADD")
+            btn.flRing:SetVertexColor(1, 0.85, 0.1)
+            btn.flRing:SetPoint("CENTER", btn, "CENTER", 0, 0)
+            btn.flRing:SetSize(54, 54)
+        end
+        if SameFlightPoint(p[2], target) then
+            btn.flRing:SetAlpha(pulse)
+            btn.flRing:Show()
+        else
+            btn.flRing:Hide()
+        end
+    end
+end
+
+local taxiTick = CreateFrame("Frame")
+local taxiAcc = 0
+taxiTick:SetScript("OnUpdate", function(_, dt)
+    taxiAcc = taxiAcc + dt
+    if taxiAcc < 0.1 then return end
+    taxiAcc = 0
+    if On() then pcall(TaxiHighlight) end
+end)
+
+--------------------------------------------------------------------------------
+-- Titan Panel / any LibDataBroker display bar: a "Forever Lazy" button with the next stop and its distance.
+-- Left-click = Lazy Mode, right-click = the services menu, shift-click = options.
+--------------------------------------------------------------------------------
+local ldbMain
+local hoverSrc
+local function SetupMainLDB()
+    if ldbMain then return true end
+    local LDB = LibStub and LibStub("LibDataBroker-1.1", true)
+    if not LDB then return false end
+    local function NextText()
+        local trip, leg = nil, nil
+        if addon.GoStatus then trip, leg = addon.GoStatus() end
+        if trip then return "Trip: " .. tostring(leg):gsub("%s*%(about.-%)", "") end
+        local db = DB()
+        local wp = db and db.waypoints and db.waypoints[1]
+        if not wp then return "Lazy: no stop" end
+        local text = tostring(wp.name or wp.label or "stop"):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "")
+        local px, py, pinst = api.hbd:GetPlayerWorldPosition()
+        if px and wp.x and wp.instance == pinst then
+            text = string.format("%s (%d yd)", text, math.sqrt((wp.x - px) ^ 2 + (wp.y - py) ^ 2))
+        end
+        return text
+    end
+    -- one icon, a line of text, and the whole menu opens when the mouse is over it
+    ldbMain = LDB:NewDataObject("Forever Lazy", {
+        type = "data source",
+        label = "Forever Lazy",
+        text = "Lazy",
+        icon = "Interface\\AddOns\\ForeverLazy\\media\\icon",
+        OnClick = function(_, button)
+            if IsShiftKeyDown() then addon:OpenOptions() else Cmd("now") end
+        end,
+        OnEnter = function(frame)
+            hoverSrc = frame
+            addon:OpenMenu()
+        end,
+        OnLeave = function() end,
+    })
+    local acc, outside = 0, 0
+    local f = CreateFrame("Frame")
+    f:SetScript("OnUpdate", function(_, dt)
+        -- close the hover menu once the mouse has left both the button and the menu
+        if hoverSrc and menu and menu:IsShown() then
+            local over = (hoverSrc.IsMouseOver and hoverSrc:IsMouseOver()) or menu:IsMouseOver()
+            outside = over and 0 or (outside + dt)
+            if outside > 0.6 then menu:Hide(); hoverSrc = nil; outside = 0 end
+        else
+            outside = 0
+        end
+        acc = acc + dt
+        if acc < 1 then return end
+        acc = 0
+        pcall(function() ldbMain.text = NextText() end)
+    end)
+    return true
+end
+local ldbWatch = CreateFrame("Frame")
+pcall(ldbWatch.RegisterEvent, ldbWatch, "PLAYER_LOGIN")
+ldbWatch:SetScript("OnEvent", function()
+    if not C_Timer or not C_Timer.After then return end
+    -- the bar addon may load after this one, so try again a few times
+    for _, secs in ipairs({ 2, 6, 15 }) do C_Timer.After(secs, function() pcall(SetupMainLDB) end) end
+end)
+
 local gossipBar
 local function GossipText()
     if C_GossipInfo and C_GossipInfo.GetText then return C_GossipInfo.GetText() end

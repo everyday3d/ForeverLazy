@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.7
+- **One button for Titan Panel** (and any LibDataBroker bar): an icon, your next stop with its distance, and the whole menu opens when you hover over it.
+- **Your route on the minimap**: numbered stops joined in order, and trips are drawn on both the world map and the minimap, with flights, boats, the tram and walks in different colours.
+- **Far-off stops use flights**: when the quickest way to a stop includes a flight, Lazy Mode points at the flight master, says where to fly, and the flight map rings that destination.
+- Lazy Mode **skips the trainer when there is nothing to learn**, learning from your trainer visits.
+- Collected library books now lose their book icon and show the green tick, and picking one up is recognised more reliably.
 ## 0.8.6
 - **A custom minimap button**: a Sam Kinison icon (credited, CC BY-SA 2.0), with a tooltip that matches what the clicks do.
 - The services menu on the arrow adapts to where you are: in a city it offers every service in that city, in the open world only those within about 900 yards.

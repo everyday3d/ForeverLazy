@@ -188,6 +188,29 @@ end
 local function RouteStop(s)
     return s.label or s.go or s.gather or s.lazy or s.boat or s.service or s.craft or s.farm or s.hearth
 end
+-- the points of my route in order: the rest of a trip in progress, then the plan's stops.
+-- { x, y, instance, kind, stop = { name, detail } }; kind says how I get there (walk, fly, boat, tram, hearth)
+local KIND_COLOR = {
+    walk = { 1, 0.82, 0 }, fly = { 0.3, 0.85, 1 }, boat = { 0.4, 0.6, 1 }, tram = { 0.8, 0.5, 1 }, hearth = { 1, 0.5, 0.9 },
+}
+local function RoutePoints(max)
+    local db = DB()
+    local pts = {}
+    local path = addon.GoTripPath and addon.GoTripPath()
+    if path then
+        for _, p in ipairs(path) do
+            pts[#pts + 1] = { x = p.x, y = p.y, instance = p.instance, kind = p.kind, stop = { name = p.name, detail = p.text } }
+        end
+    end
+    for _, s in ipairs(db.waypoints or {}) do
+        if #pts >= (max or 15) then break end
+        -- the trip's own waypoint is already covered by the trip path
+        if RouteStop(s) and s.instance and s.x and not (path and s.go) then
+            pts[#pts + 1] = { x = s.x, y = s.y, instance = s.instance, kind = "walk", stop = s }
+        end
+    end
+    return pts
+end
 local function Canvas()
     local wm = _G.WorldMapFrame
     if not wm then return nil end
@@ -220,13 +243,12 @@ function addon.DrawRouteLines()
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if px then pts[#pts + 1] = { px, py, pinst } end
     local number = 0
-    for i, s in ipairs(db.waypoints or {}) do
-        if i > 15 then break end
-        if RouteStop(s) and s.instance and s.x then
-            number = number + 1
-            pts[#pts + 1] = { s.x, s.y, s.instance }
-            stopOf[#pts] = { stop = s, number = number }
-        end
+    local kinds = {}
+    for _, rp in ipairs(RoutePoints(15)) do
+        number = number + 1
+        pts[#pts + 1] = { rp.x, rp.y, rp.instance }
+        kinds[#pts] = rp.kind
+        stopOf[#pts] = { stop = rp.stop, number = number }
     end
     local screen = {}
     for i, p in ipairs(pts) do
@@ -246,7 +268,8 @@ function addon.DrawRouteLines()
                 line:SetThickness(3)
                 lines[n] = line
             end
-            line:SetColorTexture(1, 0.82, 0, i == 1 and 0.95 or 0.65)
+            local c = KIND_COLOR[kinds[i + 1] or "walk"] or KIND_COLOR.walk
+            line:SetColorTexture(c[1], c[2], c[3], i == 1 and 0.95 or 0.7)
             line:SetStartPoint("TOPLEFT", overlay, a[1], a[2])
             line:SetEndPoint("TOPLEFT", overlay, b[1], b[2])
             line:Show()
@@ -293,6 +316,153 @@ ev:SetScript("OnEvent", function()
     end)
 end)
 
+--------------------------------------------------------------------------------
+-- My route on the minimap: numbered stops joined in order, clipped to the minimap's edge.
+-- Straight segments between stops (the game gives addons no pathfinding), but each stop is exactly placed.
+--------------------------------------------------------------------------------
+local OUTDOOR_RADIUS = { [0] = 116.7, [1] = 100, [2] = 83.3, [3] = 66.7, [4] = 50, [5] = 33.3 }
+local mmLines, mmMarks = {}, {}
+local MAX_STOPS = 8
+
+local function ViewRadius(mm)
+    if C_Minimap and C_Minimap.GetViewRadius then
+        local ok, r = pcall(C_Minimap.GetViewRadius)
+        if ok and type(r) == "number" and r > 0 then return r end
+    end
+    return OUTDOOR_RADIUS[mm:GetZoom() or 3] or 66.7
+end
+
+local function MinimapHolder(mm)
+    if not mm.flRouteHolder then
+        local h = CreateFrame("Frame", nil, mm)
+        h:SetAllPoints(mm)
+        h:SetFrameLevel(mm:GetFrameLevel() + 3)
+        mm.flRouteHolder = h
+    end
+    return mm.flRouteHolder
+end
+
+local function GetMark(mm, i)
+    local m = mmMarks[i]
+    if m then return m end
+    m = CreateFrame("Frame", nil, MinimapHolder(mm))
+    m:SetSize(15, 15)
+    m:SetFrameLevel(mm:GetFrameLevel() + 6)
+    m.bg = m:CreateTexture(nil, "BACKGROUND")
+    m.bg:SetAllPoints()
+    m.bg:SetTexture("Interface\\Buttons\\WHITE8X8")
+    m.num = m:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    m.num:SetPoint("CENTER", 0, 0)
+    m.dist = m:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    m.dist:SetPoint("TOP", m, "BOTTOM", 0, -1)
+    mmMarks[i] = m
+    return m
+end
+
+local function GetSeg(mm, i)
+    local l = mmLines[i]
+    if not l then
+        l = MinimapHolder(mm):CreateLine(nil, "OVERLAY")
+        l:SetThickness(2)
+        mmLines[i] = l
+    end
+    return l
+end
+
+local function HideMinimapRoute()
+    for _, l in ipairs(mmLines) do l:Hide() end
+    for _, m in ipairs(mmMarks) do m:Hide() end
+end
+
+-- the part of the segment A-B that lies inside a circle of radius R around 0,0, or nil
+local function ClipToCircle(ax, ay, bx, by, R)
+    local dx, dy = bx - ax, by - ay
+    local a = dx * dx + dy * dy
+    if a < 1e-6 then return nil end
+    local b = 2 * (ax * dx + ay * dy)
+    local c = ax * ax + ay * ay - R * R
+    local disc = b * b - 4 * a * c
+    if disc < 0 then return nil end
+    local s = math.sqrt(disc)
+    local t1, t2 = (-b - s) / (2 * a), (-b + s) / (2 * a)
+    local lo, hi = math.max(t1, 0), math.min(t2, 1)
+    if lo >= hi then return nil end
+    return ax + dx * lo, ay + dy * lo, ax + dx * hi, ay + dy * hi
+end
+
+local function UpdateMinimapRoute()
+    local db = DB()
+    local mm = _G.Minimap
+    if not (db and mm) or db.minimapLine == false or db.mode == "off" then return HideMinimapRoute() end
+    if api.ShouldHide and api.ShouldHide() then return HideMinimapRoute() end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return HideMinimapRoute() end
+    local rotate = GetCVar and GetCVar("rotateMinimap") == "1"
+    local facing = rotate and GetPlayerFacing and GetPlayerFacing()
+    if rotate and not facing then return HideMinimapRoute() end
+
+    local half = mm:GetWidth() / 2
+    local R = half - 3
+    local scale = half / ViewRadius(mm)
+
+    -- the stops that are in this zone, as offsets from the middle of the minimap in pixels
+    local pts, dists, kinds = { { 0, 0 } }, {}, {}
+    for _, w in ipairs(RoutePoints(MAX_STOPS)) do
+        if #pts > MAX_STOPS then break end
+        if w.x and w.y and w.instance == pinst then
+            local angle, dist = hbd:GetWorldVector(pinst, px, py, w.x, w.y)
+            if angle then
+                local theta = rotate and (angle - facing) or angle
+                local r = (dist or 0) * scale
+                pts[#pts + 1] = { -math.sin(theta) * r, math.cos(theta) * r }
+                dists[#pts] = dist
+                kinds[#pts] = w.kind
+            end
+        end
+    end
+    if #pts == 1 then return HideMinimapRoute() end
+
+    local segs = 0
+    for i = 1, #pts - 1 do
+        local x1, y1, x2, y2 = ClipToCircle(pts[i][1], pts[i][2], pts[i + 1][1], pts[i + 1][2], R)
+        if x1 then
+            segs = segs + 1
+            local l = GetSeg(mm, segs)
+            local c = KIND_COLOR[kinds[i + 1] or "walk"] or KIND_COLOR.walk
+            l:SetColorTexture(c[1], c[2], c[3], i == 1 and 0.95 or 0.65)
+            l:SetStartPoint("CENTER", mm, x1, y1)
+            l:SetEndPoint("CENTER", mm, x2, y2)
+            l:Show()
+        end
+    end
+    for i = segs + 1, #mmLines do mmLines[i]:Hide() end
+
+    local marks = 0
+    for i = 2, #pts do
+        local x, y = pts[i][1], pts[i][2]
+        if x * x + y * y <= R * R then
+            marks = marks + 1
+            local m = GetMark(mm, marks)
+            m:ClearAllPoints()
+            m:SetPoint("CENTER", mm, "CENTER", x, y)
+            m.bg:SetVertexColor(i == 2 and 1 or 0.15, i == 2 and 0.82 or 0.15, i == 2 and 0.1 or 0.2, 0.95)
+            m.num:SetText(i - 1)
+            m.num:SetTextColor(i == 2 and 0 or 1, i == 2 and 0 or 0.82, i == 2 and 0 or 0.1)
+            m.dist:SetText(i == 2 and dists[i] and string.format("%d yd", dists[i]) or "")
+            m:Show()
+        end
+    end
+    for i = marks + 1, #mmMarks do mmMarks[i]:Hide() end
+end
+
+local mmTick = CreateFrame("Frame")
+local mmAcc = 0
+mmTick:SetScript("OnUpdate", function(_, dt)
+    mmAcc = mmAcc + dt
+    if mmAcc < 0.05 then return end
+    mmAcc = 0
+    pcall(UpdateMinimapRoute)
+end)
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     local word = (cmd or ""):lower()

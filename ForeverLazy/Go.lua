@@ -141,7 +141,7 @@ local function BuildGraph(dest)
                 local rec = times[a.name .. "->" .. b.name]
                 local cost = rec and rec.avg or (Dist(a, b) / 30 + 15)
                 table.insert(rides[a.index], { to = b.index, cost = cost + 10, kind = "fly",
-                    text = string.format("Fly from %s to %s (about %s)", a.name:match("^[^,]+") or a.name, b.name:match("^[^,]+") or b.name, Clock(cost)) })
+                    text = string.format("Talk to the flight master here and fly to %s (about %s)", b.name:match("^[^,]+") or b.name, Clock(cost)) })
             end
         end
     end
@@ -279,6 +279,56 @@ end
 function addon.GoTo(map, zx, zy, name)
     local dest = Place(name or "there", map, zx, zy)
     if dest then Start(dest) end
+end
+
+-- Lazy Mode asks this for a far-away stop: if the quickest way there uses a flight, start that trip
+function addon.GoWithFlight(map, zx, zy, name)
+    local dest = Place(name or "there", map, zx, zy)
+    if not dest then return false end
+    local legs = Route(dest)
+    if not legs or #legs == 0 then return false end
+    local flies = false
+    for _, l in ipairs(legs) do if l.kind == "fly" then flies = true end end
+    if not flies then return false end
+    Start(dest)
+    return true
+end
+
+-- the rest of the trip as points to draw: where to board, where each ride lands, where the walks end.
+-- Each point is { x, y, instance, kind = how I get there ("walk", "fly", "boat", "tram", "hearth"), name, text }.
+function addon.GoTripPath()
+    if not trip then return nil end
+    local out = {}
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    local last = px and { x = px, y = py, instance = pinst } or nil
+    for i = trip.idx, #trip.legs do
+        local l = trip.legs[i]
+        if l.kind == "walk" then
+            out[#out + 1] = { x = l.to.x, y = l.to.y, instance = l.to.instance, kind = "walk", name = l.to.name, text = LegText(l) }
+        else
+            -- walk to the boarding point first, unless I am already there
+            if l.from and last and (l.from.instance ~= last.instance or Dist(l.from, last) > 8) then
+                out[#out + 1] = { x = l.from.x, y = l.from.y, instance = l.from.instance, kind = "walk", name = l.from.name, text = LegText(l) }
+            end
+            out[#out + 1] = { x = l.to.x, y = l.to.y, instance = l.to.instance, kind = l.kind, name = l.to.name, text = LegText(l) }
+        end
+        last = out[#out]
+    end
+    return out
+end
+-- the flight point the trip flies to next (nil when no trip, or no flight left in it)
+function addon.GoFlightTarget()
+    if not trip then return nil end
+    for i = trip.idx, #trip.legs do
+        local l = trip.legs[i]
+        if l.kind == "fly" then return l.to.name end
+    end
+    return nil
+end
+-- what the trip in progress wants me to do now (nil when there is none)
+function addon.GoStatus()
+    if not trip then return nil end
+    return trip.dest.name, LegText(trip.legs[trip.idx])
 end
 
 local function Tick()
