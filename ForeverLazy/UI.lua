@@ -563,14 +563,41 @@ local function BuildCraftPanel(frame)
     craftPanel = p
 end
 
+local craftWarned = {}
+local function CraftWarn(key, text)
+    if craftWarned[key] then return end
+    craftWarned[key] = true
+    Print("craft panel: " .. text)
+end
+
 local function ShowCraft(names)
-    if not On() or not addon.ModuleOn("crafting") then return end
+    if not On() then CraftWarn("ui", "the buttons in the game windows are switched off (Options > Buttons in the game windows)"); return end
+    if not addon.ModuleOn("crafting") then CraftWarn("module", "the Crafting module is switched off (Options > Modules)"); return end
     local f, name = FirstFrame(names)
     if not f then problems.craft = "no profession window found (tried " .. table.concat(names, ", ") .. ")"; return end
     built.craft = name
     BuildCraftPanel(f)
     if C_Timer then C_Timer.After(0.8, function() if addon.ReadProfession then addon.ReadProfession() end; RefreshCraftPanel() end) end
 end
+
+-- Do not depend on the window's events or on when it loads: while a profession window is open, make sure the panel is
+-- there. (A different addon loading the professions window early made the one-time hook miss it.)
+local craftWatch = CreateFrame("Frame")
+local craftAcc = 0
+craftWatch:SetScript("OnUpdate", function(_, dt)
+    craftAcc = craftAcc + dt
+    if craftAcc < 0.5 then return end
+    craftAcc = 0
+    for _, name in ipairs({ "ProfessionsFrame", "TradeSkillFrame", "CraftFrame" }) do
+        local f = _G[name]
+        if f and f.IsShown and f:IsShown() then
+            if not (craftPanel and craftPanel:IsShown() and craftPanel:GetParent() == f) then
+                if not Try("craft", ShowCraft, { name }) then CraftWarn("error", "error building it: " .. tostring(problems.craft)) end
+            end
+            return
+        end
+    end
+end)
 
 --------------------------------------------------------------------------------
 -- Profession window: light up the recipes in its own list

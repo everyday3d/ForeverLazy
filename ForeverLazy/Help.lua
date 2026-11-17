@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.10.1", {
+        "The craft plan panel beside the profession window now always appears (it could be missed when another addon loaded that window first), and says why in chat if it cannot.",
+    } },
     { "0.10.0", {
         "The Hive: the addon learns from your own play. Your real XP per hour (/lazy pace), the drops you loot (/lazy drops, item tooltips, the crafting plan), how long each quest really takes you, and a session report (/lazy session).",
         "Best grind (/lazy grind): which mobs give the most XP per hour near your level. Rare pins turn into timers after a kill, with how long the rare usually takes to come back.",

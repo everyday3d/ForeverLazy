@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.10.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.10.1-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 

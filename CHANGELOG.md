@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.10.1
+- **Fix: the craft plan panel** beside the profession window could be missed when another addon loaded the professions window first. It now appears whenever a profession window is open, and says in chat why if it cannot.
+
 ## 0.10.0
 - **The Hive**: the addon learns from real play and players who have it on share what they measured. One switch (Options > The Hive, or `/lazy hive on`), off until you turn it on.
   - **Your real pace**: XP per hour per zone and level (`/lazy pace`), shown in the guide with your fastest zone lately and the time to your next level.
