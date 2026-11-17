@@ -29,6 +29,11 @@ You log in with a full quest log and no idea where to start. You click the minim
 
 No spreadsheets. No second monitor. No typing, unless you want to.
 
+<p align="center">
+  <img src="docs/recipe-highlight.jpg" alt="The recipe to craft next glows in the profession window with a craft 19 badge" width="620"><br>
+  <i>The recipe to craft next glows in your own profession window, with how many to make.</i>
+</p>
+
 ## What you get
 
 | | |
