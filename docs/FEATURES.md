@@ -17,7 +17,7 @@ Back to the [README](../README.md) · [Commands](COMMANDS.md)
 
 ## Quests
 
-- **Route planner** (`/lrxp plan`): the stops that pay the most XP for the least walking come first; quests that overlap
+- **Route planner** (`/lazy plan`): the stops that pay the most XP for the least walking come first; quests that overlap
   are done in one visit and every turn-in comes after its objectives. Green, yellow and orange quests count, red only as
   a turn-in, grey never. It stays in your zone, replans when something changes, and routes you to the nearest quest
   givers when nothing of yours is in the zone.
@@ -57,7 +57,7 @@ window appears after an update (`/lazy new`).
 ## Collections and timers
 
 - **Library books**: waypoints, zone alerts, collected tracking, map pins, party sharing and a Titan Panel button.
-- **Flight timer** (learns each flight), **hunter pet reminder**, and a few **macros** (`/lrxp macros`).
+- **Flight timer** (learns each flight), **hunter pet reminder**, and a few **macros** (`/lazy macros`).
 
 ## Keeping it simple
 

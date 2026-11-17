@@ -1,6 +1,6 @@
 -- Next zone suggestion: when you have outgrown the zone you are in, it suggests where to go for your level.
---   /lrxp nextzone        list the best zones for your level now
---   /lrxp nextzone go [n] put a waypoint on suggestion n (default 1)
+--   /lazy nextzone        list the best zones for your level now
+--   /lazy nextzone go [n] put a waypoint on suggestion n (default 1)
 -- The level ranges and quest hub positions are from memory, so treat them as a guide.
 local ADDON, ns = ...
 local addon = ns.addon
@@ -119,7 +119,7 @@ local function Show(level, header)
     end
     Print(header)
     for i, s in ipairs(suggestions) do Print(Describe(i, s)) end
-    Print("/lrxp nextzone go  puts a waypoint on the first one")
+    Print("/lazy nextzone go  puts a waypoint on the first one")
 end
 
 local lastHint
@@ -154,7 +154,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if go then
             if #suggestions == 0 then suggestions = Suggest(UnitLevel("player"), (CurrentZoneName())) end
             local s = suggestions[tonumber(go) or 1]
-            if not s then Print("no such suggestion, try /lrxp nextzone first"); return true end
+            if not s then Print("no such suggestion, try /lazy nextzone first"); return true end
             DB().waypoints = {}
             addon:AddWaypointZone(s.mapId, s.zx, s.zy, s.zone[1] .. " (level " .. s.zone[2] .. "-" .. s.zone[3] .. ")")
         else

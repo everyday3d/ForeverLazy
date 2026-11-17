@@ -1,7 +1,7 @@
 -- Dungeons: which of your quests need a dungeon, where its entrance is, and which dungeons suit your level.
 -- It also gives the corpse arrow the dungeon entrance after you die inside one (the corpse run).
---   /lrxp dungeons              quests that need a dungeon, and dungeons for your level
---   /lrxp dungeons go [n|name]  put a waypoint on a dungeon entrance
+--   /lazy dungeons              quests that need a dungeon, and dungeons for your level
+--   /lazy dungeons go [n|name]  put a waypoint on a dungeon entrance
 -- Dungeon names, entrances and quest locations come from Questie's database.
 local ADDON, ns = ...
 local addon = ns.addon
@@ -223,7 +223,7 @@ local function Summary()
             Print(string.format("  %d. %s (level %d-%d) - %s", #listing, rec.name, rec.levels[1], rec.levels[2], Where(rec)))
         end
     end
-    if #listing > 0 then Print("/lrxp dungeons go 1  puts a waypoint on the first entrance") end
+    if #listing > 0 then Print("/lazy dungeons go 1  puts a waypoint on the first entrance") end
 end
 
 local function Go(arg)
@@ -241,7 +241,7 @@ local function Go(arg)
     else
         rec = listing[1]
     end
-    if not rec then Print("no such dungeon, try /lrxp dungeons first"); return end
+    if not rec then Print("no such dungeon, try /lazy dungeons first"); return end
     local e = Nearest(rec)
     if not e then Print(rec.name .. ": entrance position unknown"); return end
     addon:AddWaypointZone(e.uiMapId, e.zx, e.zy, rec.name .. " entrance")
@@ -276,7 +276,7 @@ ev:SetScript("OnEvent", function()
                 for _, e in ipairs(v.rec.entrances) do
                     if e.uiMapId == here and not hinted[v.rec.name] then
                         hinted[v.rec.name] = true
-                        Print(string.format("%d of your quests are inside %s, the entrance is here (%s). /lrxp dungeons go %s",
+                        Print(string.format("%d of your quests are inside %s, the entrance is here (%s). /lazy dungeons go %s",
                             #v.quests, v.rec.name, Where(v.rec), v.rec.name))
                     end
                 end

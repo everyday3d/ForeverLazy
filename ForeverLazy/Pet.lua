@@ -1,7 +1,7 @@
 -- Hunter pet reminder: watches your pet's happiness and tells you when it needs feeding.
---   /lrxp pet          status
---   /lrxp pet on|off   turn the reminder on or off
---   /lrxp pet test     show the reminder for a few seconds
+--   /lazy pet          status
+--   /lazy pet on|off   turn the reminder on or off
+--   /lazy pet test     show the reminder for a few seconds
 local ADDON, ns = ...
 local addon = ns.addon
 local Print = addon.Print
@@ -15,7 +15,7 @@ local lastNag = 0
 local lastState
 
 local function MakeFrame()
-    local f = CreateFrame("Frame", "LRXPT_PetAlert", UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_PetAlert", UIParent)
     f:SetSize(280, 44)
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)

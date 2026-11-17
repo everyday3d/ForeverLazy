@@ -146,7 +146,7 @@ local function SharePlan(silent)
             stops[#stops + 1] = { label = w.label, map = w.uiMapId, zx = w.zx, zy = w.zy, detail = w.detail }
         end
     end
-    if #stops == 0 then Print("you have no plan to share. /lrxp plan builds one"); return end
+    if #stops == 0 then Print("you have no plan to share. /lazy plan builds one"); return end
     addon:SendCommMessage(PLAN_PREFIX, addon:Serialize({ stops = stops, lead = addon.DuoRole() == "lead" }), ch)
     if not silent then Print(string.format("sent your plan (%d stops) to the group. Players with the addon can follow it with /lazy acceptplan", #stops)) end
 end

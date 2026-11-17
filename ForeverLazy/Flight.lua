@@ -2,7 +2,7 @@
 -- The game does not tell addons the length of a flight, so the addon learns it:
 -- the first time you fly a route it measures the ride, after that it can count down
 -- (and show the time on the flight map when you hover a destination).
---   /lrxp flight   lists the flight times learned so far
+--   /lazy flight   lists the flight times learned so far
 local ADDON, ns = ...
 local addon = ns.addon
 local Print = addon.Print
@@ -57,7 +57,7 @@ if hooksecurefunc and _G.TaxiNodeOnButtonEnter then
 end
 
 local function MakeFrame()
-    local f = CreateFrame("Frame", "LRXPT_FlightTimer", UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_FlightTimer", UIParent)
     f:SetSize(260, 44)
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)

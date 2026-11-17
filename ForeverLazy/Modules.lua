@@ -91,7 +91,7 @@ function addon.ModulesChanged()
     if not addon.ModuleOn("plan") then
         for i = #wps, 1, -1 do if wps[i].label then table.remove(wps, i) end end
     end
-    for _, name in ipairs({ "LRXPT_PetAlert", "LRXPT_FlightTimer" }) do
+    for _, name in ipairs({ "ForeverLazy_PetAlert", "ForeverLazy_FlightTimer" }) do
         local f = _G[name]
         if f and f.Hide then f:Hide() end
     end

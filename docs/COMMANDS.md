@@ -2,7 +2,7 @@
 
 Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 
-`/lrxp`, `/forever` and `/lazy` all do the same thing. Most of these are also a click on the minimap button's menu.
+`/lazy` and `/forever` do the same thing. Most of these are also a click on the minimap button's menu.
 
 ## Everyday
 
@@ -10,9 +10,9 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 |---|---|
 | `/lazy now` | Lazy Mode: point at the best next thing |
 | `/lazy go <place>` `go stop` | Plan and follow a whole trip |
-| `/lrxp plan [all]` | Plan the most efficient quest route (`all` includes other zones) |
+| `/lazy plan [all]` | Plan the most efficient quest route (`all` includes other zones) |
 | `/lazy window` | The plan window |
-| `/lrxp skip` `skip clear` | List or bring back quests you skipped |
+| `/lazy skip` `skip clear` | List or bring back quests you skipped |
 | `/lazy check` | Is everything loaded and working |
 | `/lazy tour` `export` `import` `new` `welcome` | Tour, share settings, what's new, welcome window |
 
@@ -26,22 +26,22 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy hearth` `hearth set` `fp` `fp list` | Hearthstone and flight points |
 | `/lazy herb <name>` `ore <name>` `gather` `fish` | Gathering routes and fishing spots |
 | `/lazy journey` `generate` `regenerate` `go <n>` | Your zone-by-zone route to 60 |
-| `/lrxp way <x> <y> [name]` `here` `list` `next` `remove <n>` `clear` | Waypoints |
+| `/lazy way <x> <y> [name]` `here` `list` `next` `remove <n>` `clear` | Waypoints |
 
 ## Quests and crafting
 
 | Command | What it does |
 |---|---|
-| `/lrxp class` `dungeons` `bag` `nextzone` | Class quests, dungeons, sleeping bag chain, next zone (each takes `go`) |
+| `/lazy class` `dungeons` `bag` `nextzone` | Class quests, dungeons, sleeping bag chain, next zone (each takes `go`) |
 | `/lazy chain` `farm` | Quest chain follow-up, best place to farm |
 | `/lazy craft [profession] [goal]` `craft go` `craft bank` | Crafting plan, materials, bank |
-| `/lrxp books` `zone` `turnin` `list` `done` `share` `say` | Library book collection |
+| `/lazy books` `zone` `turnin` `list` `done` `share` `say` | Library book collection |
 
 ## Group
 
 | Command | What it does |
 |---|---|
-| `/lrxp follow [name]` `follow off` | Follow a group member |
+| `/lazy follow [name]` `follow off` | Follow a group member |
 | `/lazy party` `shareplan` `acceptplan` `duo` | Group features |
 | `/lazy net on` `off` | Share boat docks with your guild and group (hidden messages) |
 
@@ -50,9 +50,9 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | Command | What it does |
 |---|---|
 | `/lazy preset minimal` `leveler` `duo` `full` | Switch modules in one go |
-| `/lrxp lock` `unlock` `scale <n>` `reset` | Move, resize and reset the arrows |
-| `/lrxp own` `compass` `pet` | My quests arrow, compass bar, pet reminder |
+| `/lazy lock` `unlock` `scale <n>` `reset` | Move, resize and reset the arrows |
+| `/lazy own` `compass` `pet` | My quests arrow, compass bar, pet reminder |
 | `/lazy flighttimes` | Flight times learned so far |
-| `/lrxp macros` `macros remove` | Make or remove the addon's macros |
-| `/lrxp toggle` `both` `quest` `friend` `off` | RestedXP friend arrows |
-| `/lrxp why` | Explain where the plan's arrow comes from (for bug reports) |
+| `/lazy macros` `macros remove` | Make or remove the addon's macros |
+| `/lazy toggle` `both` `quest` `friend` `off` | RestedXP friend arrows |
+| `/lazy why` | Explain where the plan's arrow comes from (for bug reports) |

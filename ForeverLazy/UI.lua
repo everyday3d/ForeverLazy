@@ -222,7 +222,7 @@ end
 -- The minimap button
 --------------------------------------------------------------------------------
 local function HookMinimap()
-    local b = _G.LRXPT_MinimapButton
+    local b = _G.ForeverLazy_MinimapButton
     if not b then return false end
     b:SetScript("OnClick", function(_, button)
         if button == "RightButton" then
@@ -241,7 +241,7 @@ local function HookMinimap()
         GameTooltip:AddLine("Shift-click: options", 1, 1, 1)
         GameTooltip:Show()
     end)
-    built.minimap = "LRXPT_MinimapButton"
+    built.minimap = "ForeverLazy_MinimapButton"
     return true
 end
 
@@ -692,7 +692,7 @@ function addon:HandleExtraCommand(cmd, rest)
         Print("buttons in the windows: " .. (On() and "on" or "OFF in the options"))
         Print(string.format("  windows: map %s, quest log %s, quest map %s, old profession %s, new profession %s, bank %s, flight map %s, new flight map %s, gossip %s, minimap button %s",
             has("WorldMapFrame"), has("QuestLogFrame"), has("QuestMapFrame"), has("TradeSkillFrame"), has("ProfessionsFrame"),
-            has("BankFrame"), has("TaxiFrame"), has("FlightMapFrame"), has("GossipFrame"), has("LRXPT_MinimapButton")))
+            has("BankFrame"), has("TaxiFrame"), has("FlightMapFrame"), has("GossipFrame"), has("ForeverLazy_MinimapButton")))
         Print(string.format("  old profession API %s, new profession API %s",
             GetTradeSkillLine and "yes" or "no", (C_TradeSkillUI and C_TradeSkillUI.GetAllRecipeIDs) and "yes" or "no"))
         local d = addon.CraftDiag

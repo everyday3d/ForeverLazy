@@ -1,9 +1,9 @@
 -- Library book collection (WoW Forever): every known book location as waypoints.
 -- Source: Wowhead "Collecting Library Books: Locations and Rewards" (updated 2026/11/13).
---   /lrxp books          all books, nearest first
---   /lrxp books zone     only books in the zone you are in
---   /lrxp books turnin   waypoint to your faction's librarian
---   /lrxp books list     show the book list
+--   /lazy books          all books, nearest first
+--   /lazy books zone     only books in the zone you are in
+--   /lazy books turnin   waypoint to your faction's librarian
+--   /lazy books list     show the book list
 local ADDON, ns = ...
 local addon = ns.addon
 local api = ns.api
@@ -154,7 +154,7 @@ local function LoadBooks(onlyZone, append, includeDone)
     end
     if #list == 0 then
         if onlyZone and haveIt > 0 then
-            Print("you already have every known book in this zone. /lrxp books zone all shows them anyway.")
+            Print("you already have every known book in this zone. /lazy books zone all shows them anyway.")
         else
             Print(onlyZone and "no known books in this zone" or "no books left to find, or none could be placed")
         end
@@ -229,7 +229,7 @@ local function MarkDone(value, nameBit)
                 return
             end
         end
-        Print("no book with that in its name. /lrxp books list shows them all")
+        Print("no book with that in its name. /lazy books list shows them all")
         return
     end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
@@ -246,7 +246,7 @@ local function MarkDone(value, nameBit)
         SetDone(best, value)
         Print(string.format("%s marked as %s", BookKey(best), value and "collected" or "not collected"))
     else
-        Print("no book within 60 yards. Stand next to it, or use /lrxp books done <part of its name>")
+        Print("no book within 60 yards. Stand next to it, or use /lazy books done <part of its name>")
     end
 end
 
@@ -277,11 +277,11 @@ end)
 --------------------------------------------------------------------------------
 -- Telling the party
 --------------------------------------------------------------------------------
-local BOOK_PREFIX = "LRXPTBK"
+local BOOK_PREFIX = "FLBK"
 local pending   -- who offered us the book route
 
 -- Offer the whole book route to party members who also run this addon.
--- They get a chat line and accept with /lrxp books accept (nothing changes on their side until then).
+-- They get a chat line and accept with /lazy books accept (nothing changes on their side until then).
 function addon:ShareBooks()
     if not IsInGroup() then Print("you are not in a party"); return end
     self:SendCommMessage(BOOK_PREFIX, "offer", IsInRaid() and "RAID" or "PARTY")
@@ -295,7 +295,7 @@ function addon:OnBooksComm(prefix, message, distribution, sender)
     if not DB().acceptShared then return end
     if message ~= "offer" then return end
     pending = from
-    Print(string.format("%s shared the library book route. Type |cff55ff55/lrxp books accept|r to load it as waypoints (replaces your current ones).", from))
+    Print(string.format("%s shared the library book route. Type |cff55ff55/lazy books accept|r to load it as waypoints (replaces your current ones).", from))
 end
 addon:RegisterComm(BOOK_PREFIX, "OnBooksComm")
 
@@ -382,7 +382,7 @@ local function CheckZone()
         Print(string.format("%d library book%s in this zone - adding waypoints.", n, n == 1 and "" or "s"))
         LoadBooks(true, true)
     else
-        Print(string.format("%d library book%s in this zone. |cff55ff55/lrxp books zone|r for arrows.", n, n == 1 and "" or "s"))
+        Print(string.format("%d library book%s in this zone. |cff55ff55/lazy books zone|r for arrows.", n, n == 1 and "" or "s"))
     end
 end
 
@@ -458,7 +458,7 @@ local function RefreshMenu()
 end
 
 local function MakeBookMenu()
-    local f = CreateFrame("Frame", "LRXPT_BookMenu", UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_BookMenu", UIParent)
     f:SetSize(380, ROWS * ROWH + 46)
     f:SetFrameStrata("FULLSCREEN_DIALOG")
     f:SetClampedToScreen(true)
@@ -506,7 +506,7 @@ local function MakeBookMenu()
     menuCatcher:SetScript("OnClick", function() f:Hide() end)
     f:SetScript("OnShow", function() menuCatcher:Show() end)
     f:SetScript("OnHide", function() menuCatcher:Hide() end)
-    table.insert(UISpecialFrames, "LRXPT_BookMenu")
+    table.insert(UISpecialFrames, "ForeverLazy_BookMenu")
     f:Hide()
     return f
 end

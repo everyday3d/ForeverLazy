@@ -119,7 +119,7 @@ local function Decide()
                      reason = "nothing left to do here, time to move on to " .. s.zone, say = "nothing left to do here: on to " .. s.zone, trip = s.zone }
         end
     end
-    return { say = "nothing to suggest right now. Take a quest, or /lrxp plan" }
+    return { say = "nothing to suggest right now. Take a quest, or /lazy plan" }
 end
 
 local function Now()
@@ -140,8 +140,8 @@ local function Now()
     end
 end
 addon.LazyNow = Now
-function _G.LRXPT_LazyNow() Now() end
-_G.BINDING_NAME_LRXPT_NOW = "Lazy mode: point me at the next thing"
+function _G.ForeverLazy_LazyNow() Now() end
+_G.BINDING_NAME_FOREVERLAZY_NOW = "Lazy mode: point me at the next thing"
 
 --------------------------------------------------------------------------------
 -- Keep going: when the lazy stop is reached, pick the next thing

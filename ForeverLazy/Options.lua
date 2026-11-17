@@ -77,7 +77,7 @@ end
 local checkId = 0
 local function Check(parent, text, x, get, set, advance)
     checkId = checkId + 1
-    local name = "LRXPT_Check" .. checkId
+    local name = "ForeverLazy_Check" .. checkId
     local cb = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
     cb:SetPoint("TOPLEFT", x or 16, y)
     Track(cb, x or 16, y)
@@ -93,7 +93,7 @@ end
 local sliderId = 0
 local function Slider(parent, text, minV, maxV, step, fmt, get, set)
     sliderId = sliderId + 1
-    local name = "LRXPT_Slider" .. sliderId
+    local name = "ForeverLazy_Slider" .. sliderId
     y = y - 14
     local s = CreateFrame("Slider", name, parent, "OptionsSliderTemplate")
     s:SetPoint("TOPLEFT", 24, y)
@@ -191,7 +191,7 @@ local function ColorRow(parent, text, key)
 end
 
 local function BuildControls(parent)
-    local scroll = CreateFrame("ScrollFrame", "LRXPT_OptionsScroll", parent, "UIPanelScrollFrameTemplate")
+    local scroll = CreateFrame("ScrollFrame", "ForeverLazy_OptionsScroll", parent, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 4, -4)
     scroll:SetPoint("BOTTOMRIGHT", -28, 4)
     local content = CreateFrame("Frame", nil, scroll)
@@ -262,7 +262,7 @@ local function BuildControls(parent)
     Button(content, "Do the next thing now", 16, 190, function() if addon.LazyNow then addon.LazyNow() end end, true)
     Check(content, "Keep going: pick the next thing by itself when I reach it", 16,
         function() return DB().lazyKeepGoing == true end, function(v) DB().lazyKeepGoing = v end)
-    Label(content, "Also: /lazy now, the macro LRXP Now (/lrxp macros), or a key under Key Bindings > Forever Lazy.")
+    Label(content, "Also: /lazy now, the macro Lazy Now (/lazy macros), or a key under Key Bindings > Forever Lazy.")
     y = y - 26
     Header(content, "Journey")
     Label(content, "Which zones to level in, in order, from your level to 60. It is kept for each character.")
@@ -344,7 +344,7 @@ local function BuildControls(parent)
         function() return DB().followLastSeen end, function(v) DB().followLastSeen = v end)
     Check(content, "Warn me if my friend hasn't moved for 3 minutes", 16,
         function() return DB().stuckAlert end, function(v) DB().stuckAlert = v end)
-    Label(content, "Several friends: right-click the step panel to switch, /lrxp friend <name> to pin.")
+    Label(content, "Several friends: right-click the step panel to switch, /lazy friend <name> to pin.")
     y = y - 26
 
     Header(content, "My own quests")
@@ -357,11 +357,11 @@ local function BuildControls(parent)
         function() return DB().ownFocus ~= false end, function(v) DB().ownFocus = v; Changed() end)
     ColorRow(content, "My quests arrow color", "colorMine")
     Button(content, "Plan my route (replaces waypoints)", 16, 240, function() addon:PlanRoute() end, true)
-    Label(content, "Same as /lrxp plan. Orders your quest spots into a walking route, one waypoint each.")
+    Label(content, "Same as /lazy plan. Orders your quest spots into a walking route, one waypoint each.")
     y = y - 26
     Check(content, "Plan for XP: do the quests that give the most XP for the walking first", 16,
         function() return DB().planXP ~= false end, function(v) DB().planXP = v end)
-    Check(content, "Keep the plan to the zone I'm in (/lrxp plan all ignores this)", 16,
+    Check(content, "Keep the plan to the zone I'm in (/lazy plan all ignores this)", 16,
         function() return DB().planZoneOnly ~= false end, function(v) DB().planZoneOnly = v end)
     Check(content, "Leave grey (too low level) quests out of the plan", 16,
         function() return DB().planSkipGrey ~= false end, function(v) DB().planSkipGrey = v end)
@@ -426,11 +426,11 @@ local function BuildControls(parent)
     Button(content, "Share waypoint", 146, 120, function() addon:ShareWaypoint() end, false)
     Button(content, "Export", 276, 80, function() addon:OpenIO("export") end, false)
     Button(content, "Import", 366, 80, function() addon:OpenIO("import") end, true)
-    Label(content, "Routes: /lrxp route save|load|delete <name>.  Profiles: /lrxp profile list|new|use|delete.")
+    Label(content, "Routes: /lazy route save|load|delete <name>.  Profiles: /lazy profile list|new|use|delete.")
     y = y - 26
 
     Header(content, "My waypoints")
-    Label(content, "Set one with /lrxp way <x> <y> [name], /lrxp way here, or Ctrl + right-click on the world map.")
+    Label(content, "Set one with /lazy way <x> <y> [name], /lazy way here, or Ctrl + right-click on the world map.")
     y = y - 26
     ColorRow(content, "Waypoint arrow color", "colorWaypoint")
     Check(content, "Remove a waypoint automatically when I arrive", 16,
@@ -438,7 +438,7 @@ local function BuildControls(parent)
     Button(content, "Drop at my position", 16, 150, function() addon:DropWaypointHere() end, false)
     Button(content, "Skip active", 176, 110, function() addon:RemoveWaypoint(1) end, false)
     Button(content, "Clear all", 296, 100, function() addon:ClearWaypoints() end, true)
-    Label(content, "List them with /lrxp way list, make one active with /lrxp way <number>.")
+    Label(content, "List them with /lazy way list, make one active with /lazy way <number>.")
     y = y - 26
 
     Header(content, "Library books")
@@ -465,7 +465,7 @@ local function BuildControls(parent)
     Button(content, "Post this zone in party chat", 186, 190, function() addon:HandleExtraCommand("books", "say") end, true)
     Label(content, "Offer: party members with this addon get a prompt to load it. Post: plain /way lines anyone can use.")
     y = y - 26
-    Label(content, "Same as /lrxp books, books zone, books turnin, books list, books share, books say, books accept.")
+    Label(content, "Same as /lazy books, books zone, books turnin, books list, books share, books say, books accept.")
     y = y - 26
 
     Header(content, "Map pins")
@@ -505,7 +505,7 @@ local function BuildControls(parent)
         addon.Print("simulated step: Kill Mottled Boar")
     end, true)
 
-    Label(content, "Slash commands: /lrxp (opens this), /lrxp status, /lrxp test <text>")
+    Label(content, "Slash commands: /lazy (opens this), /lazy status, /lazy test <text>")
     y = y - 30
     cur.bodyEnd = y
 
@@ -577,7 +577,7 @@ end
 local function Build()
     if built then return end
     built = true
-    panel = CreateFrame("Frame", "LRXPT_OptionsPanel")
+    panel = CreateFrame("Frame", "ForeverLazy_OptionsPanel")
     panel:Hide()      -- a new frame counts as shown; the Settings window needs to Show() it to fire OnShow
     panel.name = TITLE
     BuildControls(panel)
@@ -620,7 +620,7 @@ function addon:OpenOptions()
         return
     end
     if not standalone then
-        standalone = CreateFrame("Frame", "LRXPT_OptionsWindow", UIParent, "BasicFrameTemplateWithInset")
+        standalone = CreateFrame("Frame", "ForeverLazy_OptionsWindow", UIParent, "BasicFrameTemplateWithInset")
         standalone:SetSize(560, 560)
         standalone:SetPoint("CENTER")
         standalone:SetMovable(true)
@@ -633,7 +633,7 @@ function addon:OpenOptions()
         panel:ClearAllPoints()
         panel:SetPoint("TOPLEFT", 4, -24)
         panel:SetPoint("BOTTOMRIGHT", -4, 4)
-        tinsert(UISpecialFrames, "LRXPT_OptionsWindow")
+        tinsert(UISpecialFrames, "ForeverLazy_OptionsWindow")
         -- the stand-alone window shows everything on one page with fold-away groups
         panel:SetScript("OnShow", function() AttachTo(panel, nil) end)
     end
@@ -646,22 +646,30 @@ end
 -- Macros the addon makes for you (account-wide, find them with /macro)
 --------------------------------------------------------------------------------
 local MACROS = {
-    { name = "LRXP Plan",       body = "/lrxp plan" },
-    { name = "LRXP Now",        body = "/lazy now" },
-    { name = "LRXP Next",       body = "/lrxp way next" },
-    { name = "LRXP Arrows",     body = "/lrxp toggle" },
-    { name = "LRXP Books",      body = "/lrxp books" },
-    { name = "LRXP Book Arrow", body = "/lrxp arrow" },
-    { name = "LRXP Share",      body = "/lrxp books share" },
+    { name = "Lazy Plan",       body = "/lazy plan" },
+    { name = "Lazy Now",        body = "/lazy now" },
+    { name = "Lazy Next",       body = "/lazy way next" },
+    { name = "Lazy Arrows",     body = "/lazy toggle" },
+    { name = "Lazy Books",      body = "/lazy books" },
+    { name = "Lazy Book Arrow", body = "/lazy arrow" },
+    { name = "Lazy Share",      body = "/lazy books share" },
 }
 
 function addon.MakeMacros()
     local say = addon.Print or print
-    if InCombatLockdown and InCombatLockdown() then say("macros can't be made in combat, try /lrxp macros again after the fight"); return end
+    if InCombatLockdown and InCombatLockdown() then say("macros can't be made in combat, try /lazy macros again after the fight"); return end
     if not (CreateMacro and GetMacroIndexByName) then return end
     local made, updated = 0, 0
     for _, m in ipairs(MACROS) do
         local idx = GetMacroIndexByName(m.name)
+        if not (idx and idx > 0) then
+            -- an older version called these "LRXP ..."; rename it instead of making a second copy
+            local oldIdx = GetMacroIndexByName((m.name:gsub("^Lazy ", "LRXP ")))
+            if oldIdx and oldIdx > 0 and EditMacro then
+                EditMacro(oldIdx, m.name, nil, m.body)
+                idx = oldIdx
+            end
+        end
         if idx and idx > 0 then
             local _, _, body = GetMacroInfo(idx)
             if body ~= m.body then
@@ -676,7 +684,7 @@ function addon.MakeMacros()
         end
     end
     say(string.format("macros ready: %d new, %d updated. Drag them from /macro to your action bars: %s", made, updated,
-        "LRXP Plan, Next, Arrows, Books, Book Arrow, Share"))
+        "Lazy Plan, Next, Arrows, Books, Book Arrow, Share"))
 end
 
 function addon.RemoveMacros()
@@ -728,8 +736,8 @@ local function ShowWelcome()
         text:SetText("|cff4db8ffWelcome to Forever Lazy!|r\n\n"
             .. "Arrows that point at your quests, your party and your next best XP. Click OK to open the options, "
             .. "where you can turn features on and off, and take a quick tour of the buttons.\n\n"
-            .. "I have also added a few shared macros (type |cffffd100/macro|r and look for |cffffd100LRXP|r) that you can drag to your action bars.\n\n"
-            .. "|cffaaaaaaTip: |cffffd100/lazy now|r|cffaaaaaa (or left-click the minimap button) points at the best next thing, and |cffffd100/lrxp|r|cffaaaaaa opens the options any time.|r")
+            .. "I have also added a few shared macros (type |cffffd100/macro|r and look for |cffffd100Lazy|r) that you can drag to your action bars.\n\n"
+            .. "|cffaaaaaaTip: |cffffd100/lazy now|r|cffaaaaaa (or left-click the minimap button) points at the best next thing, and |cffffd100/lazy|r|cffaaaaaa opens the options any time.|r")
 
         local credit = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         credit:SetPoint("BOTTOM", 0, 46)

@@ -40,10 +40,10 @@ LibStub("AceComm-3.0"):Embed(addon)
 AceSerializer:Embed(addon)
 
 -- Binding labels
-_G.BINDING_HEADER_LRXPT = "Forever Lazy"
-_G.BINDING_NAME_LRXPT_CYCLE = "Cycle arrow mode"
-_G.BINDING_NAME_LRXPT_OPTIONS = "Open options"
-_G.BINDING_NAME_LRXPT_PANEL = "Show / hide step panel"
+_G.BINDING_HEADER_FOREVERLAZY = "Forever Lazy"
+_G.BINDING_NAME_FOREVERLAZY_CYCLE = "Cycle arrow mode"
+_G.BINDING_NAME_FOREVERLAZY_OPTIONS = "Open options"
+_G.BINDING_NAME_FOREVERLAZY_PANEL = "Show / hide step panel"
 
 local DEFAULTS = {
     mode = "both",            -- both | quest | friend | off
@@ -146,7 +146,7 @@ local function CharKey()
 end
 
 function addon:SelectProfile()
-    local root = _G.LRXPTDB
+    local root = _G.ForeverLazyDB
     root.profiles = root.profiles or {}
     if root.useChar then
         local key = CharKey()
@@ -161,10 +161,12 @@ function addon:SelectProfile()
 end
 
 function addon.GetDB() return db end
-function addon.GetRoot() return _G.LRXPTDB end
+function addon.GetRoot() return _G.ForeverLazyDB end
 
 local function InitSavedVars()
-    local root = _G.LRXPTDB
+    local root = _G.ForeverLazyDB
+    -- settings saved under the old name are carried over once
+    if type(root) ~= "table" and type(_G.LRXPTDB) == "table" then root = _G.LRXPTDB end
     if type(root) ~= "table" then root = {} end
     -- migrate old flat table
     if root.mode and not root.global then
@@ -172,7 +174,7 @@ local function InitSavedVars()
     end
     root.global = root.global or {}
     root.chars = root.chars or {}
-    _G.LRXPTDB = root
+    _G.ForeverLazyDB = root
     CopyDefaults(root.global, DEFAULTS)
     addon:SelectProfile()
 end
@@ -669,7 +671,7 @@ local function StyleTexture()
 end
 
 local function MakeArrow(name, size, movableKey)
-    local f = CreateFrame("Frame", "LRXPT_" .. name, UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_" .. name, UIParent)
     f:SetSize(size, size)
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)
@@ -961,7 +963,7 @@ end)
 -- Step panel
 --------------------------------------------------------------------------------
 local function MakePanel()
-    local f = CreateFrame("Frame", "LRXPT_Panel", UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_Panel", UIParent)
     f:SetSize(260, 60)
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)
@@ -1027,7 +1029,7 @@ function addon:CycleMode()
 end
 
 local function MakeMinimapButton()
-    mmb = CreateFrame("Button", "LRXPT_MinimapButton", Minimap)
+    mmb = CreateFrame("Button", "ForeverLazy_MinimapButton", Minimap)
     mmb:SetSize(31, 31)
     mmb:SetFrameStrata("MEDIUM")
     mmb:SetFrameLevel(8)
@@ -1121,7 +1123,7 @@ end
 
 function addon:ListWaypoints()
     if #db.waypoints == 0 then
-        Print("no waypoints. /lrxp way <x> <y> [name], /lrxp way here [name], or Ctrl+right-click the world map")
+        Print("no waypoints. /lazy way <x> <y> [name], /lazy way here [name], or Ctrl+right-click the world map")
         return
     end
     for i, w in ipairs(db.waypoints) do
@@ -1148,7 +1150,7 @@ function addon:HandleWayCommand(rest)
         self:RemoveWaypoint(1)
     elseif sub == "remove" or sub == "delete" then
         local n = tonumber(arg)
-        if n and db.waypoints[n] then self:RemoveWaypoint(n) else Print("usage: /lrxp way remove <number>") end
+        if n and db.waypoints[n] then self:RemoveWaypoint(n) else Print("usage: /lazy way remove <number>") end
     else
         local a, b, name = rest:match("^([%d%.]+)[%s,]+([%d%.]+)%s*(.*)$")
         a, b = tonumber(a), tonumber(b)
@@ -1164,7 +1166,7 @@ function addon:HandleWayCommand(rest)
             self:RefreshPins()
             Print("active waypoint: " .. w.name)
         else
-            Print("usage: /lrxp way <x> <y> [name] | here [name] | list | <number> | next | remove <n> | clear")
+            Print("usage: /lazy way <x> <y> [name] | here [name] | list | <number> | next | remove <n> | clear")
         end
     end
 end
@@ -1186,8 +1188,8 @@ local function HookWorldMap()
     end)
 end
 
-function _G.LRXPT_DropWaypoint() addon:DropWaypointHere() end
-_G.BINDING_NAME_LRXPT_WAYPOINT = "Drop waypoint at my position"
+function _G.ForeverLazy_DropWaypoint() addon:DropWaypointHere() end
+_G.BINDING_NAME_FOREVERLAZY_WAYPOINT = "Drop waypoint at my position"
 
 function addon:ApplyAll()
     self:ApplyStyle()
@@ -1198,9 +1200,9 @@ function addon:ApplyAll()
     self:UpdateTomTom()
 end
 
-function _G.LRXPT_CycleMode() addon:CycleMode() end
-function _G.LRXPT_ToggleOptions() addon:OpenOptions() end
-function _G.LRXPT_TogglePanel()
+function _G.ForeverLazy_CycleMode() addon:CycleMode() end
+function _G.ForeverLazy_ToggleOptions() addon:OpenOptions() end
+function _G.ForeverLazy_TogglePanel()
     db.showPanel = not db.showPanel
     Print("step panel " .. (db.showPanel and "shown" or "hidden"))
     if addon.RefreshOptions then addon.RefreshOptions() end
@@ -1230,8 +1232,8 @@ init:SetScript("OnEvent", function(_, event)
         C_Timer.After(3, HookWorldMap)
         local isLoaded = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
         if not (isLoaded and isLoaded("TomTom")) then
-            _G.SLASH_LRXPTWAY1 = "/way"
-            SlashCmdList["LRXPTWAY"] = function(m) addon:HandleWayCommand(m or "") end
+            _G.SLASH_FOREVERLAZYWAY1 = "/way"
+            SlashCmdList["FOREVERLAZYWAY"] = function(m) addon:HandleWayCommand(m or "") end
         end
         C_Timer.After(5, BuildIndex)
     elseif event == "GROUP_ROSTER_UPDATE" then
@@ -1254,10 +1256,10 @@ ns.api = {
     IndexReady = function() return indexReady end,
 }
 
-SLASH_LAZYRXPT1 = "/lrxp"
-SLASH_LAZYRXPT2 = "/forever"
-SLASH_LAZYRXPT3 = "/lazy"
-SlashCmdList["LAZYRXPT"] = function(msg)
+SLASH_FOREVERLAZY1 = "/lrxp"
+SLASH_FOREVERLAZY2 = "/forever"
+SLASH_FOREVERLAZY3 = "/lazy"
+SlashCmdList["FOREVERLAZY"] = function(msg)
     msg = (msg or ""):gsub("^%s+", ""):gsub("%s+$", "")
     local cmd, rest = msg:match("^(%S+)%s*(.*)$")
     cmd = cmd and cmd:lower() or ""
@@ -1270,17 +1272,17 @@ SlashCmdList["LAZYRXPT"] = function(msg)
     elseif cmd == "scale" then
         local s = tonumber(rest)
         if s and s >= 0.3 and s <= 3 then db.scale = s; addon:ApplyLayout(); Print("scale " .. s)
-        else Print("usage: /lrxp scale 0.5 - 3") end
+        else Print("usage: /lazy scale 0.5 - 3") end
     elseif cmd == "reset" then
         db.pos = DeepCopy(DEFAULTS.pos); db.scale = 1; addon:ApplyLayout(); Print("positions reset")
     elseif cmd == "way" or cmd == "waypoint" then
         addon:HandleWayCommand(rest)
     elseif cmd == "panel" then
-        _G.LRXPT_TogglePanel()
+        _G.ForeverLazy_TogglePanel()
     elseif cmd == "minimap" then
         db.minimapButton = not db.minimapButton; addon:UpdateMinimapButton()
     elseif cmd == "test" then
-        if rest == "" then Print("usage: /lrxp test Accept <quest name>   or   Kill <mob>"); return end
+        if rest == "" then Print("usage: /lazy test Accept <quest name>   or   Kill <mob>"); return end
         state.friend = state.friend or UnitName("player")
         addon:SetStepText(nil, rest)
         Print("simulated step: " .. rest)
@@ -1299,7 +1301,7 @@ SlashCmdList["LAZYRXPT"] = function(msg)
         end)() then
         -- handled in Extras.lua
     else
-        Print("commands: /lrxp (options) | both | quest | friend | off | lock | unlock | scale <n> | reset | panel | minimap | way | status | test <text>")
+        Print("commands: /lazy (options) | both | quest | friend | off | lock | unlock | scale <n> | reset | panel | minimap | way | status | test <text>")
     end
 end
 

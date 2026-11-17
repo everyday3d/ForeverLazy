@@ -1,7 +1,7 @@
 -- Class quests: finds the quests only your class can take, tells you when a new one opens up, and puts the
 -- giver in your plan when you are in the zone they are in.
---   /lrxp class            class quests you can take now, and the ones coming in the next few levels
---   /lrxp class go [n]     waypoint on the giver
+--   /lazy class            class quests you can take now, and the ones coming in the next few levels
+--   /lazy class go [n]     waypoint on the giver
 -- Everything comes from Questie's database (quests that need your class).
 local ADDON, ns = ...
 local addon = ns.addon
@@ -209,13 +209,13 @@ local function Show()
             Print(string.format("  %d. %s (from level %d) - %s", #shown, q.name, q.need, Where(q)))
         end
     end
-    if #shown > 0 then Print("/lrxp class go 1  puts a waypoint on the first giver") end
+    if #shown > 0 then Print("/lazy class go 1  puts a waypoint on the first giver") end
 end
 
 local function Go(arg)
     if #shown == 0 then Show() end
     local q = shown[tonumber(arg) or 1]
-    if not q then Print("no such class quest, try /lrxp class first"); return end
+    if not q then Print("no such class quest, try /lazy class first"); return end
     local s = Nearest(q.spawns)
     if not s then return end
     addon:AddWaypointZone(s.uiMapId, s.zx, s.zy, "Class quest: " .. q.name)
@@ -245,7 +245,7 @@ local function Announce(silent)
         if i > 3 then break end
         Print(string.format("new class quest: %s (level %d) - %s", q.name, q.level or 0, Where(q)))
     end
-    if #fresh > 0 then Print("/lrxp class lists them, /lrxp class go puts a waypoint on the giver") end
+    if #fresh > 0 then Print("/lazy class lists them, /lazy class go puts a waypoint on the giver") end
 end
 
 OnReady = function()

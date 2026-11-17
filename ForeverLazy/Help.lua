@@ -22,7 +22,7 @@ local STEPS = {
     { text = "|cffffd100Welcome to Forever Lazy.|r This is a quick tour (8 short steps). It shows where the buttons are, so you never need to type a command. Press Next.",
       target = nil },
     { text = "|cffffd100The minimap button.|r Left-click: do the next best thing (Lazy Mode). Right-click: the menu with everything. Shift-click: the options.",
-      target = function() return _G.LRXPT_MinimapButton end },
+      target = function() return _G.ForeverLazy_MinimapButton end },
     { text = "|cffffd100The menu.|r This is what the right-click opens: go somewhere, plan your route, boats, journey, crafting, group, settings. Pick anything to try it.",
       target = nil, onShow = function() if addon.OpenMenu then addon:OpenMenu() end end, onHide = function() if _G.ForeverLazy_Menu then _G.ForeverLazy_Menu:Hide() end end },
     { text = "|cffffd100The world map.|r Press M. In the top right there is a search box (\"Go to...\") and a Lazy button. Type a place, a city, a dungeon or a flight point, and press Enter: the arrow plans the whole trip. Your route shows on the map with numbered stops.",
@@ -31,7 +31,7 @@ local STEPS = {
       target = function() local q = _G.QuestLogFrame; return q and q:IsShown() and q or nil end },
     { text = "|cffffd100Professions.|r Open a profession window once. Beside it, a craft plan appears: what to craft, the materials counting your bags and bank, and where to get what is missing.",
       target = function() local p = _G.ForeverLazy_CraftPanel; return p and p:IsShown() and p or nil end },
-    { text = "|cffffd100The options.|r /lrxp opens them. At the top: Presets (Minimal, Leveler, Duo, Everything) and a switch for every module, so you only keep what you want.",
+    { text = "|cffffd100The options.|r /lazy opens them. At the top: Presets (Minimal, Leveler, Duo, Everything) and a switch for every module, so you only keep what you want.",
       target = nil, onShow = function() if addon.OpenOptions then addon:OpenOptions() end end },
     { text = "|cffffd100That is it.|r Lazy Mode (/lazy now, or left-click the minimap button) is the one to remember. /lazy tour shows this again, and /lazy check says if everything is working.",
       target = nil },
@@ -273,6 +273,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.8.4", {
+        "The craft plan shows how many to make on the recipe row, names the zones to get materials, and has a Clear button.",
+        "The old LRXP name is gone: commands are /lazy, macros are called Lazy ..., and your settings carry over. /lrxp still works.",
+    } },
     { "0.8.3", {
         "Fixes for this client: crafting and the window buttons now load, and the craft plan reads your recipes.",
         "The recommended recipe lights up in the profession window, with a Show it button.",

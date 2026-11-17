@@ -274,7 +274,7 @@ end
 --------------------------------------------------------------------------------
 local compass
 local function MakeCompass()
-    local f = CreateFrame("Frame", "LRXPT_Compass", UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_Compass", UIParent)
     f:SetSize(360, 18)
     f:SetFrameStrata("MEDIUM")
     f:SetClampedToScreen(true)
@@ -454,7 +454,7 @@ end
 --------------------------------------------------------------------------------
 -- Waypoint sharing (party) -- needs this addon on both sides
 --------------------------------------------------------------------------------
-local SHARE_PREFIX = "LRXPTWP"
+local SHARE_PREFIX = "FLWP"
 
 function addon:ShareWaypoint()
     local wp = DB().waypoints[1]
@@ -484,7 +484,7 @@ addon:RegisterComm(SHARE_PREFIX, "OnSharedWaypoint")
 --------------------------------------------------------------------------------
 local io
 local function MakeIO()
-    local f = CreateFrame("Frame", "LRXPT_IOFrame", UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_IOFrame", UIParent)
     f:SetSize(400, 250)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
@@ -569,7 +569,7 @@ end
 --------------------------------------------------------------------------------
 local menu
 local function MakeMenu()
-    local f = CreateFrame("Frame", "LRXPT_Menu", UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_Menu", UIParent)
     f:SetFrameStrata("DIALOG")
     f:SetClampedToScreen(true)
     local bg = f:CreateTexture(nil, "BACKGROUND")
@@ -578,7 +578,7 @@ local function MakeMenu()
     local items = {
         { function() return "Options" end, function() addon:OpenOptions() end },
         { function() return "Arrow mode: " .. DB().mode .. " (click to change)" end, function() addon:CycleMode() end },
-        { function() return DB().showPanel and "Hide step panel" or "Show step panel" end, function() _G.LRXPT_TogglePanel() end },
+        { function() return DB().showPanel and "Hide step panel" or "Show step panel" end, function() _G.ForeverLazy_TogglePanel() end },
         { function() return "Drop waypoint here" end, function() addon:DropWaypointHere() end },
         { function() return "Clear waypoints" end, function() addon:ClearWaypoints() end },
         { function() return "Follow next friend" end, function() addon:CycleFriend() end },
@@ -1045,7 +1045,7 @@ function addon:PlanRoute(allZones, quiet, auto)
         -- the plan replaces the "nearest/selected quest" arrow, two arrows would disagree
         db.ownQuests = false
         mine.dirty = true
-        Print("my quest log arrow switched off while you follow the plan (/lrxp own turns it back on)")
+        Print("my quest log arrow switched off while you follow the plan (/lazy own turns it back on)")
     end
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
@@ -1061,7 +1061,7 @@ function addon:PlanRoute(allZones, quiet, auto)
     end
     if greyCount > 0 then Print(string.format("%d quest%s skipped (grey, or too high a level)", greyCount, greyCount == 1 and "" or "s")) end
     if otherZone > 0 then
-        Print(string.format("%d quest%s in other zones left out. /lrxp plan all includes them", otherZone, otherZone == 1 and "" or "s"))
+        Print(string.format("%d quest%s in other zones left out. /lazy plan all includes them", otherZone, otherZone == 1 and "" or "s"))
     end
     if elsewhere > 0 then Print(string.format("%d quest%s on another continent left out", elsewhere, elsewhere == 1 and "" or "s")) end
 end
@@ -1377,7 +1377,7 @@ local function SkipQuest(id, label)
     local db = DB()
     db.planSkip = db.planSkip or {}
     db.planSkip[id] = PlainTitle(label)
-    Print("skipping " .. PlainTitle(label) .. " (/lrxp skip clear brings skipped quests back)")
+    Print("skipping " .. PlainTitle(label) .. " (/lazy skip clear brings skipped quests back)")
     ReplanAfterSkip()
 end
 
@@ -1396,7 +1396,7 @@ end
 
 local skipMenu, skipCatcher
 local function BuildSkipMenu()
-    local f = CreateFrame("Frame", "LRXPT_SkipMenu", UIParent)
+    local f = CreateFrame("Frame", "ForeverLazy_SkipMenu", UIParent)
     f:SetFrameStrata("FULLSCREEN_DIALOG")
     f:SetClampedToScreen(true)
     f:EnableMouse(true)
@@ -1414,7 +1414,7 @@ local function BuildSkipMenu()
     skipCatcher:SetScript("OnClick", function() f:Hide() end)
     f:SetScript("OnShow", function() skipCatcher:Show() end)
     f:SetScript("OnHide", function() skipCatcher:Hide() end)
-    table.insert(UISpecialFrames, "LRXPT_SkipMenu")
+    table.insert(UISpecialFrames, "ForeverLazy_SkipMenu")
     f:Hide()
     return f
 end
@@ -1441,7 +1441,7 @@ end
 function addon:OpenSkipMenu()
     local db = DB()
     local wp = db.waypoints[1]
-    if not (wp and wp.label) then Print("no plan stop to skip. /lrxp plan builds a plan"); return end
+    if not (wp and wp.label) then Print("no plan stop to skip. /lazy plan builds a plan"); return end
     skipMenu = skipMenu or BuildSkipMenu()
     local f = skipMenu
     f.title:SetText(wp.name or wp.label)
@@ -1507,7 +1507,7 @@ function addon:OpenQuestList()
         end
         if #items >= 14 then break end
     end
-    if #items == 0 then Print("no quests in the plan. /lrxp plan builds one"); return end
+    if #items == 0 then Print("no quests in the plan. /lazy plan builds one"); return end
     f.title:SetText("Do which quest now?")
     for i, it in ipairs(items) do
         local row = MenuRow(f, i)
@@ -1635,7 +1635,7 @@ function addon:HandleExtraCommand(cmd, rest)
                     (w.zx or 0) * 100, (w.zy or 0) * 100, w.detail and (" - " .. w.detail) or ""))
                 for _, q in ipairs(w.quests or {}) do ids[#ids + 1] = q.id end
             else
-                Print("no stop 1, try /lrxp why all")
+                Print("no stop 1, try /lazy why all")
             end
         end
         for _, id in ipairs(ids) do
@@ -1700,7 +1700,7 @@ function addon:HandleExtraCommand(cmd, rest)
                 n = n + 1
                 Print("  skipped: " .. tostring(title))
             end
-            Print(n == 0 and "no quests skipped. Right-click the plan arrow to skip one" or "/lrxp skip clear brings them back")
+            Print(n == 0 and "no quests skipped. Right-click the plan arrow to skip one" or "/lazy skip clear brings them back")
         end
         return true
 
@@ -1720,7 +1720,7 @@ function addon:HandleExtraCommand(cmd, rest)
             table.sort(names)
             Print("friends heard from: " .. (#names > 0 and table.concat(names, ", ") or "none"))
             Print("following: " .. tostring(state.friend) .. (state.pinned and " (pinned)" or " (latest sender)"))
-            Print("/lrxp friend <name> to pin, /lrxp friend auto to follow whoever sent last")
+            Print("/lazy friend <name> to pin, /lazy friend auto to follow whoever sent last")
         elseif rest:lower() == "auto" then
             state.pinned = nil
             Print("following the latest sender")
@@ -1750,9 +1750,9 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif sub == "list" or sub == "" then
             local any = false
             for n, r in pairs(db.routes) do any = true; Print(string.format("%s (%d waypoints)", n, #r)) end
-            if not any then Print("no routes. /lrxp route save <name> stores your current waypoints") end
+            if not any then Print("no routes. /lazy route save <name> stores your current waypoints") end
         else
-            Print("usage: /lrxp route save|load|delete <name>  or  /lrxp route list")
+            Print("usage: /lazy route save|load|delete <name>  or  /lazy route list")
         end
         return true
 
@@ -1782,7 +1782,7 @@ function addon:HandleExtraCommand(cmd, rest)
             SwitchProfile()
             Print("deleted profile " .. name)
         else
-            Print("usage: /lrxp profile list | new <name> | use <name> | delete <name>")
+            Print("usage: /lazy profile list | new <name> | use <name> | delete <name>")
         end
         return true
     end

@@ -116,7 +116,7 @@ local function Build()
     close:SetScript("OnClick", function() f:Hide() end)
     f.empty = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.empty:SetPoint("TOPLEFT", 12, -28)
-    f.empty:SetText("No plan yet. /lrxp plan builds one.")
+    f.empty:SetText("No plan yet. /lazy plan builds one.")
     f.rows = {}
     for i = 1, ROWS do
         local b = CreateFrame("Button", nil, f)

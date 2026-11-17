@@ -1,9 +1,9 @@
 -- Cozy Sleeping Bag quest chain (WoW Forever): guides you through it and makes the next spot stop 1
 -- of your plan whenever you are in the zone that spot is in.
---   /lrxp bag            the next step, how to get there, and a waypoint on it
---   /lrxp bag start      I am starting the chain (before I have the first quest)
---   /lrxp bag all        every step
---   /lrxp bag done|off|on|reset
+--   /lazy bag            the next step, how to get there, and a waypoint on it
+--   /lazy bag start      I am starting the chain (before I have the first quest)
+--   /lazy bag all        every step
+--   /lazy bag done|off|on|reset
 -- Spots and directions are from the Forever guides (method.gg, kami-labs.fr); the guides disagree a little on
 -- the Stonetalon camp, so that one has its trail start listed too.
 local ADDON, ns = ...
@@ -204,7 +204,7 @@ local function Refresh()
         local step = idx and Steps()[idx]
         if step then
             Print(string.format("sleeping bag, step %d of 6: %s", idx, step.title))
-            Print("  /lrxp bag  for the way there")
+            Print("  /lazy bag  for the way there")
         end
     end
     Place()
@@ -254,7 +254,7 @@ function addon:HandleExtraCommand(cmd, rest)
     elseif rest == "off" then
         db.bagGuide = false
         Place()
-        Print("sleeping bag guide off (/lrxp bag on turns it back on)")
+        Print("sleeping bag guide off (/lazy bag on turns it back on)")
     elseif rest == "on" then
         db.bagGuide = true
         Refresh()
@@ -265,7 +265,7 @@ function addon:HandleExtraCommand(cmd, rest)
     else
         local idx = Current()
         if not idx then
-            Print("the sleeping bag chain is not under way. /lrxp bag start begins it, /lrxp bag all lists the steps")
+            Print("the sleeping bag chain is not under way. /lazy bag start begins it, /lazy bag all lists the steps")
             return true
         end
         local step = steps[idx]

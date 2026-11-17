@@ -1,7 +1,7 @@
 <Bindings>
-	<Binding name="LRXPT_CYCLE" header="LRXPT">LRXPT_CycleMode()</Binding>
-	<Binding name="LRXPT_OPTIONS">LRXPT_ToggleOptions()</Binding>
-	<Binding name="LRXPT_NOW">LRXPT_LazyNow()</Binding>
-	<Binding name="LRXPT_PANEL">LRXPT_TogglePanel()</Binding>
-	<Binding name="LRXPT_WAYPOINT">LRXPT_DropWaypoint()</Binding>
+	<Binding name="FOREVERLAZY_CYCLE" header="FOREVERLAZY">ForeverLazy_CycleMode()</Binding>
+	<Binding name="FOREVERLAZY_OPTIONS">ForeverLazy_ToggleOptions()</Binding>
+	<Binding name="FOREVERLAZY_NOW">ForeverLazy_LazyNow()</Binding>
+	<Binding name="FOREVERLAZY_PANEL">ForeverLazy_TogglePanel()</Binding>
+	<Binding name="FOREVERLAZY_WAYPOINT">ForeverLazy_DropWaypoint()</Binding>
 </Bindings>
