@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.10.2
+- **The plan batches quests by area**: it finishes the quests around here before walking back to hand any in, unless handing one in opens the next quest of a chain. An option turns it off.
+- The what's new window has Sam on it (credited, CC BY-SA 2.0).
+
 ## 0.10.1
 - **Fix: the craft plan panel** beside the profession window could be missed when another addon loaded the professions window first. It now appears whenever a profession window is open, and says in chat why if it cannot.
 

@@ -273,6 +273,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.10.2", {
+        "The plan finishes the quests in an area before walking back to hand any in, unless handing one in continues a chain (Options > Extras to turn it off).",
+        "This window now has Sam on it.",
+    } },
     { "0.10.1", {
         "The craft plan panel beside the profession window now always appears (it could be missed when another addon loaded that window first), and says why in chat if it cannot.",
     } },
@@ -351,9 +355,25 @@ local function ShowNew(current)
         bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
         f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
         f.title:SetPoint("TOPLEFT", 14, -12)
+        f.title:SetWidth(320); f.title:SetJustifyH("LEFT")
+        f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.sub:SetPoint("TOPLEFT", f.title, "BOTTOMLEFT", 0, -4)
+        -- Sam, top right (photo: media\CREDITS.txt, CC BY-SA 2.0)
+        local face = f:CreateTexture(nil, "ARTWORK")
+        face:SetSize(56, 56)
+        face:SetPoint("TOPRIGHT", -14, -12)
+        face:SetTexture("Interface\\AddOns\\ForeverLazy\\media\\kinison.tga")
+        face:SetTexCoord(62 / 256, 186 / 256, 28 / 256, 152 / 256)
+        local ohh = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        ohh:SetPoint("TOP", face, "BOTTOM", 0, -2)
+        ohh:SetText("|cffff3333OH Oh OHH|r")
+        local credit = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+        credit:SetPoint("BOTTOM", 0, 14)
+        credit:SetWidth(170)
+        credit:SetText("Photo: The World Famous Comedy Store, CC BY-SA 2.0 (Wikimedia Commons)")
         -- the list sits in a scroll area so a long history never runs off the window
         f.scroll = CreateFrame("ScrollFrame", "ForeverLazy_NewScroll", f, "UIPanelScrollFrameTemplate")
-        f.scroll:SetPoint("TOPLEFT", 14, -42); f.scroll:SetPoint("BOTTOMRIGHT", -34, 46)
+        f.scroll:SetPoint("TOPLEFT", 14, -92); f.scroll:SetPoint("BOTTOMRIGHT", -34, 46)
         f.content = CreateFrame("Frame", nil, f.scroll)
         f.content:SetSize(360, 10)
         f.scroll:SetScrollChild(f.content)
@@ -374,7 +394,8 @@ local function ShowNew(current)
         for _, item in ipairs(v[2]) do lines[#lines + 1] = "  - " .. item end
         lines[#lines + 1] = ""
     end
-    newWin.title:SetText("What's new in Forever Lazy " .. (current or Version()))
+    newWin.title:SetText("What's new new |cffff3333NEWWW!|r")
+    newWin.sub:SetText("Forever Lazy " .. (current or Version()))
     newWin.text:SetText(table.concat(lines, "\n"))
     newWin.content:SetHeight(newWin.text:GetStringHeight() + 10)
     if newWin.scroll.SetVerticalScroll then newWin.scroll:SetVerticalScroll(0) end

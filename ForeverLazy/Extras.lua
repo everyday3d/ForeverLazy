@@ -1127,6 +1127,43 @@ function addon:PlanRoute(allZones, quiet, auto)
         if not improved then break end
     end
 
+    -- 2b. do the quests around here before walking back to hand any in, unless handing one in continues a chain
+    --     (the next quest of a chain only opens at the hand-in, so that one is not put off)
+    if db.planBatch ~= false then
+        local BATCH = 400        -- yards from where a quest's objectives were: quests this close are finished first
+        local QDBb = api.GetQuestie()
+        local function continuesChain(qid)
+            local nxt = QDBb and QDBb.QueryQuestSingle(qid, "nextQuestInChain")
+            return nxt and nxt > 0
+        end
+        local i, guard = 1, 0
+        while i <= #seq and guard < 300 do
+            guard = guard + 1
+            local e = seq[i]
+            local moved = false
+            if e.turn and e.qid and not continuesChain(e.qid) then
+                local center
+                for j = 1, i - 1 do
+                    if seq[j].qid == e.qid and not seq[j].turn then center = seq[j].s end
+                end
+                if center then
+                    local last = i
+                    for k = i + 1, #seq do
+                        local o = seq[k]
+                        if Dist(o.s, center) > BATCH then break end
+                        if o.qid and not o.turn then last = k end
+                    end
+                    if last > i then
+                        local item = table.remove(seq, i)
+                        table.insert(seq, last, item)      -- it now sits right after the last quest of that area
+                        moved = true
+                    end
+                end
+            end
+            if not moved then i = i + 1 end
+        end
+    end
+
     -- 3. stops that are close together become one waypoint
     local stops = {}
     for _, e in ipairs(seq) do

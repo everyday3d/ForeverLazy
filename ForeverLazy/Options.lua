@@ -405,6 +405,8 @@ local function BuildControls(parent)
         function() return DB().classAlert ~= false end, function(v) DB().classAlert = v end)
     Check(content, "Put class quest givers in my plan when they are in this zone", 16,
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
+    Check(content, "Finish the quests in an area before walking back to hand any in (unless it continues a chain)", 16,
+        function() return DB().planBatch ~= false end, function(v) DB().planBatch = v end)
     Check(content, "Draw my plan's route on the world map", 16,
         function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
     Check(content, "Item tooltips say how many I have in my bags, bank, mail and worn", 16,
