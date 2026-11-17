@@ -34,6 +34,11 @@ No spreadsheets. No second monitor. No typing, unless you want to.
   <i>The recipe to craft next glows in your own profession window, with how many to make.</i>
 </p>
 
+<p align="center">
+  <img src="docs/world-map-route.jpg" alt="The planned route drawn on the world map, with a Go to box and a Lazy button" width="620"><br>
+  <i>Your route drawn on the world map, with a "Go to..." box and a Lazy button built in.</i>
+</p>
+
 ## What you get
 
 | | |
