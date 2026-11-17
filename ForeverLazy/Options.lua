@@ -646,13 +646,13 @@ end
 -- Macros the addon makes for you (account-wide, find them with /macro)
 --------------------------------------------------------------------------------
 local MACROS = {
-    { name = "Lazy Plan",       body = "/lazy plan" },
-    { name = "Lazy Now",        body = "/lazy now" },
-    { name = "Lazy Next",       body = "/lazy way next" },
-    { name = "Lazy Arrows",     body = "/lazy toggle" },
-    { name = "Lazy Books",      body = "/lazy books" },
-    { name = "Lazy Book Arrow", body = "/lazy arrow" },
-    { name = "Lazy Share",      body = "/lazy books share" },
+    { name = "Lazy Plan",       body = "/lazy plan",        icon = "INV_Misc_Map_01" },
+    { name = "Lazy Now",        body = "/lazy now",         icon = "Ability_Tracking" },
+    { name = "Lazy Next",       body = "/lazy way next",    icon = "INV_Misc_Note_01" },
+    { name = "Lazy Arrows",     body = "/lazy toggle",      icon = "Ability_Hunter_SniperShot" },
+    { name = "Lazy Books",      body = "/lazy books",       icon = "INV_Misc_Book_09" },
+    { name = "Lazy Book Arrow", body = "/lazy arrow",       icon = "INV_Misc_Book_11" },
+    { name = "Lazy Share",      body = "/lazy books share", icon = "INV_Letter_02" },
 }
 
 function addon.MakeMacros()
@@ -671,15 +671,21 @@ function addon.MakeMacros()
             end
         end
         if idx and idx > 0 then
-            local _, _, body = GetMacroInfo(idx)
+            local _, icon, body = GetMacroInfo(idx)
             if body ~= m.body then
                 EditMacro(idx, m.name, nil, m.body)
                 updated = updated + 1
             end
+            -- only swap the question mark, so an icon you picked yourself stays
+            if icon == 134400 or icon == "INV_Misc_QuestionMark" or (type(icon) == "string" and icon:find("QuestionMark")) then
+                if not pcall(EditMacro, idx, m.name, m.icon, m.body) then pcall(EditMacro, idx, m.name, "Interface\\Icons\\" .. m.icon, m.body) end
+            end
         else
             local account = GetNumMacros()
             if account >= (_G.MAX_ACCOUNT_MACROS or 120) then say("your macro list is full, some macros were not made"); break end
-            CreateMacro(m.name, 134400, m.body, false)       -- false: shared by all characters
+            if not pcall(CreateMacro, m.name, m.icon, m.body, false) then       -- false: shared by all characters
+                CreateMacro(m.name, 134400, m.body, false)
+            end
             made = made + 1
         end
     end
@@ -778,6 +784,28 @@ welcome:SetScript("OnEvent", function(self)
         root.welcomed = true
         if root.autoMacros ~= false then pcall(addon.MakeMacros) end
         ShowWelcome()
+    end)
+end)
+
+-- macros made by an older version are renamed once, on login, so no "LRXP ..." titles are left
+local renamer = CreateFrame("Frame")
+pcall(renamer.RegisterEvent, renamer, "PLAYER_ENTERING_WORLD")
+renamer:SetScript("OnEvent", function(self)
+    self:UnregisterEvent("PLAYER_ENTERING_WORLD")
+    if not C_Timer or not C_Timer.After or not GetMacroIndexByName then return end
+    C_Timer.After(6, function()
+        if InCombatLockdown and InCombatLockdown() then return end
+        local root = addon.GetRoot and addon.GetRoot()
+        if root and root.autoMacros == false then return end
+        for _, m in ipairs(MACROS) do
+            local old = m.name:gsub("^Lazy ", "LRXP ")
+            if (GetMacroIndexByName(old) or 0) > 0 then pcall(addon.MakeMacros); return end
+            local idx = GetMacroIndexByName(m.name) or 0
+            if idx > 0 then
+                local _, icon = GetMacroInfo(idx)
+                if icon == 134400 then pcall(addon.MakeMacros); return end
+            end
+        end
     end)
 end)
 

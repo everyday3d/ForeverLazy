@@ -1571,7 +1571,9 @@ skipHooked:SetScript("OnEvent", function()
         if f then
             f:EnableMouse(true)
             f:SetScript("OnMouseUp", function(_, button)
-                if button == "RightButton" then addon:OpenSkipMenu() end
+                if button == "RightButton" then
+                    if addon.OpenServicesMenu then addon:OpenServicesMenu() else addon:OpenSkipMenu() end
+                end
             end)
         end
     end)

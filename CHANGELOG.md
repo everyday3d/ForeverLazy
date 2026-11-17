@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.5
+- **Right-click the arrow** for a short menu: **Services near me** (repair, inn, bank, auction house, mailbox, flight master, trainers and more, listing only those within 500 yards, with distances), skip this quest stop or do it next, and Lazy Mode.
+- The addon's macros now have their own icons instead of a question mark, and macros from older versions are renamed to Lazy ... on login.
+
 ## 0.8.4
 - **The old LRXP name is gone.** Commands are `/lazy` (`/forever` too), macros are called Lazy ..., window and key binding names are Forever Lazy's own. Your settings and old macros carry over on their own; `/lrxp` still works as a quiet alias. If you had keys bound under the old binding names, bind them again in Key Bindings > Forever Lazy.
 

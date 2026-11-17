@@ -23,7 +23,7 @@ Back to the [README](../README.md) · [Commands](COMMANDS.md)
   givers when nothing of yours is in the zone.
 - **Says what to do**: the line under the arrow reads your quest log (*Kill 5 more Defias Pillager (3/8)*, *Turn in X to Y*).
   A gold **?** marks a turn-in and a **!** a quest to pick up.
-- **Right-click the arrow** to skip a quest or stop, or pick any quest to do next.
+- **Right-click the arrow** for a short menu: services near me (repair, inn, bank and more, only those close by), skip a quest or stop, pick any quest to do next, or Lazy Mode.
 - **Plan window** (`/lazy window`) and the **route drawn on the world map** with numbered stops. The line is straight
   between stops, not a walking path.
 - **Class quests**, **dungeon quests** and entrances, **group quests** (green ones are fine solo), and the

@@ -273,6 +273,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.8.5", {
+        "Right-click the arrow for a short menu: services near me (repair, inn, bank and more, only the ones close by), skip or do this quest next, and Lazy Mode.",
+        "The addon's macros have their own icons, and any older ones are renamed to Lazy ... on login.",
+    } },
     { "0.8.4", {
         "The craft plan shows how many to make on the recipe row, names the zones to get materials, and has a Clear button.",
         "The old LRXP name is gone: commands are /lazy, macros are called Lazy ..., and your settings carry over. /lrxp still works.",

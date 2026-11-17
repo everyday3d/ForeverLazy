@@ -138,6 +138,7 @@ function addon.ShowMenu(items, title)
     local s = UIParent:GetEffectiveScale()
     menu:ClearAllPoints()
     menu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x / s - 10, y / s + 10)
+    menu:SetClampedToScreen(true)
     menu:Show()
 end
 
@@ -202,6 +203,64 @@ local function SettingsMenu()
         { text = "Which windows did you find?", fn = function() Cmd("windows") end },
     }
 end
+
+-- right-click on the arrow: the services you are most likely to want, one click each.
+-- Only the ones that exist on this continent and are within walking distance are listed.
+local NEAR_YARDS = 500
+function addon:OpenServicesMenu()
+    local db = addon.GetDB and addon.GetDB()
+    local wp = db and db.waypoints and db.waypoints[1]
+    local wanted = {
+        { "Repair vendor", "repair" }, { "Inn", "inn" }, { "Bank", "bank" }, { "Auction house", "ah" },
+        { "Mailbox", "mailbox" }, { "Flight master", "flight" }, { "Class trainer", "classtrainer", "trainer" },
+        { "Stable master", "stable" }, { "Battlemaster", "battlemaster" }, { "Spirit healer", "spirit" },
+    }
+    -- the services list only opens when you click "Services", and only holds what is close by
+    local function ServicesList()
+        local list = { { text = "< Back", fn = function() addon:OpenServicesMenu() end } }
+        local find = api and api.FindService
+        if find then
+            for _, w in ipairs(wanted) do
+                local ok, r = pcall(find, w[2])
+                if ok and r and r.d and r.d <= NEAR_YARDS then
+                    local cmd = w[3] or w[2]
+                    list[#list + 1] = { text = string.format("%s  |cff888888%d yd|r", w[1], r.d), fn = function() Cmd(cmd) end }
+                end
+            end
+        end
+        if #list == 1 then list[#list + 1] = { text = "Nothing close by (needs Questie loaded)", header = true } end
+        list[#list + 1] = { text = "A profession trainer...", fn = function() Ask("Which profession? (cooking, mining, ...)", function(x) Cmd(x) end) end }
+        return list
+    end
+    local items = {}
+    if addon.ModuleOn("services") then items[#items + 1] = { text = "Services near me", sub = ServicesList } end
+    if wp and wp.label and addon.OpenSkipMenu then
+        items[#items + 1] = { text = "Skip this quest stop, or do it next...", fn = function() addon:OpenSkipMenu() end }
+    end
+    items[#items + 1] = { text = "Do the next thing (Lazy Mode)", fn = function() Cmd("now") end, module = "lazymode" }
+    items[#items + 1] = { text = "More (full menu)", fn = function() addon:OpenMenu() end }
+    addon.ShowMenu(items, "Forever Lazy")
+end
+-- the same menu on every arrow you can see (the plan arrow does it in Extras.lua)
+local hookedArrows = {}
+local function HookArrows()
+    for _, name in ipairs({ "ForeverLazy_QuestArrow", "ForeverLazy_FriendArrow", "ForeverLazy_MineArrow", "ForeverLazy_Compass" }) do
+        local f = _G[name]
+        if f and not hookedArrows[name] and f.HookScript then
+            f:EnableMouse(true)
+            f:HookScript("OnMouseUp", function(_, button)
+                if button == "RightButton" then addon:OpenServicesMenu() end
+            end)
+            hookedArrows[name] = true
+        end
+    end
+end
+local arrowWatcher = CreateFrame("Frame")
+pcall(arrowWatcher.RegisterEvent, arrowWatcher, "PLAYER_ENTERING_WORLD")
+arrowWatcher:SetScript("OnEvent", function()
+    if not C_Timer or not C_Timer.After then return end
+    for _, secs in ipairs({ 3, 8, 15 }) do C_Timer.After(secs, function() pcall(HookArrows) end) end
+end)
 
 function addon:OpenMenu()
     addon.ShowMenu({
