@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.8.8", {
+        "New zone: after you have stayed a little while, a small box offers to plan it. It stays quiet while you are just passing through, and when every quest there is red or grey.",
+    } },
     { "0.8.7", {
         "One Forever Lazy button for Titan Panel and other bars: an icon, your next stop, and the whole menu when you hover.",
         "Your route is drawn on the minimap too, and trips are drawn on the world map and minimap with flights, boats and walks in different colours.",

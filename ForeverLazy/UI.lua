@@ -839,6 +839,93 @@ ldbWatch:SetScript("OnEvent", function()
     for _, secs in ipairs({ 2, 6, 15 }) do C_Timer.After(secs, function() pcall(SetupMainLDB) end) end
 end)
 
+--------------------------------------------------------------------------------
+-- A new zone: offer to plan it, but only once I have stayed a while (not while just passing through)
+--------------------------------------------------------------------------------
+local STAY_SECONDS = 25
+local lastZone, zoneToast, zoneToken = nil, nil, 0
+
+local function ZoneName(id)
+    local info = C_Map and C_Map.GetMapInfo and id and C_Map.GetMapInfo(id)
+    return info and info.name or "this zone"
+end
+
+local function ShowZoneToast(zoneId)
+    if not zoneToast then
+        local f = CreateFrame("Frame", "ForeverLazy_ZoneToast", UIParent)
+        f:SetSize(400, 92)
+        f:SetPoint("TOP", 0, -150)
+        f:SetFrameStrata("DIALOG")
+        f:SetClampedToScreen(true)
+        f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.92)
+        f.text = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.text:SetPoint("TOP", 0, -12); f.text:SetWidth(380)
+        f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.sub:SetPoint("TOP", f.text, "BOTTOM", 0, -4); f.sub:SetWidth(380)
+        f.sub:SetText("Plan the quests you can do here, or leave it if you are just passing through?")
+        local plan = MakeButton(f, "Plan it", 90, function()
+            f:Hide()
+            if addon.PlanRoute then addon:PlanRoute() end
+        end)
+        plan:SetPoint("BOTTOMLEFT", 20, 10)
+        local later = MakeButton(f, "Not now", 90, function() f:Hide() end)
+        later:SetPoint("LEFT", plan, "RIGHT", 6, 0)
+        local never = MakeButton(f, "Not in this zone", 130, function()
+            local db = DB()
+            db.zoneNoAsk = db.zoneNoAsk or {}
+            if f.zoneId then db.zoneNoAsk[f.zoneId] = true end
+            f:Hide()
+        end)
+        never:SetPoint("LEFT", later, "RIGHT", 6, 0)
+        f:Hide()
+        zoneToast = f
+    end
+    zoneToast.zoneId = zoneId
+    zoneToast.text:SetText("You are in " .. ZoneName(zoneId))
+    zoneToast:Show()
+    local token = zoneToken
+    if C_Timer and C_Timer.After then
+        C_Timer.After(30, function() if zoneToast and zoneToast:IsShown() and token == zoneToken then zoneToast:Hide() end end)
+    end
+end
+
+local function CheckZoneOffer(zoneId, token)
+    if token ~= zoneToken or not On() then return end
+    local db = DB()
+    if not db or db.zonePrompt == false or not addon.ModuleOn("plan") then return end
+    if db.zoneNoAsk and db.zoneNoAsk[zoneId] then return end
+    local here = api.hbd:GetPlayerZone()
+    if here ~= zoneId then return end                                    -- I moved on: just passing through
+    if UnitOnTaxi and UnitOnTaxi("player") then return end
+    if (UnitIsDeadOrGhost and UnitIsDeadOrGhost("player")) or (InCombatLockdown and InCombatLockdown()) then return end
+    if IsInInstance and IsInInstance() then return end
+    if IsResting and IsResting() then return end                         -- towns and inns
+    if addon.GoStatus and addon.GoStatus() then return end               -- a trip is under way
+    -- nothing here worth doing for my level (all red or grey): do not ask
+    if addon.ZoneWorthPlanning and addon.ZoneWorthPlanning(zoneId) == false then return end
+    local wp = db.waypoints and db.waypoints[1]
+    if wp and wp.label and wp.uiMapId == zoneId then return end          -- already planned for here
+    ShowZoneToast(zoneId)
+end
+
+local zoneEv = CreateFrame("Frame")
+for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA" }) do pcall(zoneEv.RegisterEvent, zoneEv, e) end
+zoneEv:SetScript("OnEvent", function()
+    if not C_Timer or not C_Timer.After then return end
+    C_Timer.After(2, function()
+        local id = api.hbd:GetPlayerZone()
+        if not id or id == lastZone then return end
+        lastZone = id
+        zoneToken = zoneToken + 1
+        if zoneToast then zoneToast:Hide() end
+        local token = zoneToken
+        C_Timer.After(STAY_SECONDS, function() pcall(CheckZoneOffer, id, token) end)
+    end)
+end)
+
 local gossipBar
 local function GossipText()
     if C_GossipInfo and C_GossipInfo.GetText then return C_GossipInfo.GetText() end

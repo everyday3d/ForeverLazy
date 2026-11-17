@@ -786,6 +786,28 @@ local function CollectGivers(zoneId, pinst, from)
     return kept
 end
 
+-- Is there anything worth planning in this zone? true / false, or nil when Questie cannot say yet.
+-- Quests I already hold here count, and so do quests I can pick up here that are not red or grey.
+function addon.ZoneWorthPlanning(zoneId)
+    local QDB = api.GetQuestie()
+    if not (zoneId and QDB and api.QuestieReady and api.QuestieReady()) then return nil end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return nil end
+    local okLog, log = pcall(ReadQuestLog)
+    if okLog and type(log) == "table" then
+        for _, q in ipairs(log) do
+            local ok, g = pcall(BuildGroup, q)
+            if ok and g and g.spawns and Wanted(g) then
+                for _, s in ipairs(g.spawns) do
+                    if s.uiMapId == zoneId then return true end
+                end
+            end
+        end
+    end
+    local ok, givers = pcall(CollectGivers, zoneId, pinst, { x = px, y = py })
+    if not ok then return nil end
+    return #givers > 0
+end
 function addon:PlanRoute(allZones, quiet, auto)
     local Print = quiet and function() end or Print
     local db = DB()

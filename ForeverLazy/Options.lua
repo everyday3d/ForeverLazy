@@ -398,6 +398,8 @@ local function BuildControls(parent)
         function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
     Check(content, "Draw my route on the minimap (numbered stops joined in order)", 16,
         function() return DB().minimapLine ~= false end, function(v) DB().minimapLine = v end)
+    Check(content, "Offer to plan a new zone once I have stayed in it a while", 16,
+        function() return DB().zonePrompt ~= false end, function(v) DB().zonePrompt = v end)
     Check(content, "Share boat docks I teach with my guild and group (hidden addon messages, nothing shows in chat)", 16,
         function() return DB().community == true end, function(v) DB().community = v end)
     Check(content, "When I open a profession window, tell me the best next craft", 16,
