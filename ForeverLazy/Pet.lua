@@ -78,7 +78,7 @@ end
 
 -- The scream: big red "FEED ME!!!" in the middle of the screen that shakes for a few seconds.
 local scream
-local function Scream(petName)
+local function Scream(petName, text, sub)
     if not scream then
         local f = CreateFrame("Frame", "ForeverLazy_Scream", UIParent)
         f:SetSize(700, 120)
@@ -101,8 +101,8 @@ local function Scream(petName)
         scream = f
     end
     scream.t = 0
-    scream.text:SetText("FEED ME!!!")
-    scream.sub:SetText(petName and (petName .. " is starving") or "")
+    scream.text:SetText(text or "FEED ME!!!")
+    scream.sub:SetText(sub or (petName and (petName .. " is starving") or ""))
     scream:SetAlpha(1)
     scream:Show()
 end
@@ -161,8 +161,125 @@ local function Update()
     end
 end
 
+--------------------------------------------------------------------------------
+-- Ammo: a hunter running low on arrows or bullets gets told, before it is too late
+--------------------------------------------------------------------------------
+local lastAmmoState, lastAmmoNag = nil, 0
+
+local function AmmoInfo()
+    if not GetInventoryItemID then return nil end
+    local ok, id = pcall(GetInventoryItemID, "player", 0)          -- slot 0 is the ammo slot
+    if not ok then id = nil end
+    if not id then
+        local ranged = GetInventoryItemID("player", 18)
+        if ranged then return { count = 0, word = "ammo" } end      -- a bow or gun but nothing in the ammo slot
+        return nil
+    end
+    local count = (GetItemCount and GetItemCount(id, false)) or 0
+    local inSlot = GetInventoryItemCount and GetInventoryItemCount("player", 0) or 0
+    count = math.max(count, tonumber(inSlot) or 0)
+    local name, _, _, _, _, _, subType = GetItemInfo(id)
+    local word = (subType == "Arrow" and "arrows") or (subType == "Bullet" and "bullets") or "ammo"
+    return { count = count, word = word, id = id, name = name, subType = subType }
+end
+
+local function AmmoCheck(test)
+    local db = DB()
+    if not db or db.ammoRemind == false then return end
+    local a = AmmoInfo()
+    if test and not a then Print("no ranged weapon or ammo found on you, so there is nothing to count"); return end
+    if not a then return end
+    local low = db.ammoLow or 200
+    local state = (a.count <= 0 and "out") or (a.count <= low and "low") or "ok"
+    if state == "ok" and not test then lastAmmoState = "ok"; return end
+    if InCombatLockdown and InCombatLockdown() and not test then return end
+    local now = GetTime()
+    if test or state ~= lastAmmoState or now - lastAmmoNag > 120 then
+        lastAmmoState, lastAmmoNag = state, now
+        if state == "out" then
+            Print("OUT OF AMMO: your ammo slot is empty")
+            pcall(Scream, nil, "OUT OF AMMO!!!", "Buy " .. a.word .. " now")
+        else
+            Print(string.format("low on ammo: %d %s left", a.count, a.word))
+            pcall(Scream, nil, "LOW ON AMMO", string.format("%d %s left", a.count, a.word))
+        end
+        PlaySound((_G.SOUNDKIT and _G.SOUNDKIT.RAID_WARNING) or 8959)
+    end
+end
+-- The next kind of ammo: better arrows and bullets open up at certain levels (vanilla levels). When I can use a
+-- better kind than the one in my ammo slot, say so, and say whether I already carry some.
+local AMMO_TIERS = {
+    Arrow  = { { 1, "Rough Arrow" }, { 10, "Sharp Arrow" }, { 25, "Razor Arrow" }, { 40, "Jagged Arrow" } },
+    Bullet = { { 1, "Light Shot" }, { 10, "Compact Shot" }, { 25, "Heavy Shot" }, { 40, "Solid Shot" } },
+}
+local lastUpgradeKey, lastUpgradeNag = nil, 0
+
+local function CarryingAmmo(name)
+    for bag = 0, (_G.NUM_BAG_SLOTS or 4) do
+        local n
+        if C_Container and C_Container.GetContainerNumSlots then n = C_Container.GetContainerNumSlots(bag)
+        else n = GetContainerNumSlots and GetContainerNumSlots(bag) end
+        for slot = 1, (n or 0) do
+            local id
+            if C_Container and C_Container.GetContainerItemInfo then
+                local info = C_Container.GetContainerItemInfo(bag, slot)
+                id = info and info.itemID
+            elseif GetContainerItemLink then
+                local link = GetContainerItemLink(bag, slot)
+                id = link and tonumber(link:match("item:(%d+)"))
+            end
+            if id then
+                local iname = GetItemInfo(id)
+                if iname and iname:find(name, 1, true) then return true end
+            end
+        end
+    end
+    return false
+end
+
+local function UpgradeCheck(test)
+    local db = DB()
+    if not db or db.ammoUpgrade == false then return end
+    local a = AmmoInfo()
+    if not a or not a.name or not a.subType then
+        if test then Print("ammo upgrade: no ammo in your ammo slot to compare") end
+        return
+    end
+    local tiers = AMMO_TIERS[a.subType]
+    if not tiers then return end
+    local level = UnitLevel("player") or 1
+    local have, best = 0, 0
+    for i, t in ipairs(tiers) do
+        if a.name:find(t[2], 1, true) then have = i end
+        if t[1] <= level then best = i end
+    end
+    if have == 0 then
+        if test then Print("ammo upgrade: I do not know the kind of ammo you are using (" .. tostring(a.name) .. ")") end
+        return
+    end
+    if have >= best then
+        lastUpgradeKey = nil
+        if test then Print(string.format("ammo upgrade: %s is the best kind you can use at level %d", a.name, level)) end
+        return
+    end
+    if InCombatLockdown and InCombatLockdown() and not test then return end
+    local nextTier = tiers[best]
+    local key = a.subType .. best
+    local now = GetTime()
+    if test or key ~= lastUpgradeKey or now - lastUpgradeNag > 600 then
+        lastUpgradeKey, lastUpgradeNag = key, now
+        local carrying = CarryingAmmo(nextTier[2])
+        local what = nextTier[2] .. "s"
+        local advice = carrying and "you already carry some: put them in your ammo slot" or "buy some from a vendor"
+        Print(string.format("ammo upgrade: you can use %s now (level %d): %s.", what, nextTier[1], advice))
+        pcall(Scream, nil, "AMMO UPGRADE", string.format("%s (level %d): %s", what, nextTier[1], advice))
+        PlaySound((_G.SOUNDKIT and _G.SOUNDKIT.RAID_WARNING) or 8959)
+    end
+end
+
 local ev = CreateFrame("Frame")
 pcall(ev.RegisterEvent, ev, "PLAYER_LOGIN")
+pcall(ev.RegisterEvent, ev, "PLAYER_LEVEL_UP")
 pcall(ev.RegisterEvent, ev, "UNIT_PET")
 pcall(ev.RegisterEvent, ev, "PET_BAR_UPDATE")
 pcall(ev.RegisterEvent, ev, "UNIT_HAPPINESS")
@@ -170,7 +287,7 @@ ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         isHunter = select(2, UnitClass("player")) == "HUNTER"
     end
-    if isHunter then Update() end
+    if isHunter then Update(); pcall(AmmoCheck); pcall(UpgradeCheck) end
 end)
 
 local timer = 0
@@ -180,6 +297,8 @@ ev:SetScript("OnUpdate", function(_, dt)
     if timer < 1 then return end
     timer = 0
     Update()
+    pcall(AmmoCheck)
+    pcall(UpgradeCheck)
 end)
 
 -- apply the saved position again when the layout is re-applied (reset positions, profile switch)
@@ -196,6 +315,10 @@ function addon:HandleExtraCommand(cmd, rest)
         rest = (rest or ""):lower()
         if rest == "on" then db.petRemind = true; Print("pet reminder on")
         elseif rest == "off" then db.petRemind = false; Print("pet reminder off")
+        elseif rest == "ammo" then
+            if not isHunter then Print("you are not a hunter"); return true end
+            AmmoCheck(true)
+            UpgradeCheck(true)
         elseif rest == "test" then
             testUntil = GetTime() + 6
             if not isHunter then Print("you are not a hunter - the reminder only runs for hunters, test shown anyway"); isHunter = true end

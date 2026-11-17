@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.2
+- **Item tooltips know your stock**: hover an item and it says how many you have in your bags, bank, mail and worn, what each of your other characters has, and what is in your guild bank (as of the last time you opened them). `/lazy has <part of a name>` lists it. Options turn it off.
+- **Hunters**: a warning when ammo runs low (you choose how low), and a reminder when a better kind of arrow or bullet opens up for your level.
 ## 0.9.1
 - The arrow's right-click menu can now point at **the nearest library book** (one you do not have yet, skipping zones too far above your level).
 

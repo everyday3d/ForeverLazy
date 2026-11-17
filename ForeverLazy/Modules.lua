@@ -167,7 +167,7 @@ function addon.CheckInstall()
     }
     local FILES = { "ForeverLazy.lua", "Options.lua", "Extras.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
         "ClassQuests.lua", "Boats.lua", "Services.lua", "FlightData.lua", "Travel.lua", "Party.lua", "Quests.lua", "PlanWindow.lua", "Journey.lua",
-        "Community.lua", "Crafting.lua", "Gather.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Modules.lua" }
+        "Community.lua", "Crafting.lua", "Inventory.lua", "Gather.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Modules.lua" }
     for _, f in ipairs(FILES) do
         check("file loaded: " .. f, addon.loaded and addon.loaded[f], "this file stopped on a Lua error while loading. Turn errors on with /console scriptErrors 1, then /reload")
     end

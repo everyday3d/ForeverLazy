@@ -377,6 +377,12 @@ local function BuildControls(parent)
         function() return DB().petMissing == true end, function(v) DB().petMissing = v end)
     Check(content, "Play a sound with the reminder", 16,
         function() return DB().petSound == true end, function(v) DB().petSound = v end)
+    Check(content, "Hunters: warn me when I am low on arrows or bullets", 16,
+        function() return DB().ammoRemind ~= false end, function(v) DB().ammoRemind = v end)
+    Check(content, "Hunters: tell me when a better kind of ammo opens up for my level", 16,
+        function() return DB().ammoUpgrade ~= false end, function(v) DB().ammoUpgrade = v end)
+    Slider(content, "Warn me below this much ammo", 50, 1000, 50, "%d", function() return DB().ammoLow or 200 end,
+        function(v) DB().ammoLow = v end)
     Check(content, "Scream FEED ME!!! across the screen when my pet is hungry", 16,
         function() return DB().petScream ~= false end, function(v) DB().petScream = v end)
     Button(content, "Test the pet reminder", 16, 170, function() addon:HandleExtraCommand("pet", "test") end, true)
@@ -400,6 +406,10 @@ local function BuildControls(parent)
         function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
     Slider(content, "Levelling guide text size (for the couch and TV, 1.8 is big)", 0.8, 2.6, 0.1, "%.1f", function() return DB().guideScale or 1 end,
         function(v) DB().guideScale = v; if _G.ForeverLazy_Guide and _G.ForeverLazy_Guide:IsShown() then _G.ForeverLazy_Guide:SetScale(v) end end)
+    Check(content, "Item tooltips say how many I have in my bags, bank, mail and worn", 16,
+        function() return DB().itemTooltip ~= false end, function(v) DB().itemTooltip = v end)
+    Check(content, "... and how many my other characters have", 16,
+        function() return DB().itemTooltipAlts ~= false end, function(v) DB().itemTooltipAlts = v end)
     Check(content, "Show XP hot spots on the world map (where the quests worth doing for my level are)", 16,
         function() return DB().xpHeat == true end, function(v) DB().xpHeat = v; if addon.DrawXPHeat then addon.DrawXPHeat() end end)
     Check(content, "Draw my route on the minimap (numbered stops joined in order)", 16,

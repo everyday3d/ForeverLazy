@@ -273,6 +273,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.9.2", {
+        "Item tooltips say how many you have in bags, bank, mail, worn and the guild bank, and what your other characters have (/lazy has <item>).",
+        "Hunters are warned when ammo runs low, and when a better kind of arrow or bullet opens up for their level.",
+    } },
     { "0.9.1", {
         "You can now point the arrow at the nearest library book (right-click the arrow).",
     } },
