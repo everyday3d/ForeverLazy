@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.9.1
+- The arrow's right-click menu can now point at **the nearest library book** (one you do not have yet, skipping zones too far above your level).
+
 ## 0.9.0
 - **The levelling guide** (`/lazy guide`): your journey to 60 in one window, with where you are, the quests worth doing in each stretch, the dungeons that fit, and a Take me there button per stretch. The whole window scales for the couch and TV (A-, A+, TV buttons, `/lazy guide tv`, or a slider in the options).
 - **XP hot spots**: an optional, light heat layer on the zone map (the XP button, or `/lazy xpmap`) showing where the quests worth doing for your level are, with the hottest spot spelled out.

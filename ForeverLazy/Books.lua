@@ -206,6 +206,26 @@ local function LoadBooks(onlyZone, append, includeDone)
         (haveIt > 0 and (" " .. haveIt .. " already collected.") or ""))
 end
 
+-- the nearest library book I do not have yet, for the arrow (nil when none is on this continent)
+function addon.NearestBook()
+    if not addon.ModuleOn("books") then return nil end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return nil end
+    local myLevel = UnitLevel and UnitLevel("player") or 80
+    local filter = DB().bookLevelFilter ~= false
+    local best, bestD
+    for _, e in ipairs(BOOKS) do
+        if not IsDone(e) and not (filter and (ZONE_MIN[e[1]] or 1) > myLevel + LEVEL_SLACK) then
+            local w = Entry(e)
+            if w and w.instance == pinst then
+                local d = (w.x - px) ^ 2 + (w.y - py) ^ 2
+                if not bestD or d < bestD then best, bestD = w, d end
+            end
+        end
+    end
+    if not best then return nil end
+    return { instance = best.instance, x = best.x, y = best.y, name = best.name or best.book, detail = "Library book" }
+end
 local function Turnin()
     local faction = UnitFactionGroup and UnitFactionGroup("player")
     local e = LIBRARIANS[faction or ""]

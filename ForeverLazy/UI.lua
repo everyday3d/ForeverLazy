@@ -211,6 +211,7 @@ local ARROW_SOURCES = {
     { "plan",    "My plan or trip stop" },
     { "mine",    "My nearest quest objective" },
     { "partner", "My partner or friend" },
+    { "books",   "The nearest library book" },
     { "rxp",     "My friend's quest target" },
 }
 local function ArrowLabel(key)

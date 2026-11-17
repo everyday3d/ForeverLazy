@@ -394,6 +394,9 @@ function addon.ArrowTarget()
     elseif src == "rxp" then
         local c = state.chosen and state.chosen[1]
         if c then return { instance = c.spawn.instance, x = c.spawn.x, y = c.spawn.y, name = c.label } end
+    elseif src == "books" then
+        local b = addon.NearestBook and addon.NearestBook()
+        if b then return b end
     elseif src == "partner" then
         local pt = PartnerTarget()
         if pt then return pt end

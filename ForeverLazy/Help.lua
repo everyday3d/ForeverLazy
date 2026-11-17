@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.9.1", {
+        "You can now point the arrow at the nearest library book (right-click the arrow).",
+    } },
     { "0.9.0", {
         "The levelling guide: /lazy guide opens your journey to 60 with where you are, quests worth doing, dungeons that fit and a Take me there button. Its text size scales for the couch and TV (A-, A+, TV).",
         "XP hot spots: a light heat layer on the zone map (the XP button, or /lazy xpmap) showing where the quests worth doing for your level are.",
