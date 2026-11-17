@@ -76,6 +76,37 @@ local function NeedsAttention(state)
     return false
 end
 
+-- The scream: big red "FEED ME!!!" in the middle of the screen that shakes for a few seconds.
+local scream
+local function Scream(petName)
+    if not scream then
+        local f = CreateFrame("Frame", "ForeverLazy_Scream", UIParent)
+        f:SetSize(700, 120)
+        f:SetFrameStrata("FULLSCREEN_DIALOG")
+        f.text = f:CreateFontString(nil, "OVERLAY")
+        f.text:SetFont("Fonts\\FRIZQT__.TTF", 72, "OUTLINE")
+        f.text:SetPoint("CENTER")
+        f.text:SetTextColor(1, 0.1, 0.1)
+        f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+        f.sub:SetPoint("TOP", f.text, "BOTTOM", 0, -4)
+        f:Hide()
+        f:SetScript("OnUpdate", function(self, dt)
+            self.t = (self.t or 0) + dt
+            if self.t > 3.5 then self:Hide(); return end
+            local k = self.t < 2.5 and 1 or (3.5 - self.t)           -- shake hard, then fade out
+            self:SetAlpha(k)
+            self:ClearAllPoints()
+            self:SetPoint("CENTER", UIParent, "CENTER", (math.random() - 0.5) * 24 * k, 140 + (math.random() - 0.5) * 24 * k)
+        end)
+        scream = f
+    end
+    scream.t = 0
+    scream.text:SetText("FEED ME!!!")
+    scream.sub:SetText(petName and (petName .. " is starving") or "")
+    scream:SetAlpha(1)
+    scream:Show()
+end
+addon.PetScream = Scream
 local function Update()
     local db = DB()
     if not db or not isHunter then return end
@@ -120,8 +151,12 @@ local function Update()
                 Print(string.format("%s needs feeding (%s)%s", name, state, diet and (" - eats " .. diet) or ""))
             end
         end
+        if db.petScream ~= false and (state == "unhappy" or state == "content") then pcall(Scream, name) end
         if db.petSound then
-            PlaySound((_G.SOUNDKIT and _G.SOUNDKIT.RAID_WARNING) or 8959)
+            -- your own clip first (media\custom\feedme.ogg or .mp3, never shipped with the addon), else the raid warning sound
+            local played = PlaySoundFile and (PlaySoundFile("Interface\\AddOns\\ForeverLazy\\media\\custom\\feedme.ogg", "Master")
+                or PlaySoundFile("Interface\\AddOns\\ForeverLazy\\media\\custom\\feedme.mp3", "Master"))
+            if not played then PlaySound((_G.SOUNDKIT and _G.SOUNDKIT.RAID_WARNING) or 8959) end
         end
     end
 end

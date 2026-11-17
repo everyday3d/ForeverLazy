@@ -377,6 +377,8 @@ local function BuildControls(parent)
         function() return DB().petMissing == true end, function(v) DB().petMissing = v end)
     Check(content, "Play a sound with the reminder", 16,
         function() return DB().petSound == true end, function(v) DB().petSound = v end)
+    Check(content, "Scream FEED ME!!! across the screen when my pet is hungry", 16,
+        function() return DB().petScream ~= false end, function(v) DB().petScream = v end)
     Button(content, "Test the pet reminder", 16, 170, function() addon:HandleExtraCommand("pet", "test") end, true)
 
     Header(content, "Extras")

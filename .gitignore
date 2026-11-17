@@ -1,7 +1,8 @@
-﻿*.lua.bak
+*.lua.bak
 SavedVariables/
 WTF/
 .claude/
 *.zip
 Thumbs.db
 .DS_Store
+ForeverLazy/media/custom/

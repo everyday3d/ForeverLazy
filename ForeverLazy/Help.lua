@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.8.9", {
+        "Hunter pets: a huge shaking FEED ME!!! across the screen when your pet is hungry (it can be turned off), and your own sound clip plays if you put one in media\\custom.",
+    } },
     { "0.8.8", {
         "New zone: after you have stayed a little while, a small box offers to plan it. It stays quiet while you are just passing through, and when every quest there is red or grey.",
     } },
