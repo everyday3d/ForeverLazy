@@ -202,6 +202,17 @@ local function RoutePoints(max)
             pts[#pts + 1] = { x = p.x, y = p.y, instance = p.instance, kind = p.kind, stop = { name = p.name, detail = p.text } }
         end
     end
+    -- the arrow is set to farm my saved nodes: the lines follow that walk instead of the plan
+    if db.arrowSource == "nodes" and addon.NodeFarmPath then
+        local fp = addon.NodeFarmPath(max or 15)
+        if fp then
+            for _, p in ipairs(fp) do
+                if #pts >= (max or 15) then break end
+                pts[#pts + 1] = { x = p.x, y = p.y, instance = p.instance, kind = "walk", stop = { name = p.name, detail = p.detail } }
+            end
+            return pts
+        end
+    end
     for _, s in ipairs(db.waypoints or {}) do
         if #pts >= (max or 15) then break end
         -- the trip's own waypoint is already covered by the trip path
@@ -486,7 +497,7 @@ end
 function addon.DrawXPHeat()
     local db = DB()
     local wm = _G.WorldMapFrame
-    if not db or not db.xpHeat or not addon.ModuleOn("plan") or not (wm and wm:IsShown()) then return HideHeat() end
+    if not db or not db.xpHeat or db.planPaused or not addon.ModuleOn("plan") or not (wm and wm:IsShown()) then return HideHeat() end
     local canvas = Canvas()
     local mapId = wm.GetMapID and wm:GetMapID()
     if not (canvas and mapId and canvas.GetWidth) then return HideHeat() end

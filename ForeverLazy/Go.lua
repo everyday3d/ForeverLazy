@@ -260,6 +260,11 @@ local function Show()
     Clear()
     -- walk legs point at where they end; rides point at where to board
     local at = (l.kind == "walk") and l.to or l.from
+    do
+        local px, py, pinst = hbd:GetPlayerWorldPosition()
+        trip.legStartDist = (px and at.instance == pinst) and Dist({ x = px, y = py }, at) or nil
+        trip.offSince = nil
+    end
     local wps = DB().waypoints
     table.insert(wps, 1, { name = string.format("Trip: %s", LegText(l)), go = true, detail = LegText(l),
                            instance = at.instance, x = at.x, y = at.y, uiMapId = at.map, zx = at.zx, zy = at.zy })
@@ -332,10 +337,42 @@ function addon.GoStatus()
 end
 
 local function Tick()
-    if not trip or not addon.ModuleOn("go") then return end
+    -- a trip stop saved from an earlier session, or left behind when a trip was cancelled elsewhere: there is no trip,
+    -- so it must not stay on the arrow (the trip itself is not saved, only its stop was)
+    if not trip then
+        local wps = DB().waypoints
+        local stale = false
+        for i = #wps, 1, -1 do
+            if wps[i].go then table.remove(wps, i); stale = true end
+        end
+        if stale then
+            addon:RefreshPins()
+            if addon.RefreshOptions then addon.RefreshOptions() end
+        end
+        return
+    end
+    if not addon.ModuleOn("go") then return end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if not px then return end
     local l = trip.legs[trip.idx]
+    -- I have gone another way (much farther from where this step points than when it began, for a while): the trip is over
+    do
+        local at = (l.kind == "walk") and l.to or l.from
+        local d = (at and at.instance == pinst) and Dist({ x = px, y = py }, at) or nil
+        if l.kind == "walk" and trip.legStartDist and d and d > trip.legStartDist + 800 then       -- only walking steps: a ride carries me away on purpose
+            trip.offSince = trip.offSince or GetTime()
+            if GetTime() - trip.offSince > 20 then
+                Print("trip to " .. trip.dest.name .. " cancelled: you went another way. /lazy go " .. trip.dest.name .. " starts it again")
+                trip = nil
+                addon.GoLastCancel = GetTime()
+                Clear()
+                addon:RefreshPins()
+                return
+            end
+        else
+            trip.offSince = nil
+        end
+    end
     local near = l.to.instance == pinst and Dist({ x = px, y = py }, l.to)
     local reached
     if l.kind == "walk" then
@@ -379,9 +416,20 @@ function addon:HandleExtraCommand(cmd, rest)
         local arg = ((rest or ""):gsub("^%s+", ""):gsub("%s+$", ""))
         if arg:lower() == "stop" then
             trip = nil
+            addon.GoLastCancel = GetTime()
             Clear()
             addon:RefreshPins()
             Print("trip cancelled")
+        elseif arg:lower() == "steps" then
+            if not trip then Print("no trip under way")
+            else
+                local px, py, pinst = hbd:GetPlayerWorldPosition()
+                Print("trip to " .. trip.dest.name .. ", step " .. trip.idx .. " of " .. #trip.legs .. ":")
+                for i, l in ipairs(trip.legs) do
+                    local d = (px and l.to.instance == pinst) and string.format(" [%d yd from me to its end]", Dist({ x = px, y = py }, l.to)) or " [end in another area]"
+                    Print(string.format("  %s%d. [%s] %s%s", i == trip.idx and "> " or "  ", i, l.kind, LegText(l), d))
+                end
+            end
         elseif arg == "" then
             if trip then Print("on the way to " .. trip.dest.name .. ": " .. LegText(trip.legs[trip.idx])) else Print("/lazy go <place>, for example /lazy go westfall, /lazy go stormwind, /lazy go the deadmines, /lazy go hearth") end
         else

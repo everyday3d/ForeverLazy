@@ -212,6 +212,7 @@ local ARROW_SOURCES = {
     { "mine",    "My nearest quest objective" },
     { "partner", "My partner or friend" },
     { "books",   "The nearest library book" },
+    { "nodes",   "The nearest ore or herb node I found" },
     { "rxp",     "My friend's quest target" },
 }
 local function ArrowLabel(key)
@@ -325,6 +326,8 @@ function addon:OpenMenu()
     addon.ShowMenu({
         { text = "Do the next thing (Lazy Mode)", fn = function() Cmd("now") end, module = "lazymode" },
         { text = "Plan my route", fn = function() addon:PlanRoute() end, module = "plan" },
+        { text = (DB().planPaused and "Turn the plan back on (where I left it)" or "Turn the plan off (keeps my place)"),
+          fn = function() if DB().planPaused then addon.PlanResume() else addon.PlanPause() end end, module = "plan" },
         { text = "Plan window", fn = function() Cmd("window") end, module = "plan" },
         { text = "Ask the Coach: what should I do?", fn = function() Cmd("coach") end },
         { text = "Levelling guide", fn = function() Cmd("guide") end, module = "zones" },
@@ -482,17 +485,59 @@ local function RefreshCraftPanel()
     craftPanel:SetHeight(math.max(96, 84 + craftPanel.text:GetStringHeight()))
 end
 
+-- put the panel just right of the window and anything stuck to its right edge (profession tabs), unless I moved it
+local function PlaceCraftPanel(p, frame)
+    p:ClearAllPoints()
+    local saved = DB() and DB().pos and DB().pos.craftPanel
+    if saved then
+        p:SetPoint(saved.point or "TOPLEFT", UIParent, saved.rel or "BOTTOMLEFT", saved.x or 0, saved.y or 0)
+        return
+    end
+    local extra = 0
+    local fr = frame.GetRight and frame:GetRight()
+    if fr then
+        local function Scan(f)
+            if not (f and f.GetLeft and f.GetRight and f:IsShown()) then return end
+            local l, r = f:GetLeft(), f:GetRight()
+            if l and r and l >= fr - 10 and r > fr + extra then extra = r - fr end
+        end
+        for _, ch in ipairs({ frame:GetChildren() }) do
+            Scan(ch)
+            -- tabs hang off the window but may be children of the tab bar or of a sub frame
+            for _, ch2 in ipairs({ ch:GetChildren() }) do Scan(ch2) end
+        end
+    end
+    p:SetPoint("TOPLEFT", frame, "TOPRIGHT", 4 + extra, -40)
+end
+
 local function BuildCraftPanel(frame)
     if craftPanel then
-        craftPanel:SetParent(frame); craftPanel:ClearAllPoints()
-        craftPanel:SetPoint("TOPLEFT", frame, "TOPRIGHT", 4, -40)
+        craftPanel:SetParent(frame)
+        PlaceCraftPanel(craftPanel, frame)
         craftPanel:Show()
         return
     end
     local p = CreateFrame("Frame", "ForeverLazy_CraftPanel", frame)
     p:SetSize(330, 120)
-    p:SetPoint("TOPLEFT", frame, "TOPRIGHT", 4, -40)
+    PlaceCraftPanel(p, frame)
     p:SetFrameStrata("HIGH")
+    -- drag it where it suits me; Shift + right-click puts it back
+    p:SetMovable(true); p:EnableMouse(true); p:RegisterForDrag("LeftButton")
+    p:SetClampedToScreen(true)
+    p:SetScript("OnDragStart", p.StartMoving)
+    p:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local x, y = self:GetLeft(), self:GetTop()
+        local db = DB()
+        if db then db.pos = db.pos or {}; db.pos.craftPanel = { point = "TOPLEFT", rel = "BOTTOMLEFT", x = x, y = y } end
+    end)
+    p:SetScript("OnMouseUp", function(self, button)
+        if button == "RightButton" and IsShiftKeyDown() then
+            local db = DB()
+            if db and db.pos then db.pos.craftPanel = nil end
+            PlaceCraftPanel(self, self:GetParent())
+        end
+    end)
     local bg = p:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.92)
     local t = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")

@@ -58,7 +58,9 @@ function addon.CoachOptions()
         opts[#opts + 1] = {
             key = "grind", label = "Grind " .. g.name,
             rate = g.rate,
-            detail = string.format("%d XP a kill, %d kills seen near your level", Round(g.per), g.n),
+            detail = string.format("%d XP a kill, %d kills seen near your level", Round(g.per), g.n)
+                .. (g.ttk and string.format("; dies in about %d seconds", Round(g.ttk)) or "")
+                .. (g.taken and string.format("; costs you about %d damage a kill", Round(g.taken)) or ""),
             act = function()
                 if zx and zoneId then
                     addon:AddWaypointZone(zoneId, zx, zy, "Grind: " .. g.name)

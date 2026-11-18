@@ -18,6 +18,7 @@ local function Root()
     r.hive.drops = r.hive.drops or {}
     r.hive.grind = r.hive.grind or {}
     r.hive.rt = r.hive.rt or {}
+    r.hive.deaths = r.hive.deaths or {}
     r.hive.spots = r.hive.spots or {}
     r.hive.killspots = r.hive.killspots or {}
     r.hive.rareDeath = r.hive.rareDeath or {}
@@ -34,7 +35,8 @@ local function Community() return Root().shared end
 -- this play session, for /lazy session
 local session = { t0 = time(), xp = 0, quests = 0, kills = 0, money0 = nil }
 -- what I learned since I last shared it (only filled while the Hive is on)
-local outbox = { drops = {}, quests = {}, pace = {}, grind = {}, rt = {}, spots = {} }
+local outbox = { drops = {}, quests = {}, pace = {}, grind = {}, rt = {}, spots = {}, deaths = {} }
+local fight = { t0 = nil, kills = {} }      -- the fight I am in: when it began and what died in it
 local AddKillSpot            -- defined further down; the kill handler above it needs to see it
 
 --------------------------------------------------------------------------------
@@ -452,6 +454,19 @@ function addon.HiveMerge(kind, who, a, b, c, d, e, f)
         local key = math.floor(cx) .. ":" .. math.floor(cy)
         if not byMap[map][key] and TableSize(byMap[map]) > 80 then return end
         byMap[map][key] = (byMap[map][key] or 0) + n
+    elseif base == "W" and not snapshot then
+        local map, cx, cy, n = tonumber(a), tonumber(b), tonumber(c), tonumber(d)
+        if not (map and cx and cy and n) or map < 1 or map > 99999 or cx < 0 or cx > 99 or cy < 0 or cy > 99 or n < 1 or n > 5 then return end
+        S.deaths = S.deaths or {}
+        local byMap = S.deaths[map]
+        if not byMap then
+            if TableSize(S.deaths) > 400 then return end
+            byMap = {}
+            S.deaths[map] = byMap
+        end
+        local key = math.floor(cx) .. ":" .. math.floor(cy)
+        if not byMap[key] and TableSize(byMap) > 300 then return end
+        byMap[key] = (byMap[key] or 0) + n
     elseif base == "T" and not snapshot then
         local npc, secs = tonumber(a), tonumber(b)
         if not npc or not secs or npc < 1 or npc > 9999999 or secs < 300 or secs > 259200 then return end
@@ -504,7 +519,8 @@ function addon.HiveOutbox()
     end
     for npc, secs in pairs(outbox.rt) do msgs[#msgs + 1] = string.format("T|%d|%d", npc, secs) end
     for _, s in pairs(outbox.spots) do msgs[#msgs + 1] = string.format("O|%d|%d|%d|%d|%d", s.q, s.map, s.cx, s.cy, s.n) end
-    outbox = { drops = {}, quests = {}, pace = {}, grind = {}, rt = {}, spots = {} }
+    for _, s in pairs(outbox.deaths) do msgs[#msgs + 1] = string.format("W|%d|%d|%d|%d", s.map, s.cx, s.cy, s.n) end
+    outbox = { drops = {}, quests = {}, pace = {}, grind = {}, rt = {}, spots = {}, deaths = {} }
     -- never more than 40 messages at once; the rest is simply not shared (it is still in my own numbers)
     while #msgs > 40 do table.remove(msgs) end
     return msgs
@@ -552,6 +568,11 @@ local function AddOutbox(kind, a, b, c, d, e)
         local s = outbox.spots[key] or { q = a, map = b, cx = c, cy = d, n = 0 }
         outbox.spots[key] = s
         s.n = s.n + (e or 1)
+    elseif kind == "death" then
+        local key = a .. ":" .. b .. ":" .. c
+        local s = outbox.deaths[key] or { map = a, cx = b, cy = c, n = 0 }
+        outbox.deaths[key] = s
+        s.n = s.n + (d or 1)
     elseif kind == "grind" then
         local key = a .. "\t" .. b .. "\t" .. c
         local g = outbox.grind[key] or { n = 0, xp = 0, secs = 0 }
@@ -592,6 +613,7 @@ local function OnKillXP(msg)
     g[ck][zone][name][lvl] = e
     e.n = e.n + 1; e.xp = e.xp + xp; e.secs = e.secs + secs
     AddKillSpot(zone, name)
+    if fight.t0 then fight.kills[#fight.kills + 1] = { zone = zone, name = name, lvl = lvl } end
     if addon.HiveAddOutbox then addon.HiveAddOutbox("grind", zone, name, lvl, xp, secs) end
 end
 
@@ -606,6 +628,8 @@ function addon.HiveBestGrind(zone)
                     local s = sums[name] or { n = 0, xp = 0, secs = 0 }
                     sums[name] = s
                     s.n = s.n + e.n; s.xp = s.xp + e.xp; s.secs = s.secs + e.secs
+                    s.fs = (s.fs or 0) + (e.fs or 0); s.fk = (s.fk or 0) + (e.fk or 0)
+                    s.dt = (s.dt or 0) + (e.dt or 0); s.dk = (s.dk or 0) + (e.dk or 0)
                 end
             end
         end
@@ -616,7 +640,11 @@ function addon.HiveBestGrind(zone)
     add(S and S.grind and S.grind[zone])
     local out = {}
     for name, s in pairs(sums) do
-        if s.n >= 5 and s.secs >= 60 then out[#out + 1] = { name = name, rate = s.xp / s.secs * 3600, n = s.n, per = s.xp / s.n } end
+        if s.n >= 5 and s.secs >= 60 then
+            out[#out + 1] = { name = name, rate = s.xp / s.secs * 3600, n = s.n, per = s.xp / s.n,
+                              ttk = ((s.fk or 0) >= 3) and (s.fs / s.fk) or nil,
+                              taken = ((s.dk or 0) >= 3) and (s.dt / s.dk) or nil }
+        end
     end
     table.sort(out, function(x, y) return x.rate > y.rate end)
     return out
@@ -783,10 +811,142 @@ function addon.HiveKillSpot(zone, name)
     return (tonumber(cx) + 0.5) / 100, (tonumber(cy) + 0.5) / 100, bn
 end
 --------------------------------------------------------------------------------
+-- Fights and deaths, from the game's own damage meter and my own timers (no other addon needed):
+--   how long a kind of mob takes to kill and how much damage it costs me (for the grind advice),
+--   and where players die (a warning when I walk into a place where people keep dying)
+--------------------------------------------------------------------------------
+-- the damage I took in the fight that just ended, from the built-in meter; nil when the game hides it or has none
+local function MyDamageTaken()
+    local DM = _G.C_DamageMeter
+    if not (DM and DM.GetCombatSessionFromType and Enum and Enum.DamageMeterType and Enum.DamageMeterSessionType) then return nil end
+    if Enum.DamageMeterType.DamageTaken == nil then return nil end
+    local ok, s = pcall(DM.GetCombatSessionFromType, Enum.DamageMeterSessionType.Current, Enum.DamageMeterType.DamageTaken)
+    if not ok or type(s) ~= "table" or type(s.combatSources) ~= "table" then return nil end
+    for _, src in ipairs(s.combatSources) do
+        if src.isLocalPlayer then
+            local v = src.totalAmount
+            if _G.issecretvalue and _G.issecretvalue(v) then return nil end
+            return tonumber(v)
+        end
+    end
+    return nil
+end
+
+local function OnFightStart()
+    fight.t0 = GetTime()
+    fight.kills = {}
+end
+
+local function OnFightEnd()
+    local t0, kills = fight.t0, fight.kills
+    fight.t0, fight.kills = nil, {}
+    if not t0 or #kills == 0 then return end
+    local secs = GetTime() - t0
+    if secs < 1 or secs > 600 then return end
+    local function Attribute(taken)
+        local per = secs / #kills
+        local takenPer = taken and (taken / #kills) or nil
+        local g = Root().grind[CharKey()]
+        if not g then return end
+        for _, k in ipairs(kills) do
+            local m = g[k.zone] and g[k.zone][k.name]
+            local e = m and m[k.lvl]
+            if e then
+                e.fs = (e.fs or 0) + per
+                e.fk = (e.fk or 0) + 1
+                if takenPer then e.dt = (e.dt or 0) + takenPer; e.dk = (e.dk or 0) + 1 end
+            end
+        end
+    end
+    if C_Timer then
+        C_Timer.After(0.7, function() pcall(function() Attribute(MyDamageTaken()) end) end)   -- the meter settles a moment after the fight
+    else
+        Attribute(nil)
+    end
+end
+
+-- where players have died (mine and other players'), in map squares of about 1% of a zone
+local function AddDeath(map, cx, cy, n)
+    local deaths = Root().deaths
+    local byMap = deaths[map]
+    if not byMap then
+        if TableSize(deaths) > 400 then return end
+        byMap = {}
+        deaths[map] = byMap
+    end
+    local key = cx .. ":" .. cy
+    if not byMap[key] and TableSize(byMap) > 300 then return end
+    byMap[key] = (byMap[key] or 0) + n
+    if addon.HiveAddOutbox then addon.HiveAddOutbox("death", map, cx, cy, n) end
+end
+
+local function OnDeath()
+    local zx, zy, map = hbd:GetPlayerZonePosition()
+    if not zx or not map then return end
+    local cx, cy = math.floor(zx * 100), math.floor(zy * 100)
+    if cx < 0 or cx > 99 or cy < 0 or cy > 99 then return end
+    AddDeath(map, cx, cy, 1)
+end
+
+-- how many deaths are recorded in the square I am in and the ones around it
+function addon.HiveDanger(map, zx, zy)
+    if not (map and zx and zy) then return 0 end
+    local cx, cy = math.floor(zx * 100), math.floor(zy * 100)
+    local own = Root().deaths[map]
+    local S = Root().shared
+    local theirs = S and S.deaths and S.deaths[map]
+    local total = 0
+    for dx = -1, 1 do
+        for dy = -1, 1 do
+            local key = (cx + dx) .. ":" .. (cy + dy)
+            total = total + ((own and own[key]) or 0) + ((theirs and theirs[key]) or 0)
+        end
+    end
+    return total
+end
+
+-- a word when I walk into a place where people keep dying (once per place, not again for 10 minutes)
+local dangerAcc, lastDangerKey, lastDangerAt = 0, nil, 0
+local dangerFrame = CreateFrame("Frame")
+dangerFrame:SetScript("OnUpdate", function(_, dt)
+    dangerAcc = dangerAcc + dt
+    if dangerAcc < 5 then return end
+    dangerAcc = 0
+    local db = addon.GetDB()
+    if not db or not db.hiveOn or db.dangerAlert == false then return end
+    if (UnitIsDeadOrGhost and UnitIsDeadOrGhost("player")) or (UnitOnTaxi and UnitOnTaxi("player")) then return end
+    local zx, zy, map = hbd:GetPlayerZonePosition()
+    if not zx or not map then return end
+    local n = addon.HiveDanger(map, zx, zy)
+    if n < 3 then return end
+    local key = map .. ":" .. math.floor(zx * 20) .. ":" .. math.floor(zy * 20)
+    if key == lastDangerKey and GetTime() - lastDangerAt < 600 then return end
+    lastDangerKey, lastDangerAt = key, GetTime()
+    Print(string.format("careful: players have died near here (%d times). Look out for elites or patrols.", n))
+end)
+
+-- the places with the most deaths in a zone: { { zx, zy, n }, ... }
+function addon.HiveDangerSpots(map)
+    local cells = {}
+    local own = Root().deaths[map]
+    local S = Root().shared
+    local theirs = S and S.deaths and S.deaths[map]
+    for _, byKey in ipairs({ own or {}, theirs or {} }) do
+        for key, n in pairs(byKey) do cells[key] = (cells[key] or 0) + n end
+    end
+    local out = {}
+    for key, n in pairs(cells) do
+        local cx, cy = key:match("^(%d+):(%d+)$")
+        if cx and n >= 2 then out[#out + 1] = { zx = (tonumber(cx) + 0.5) / 100, zy = (tonumber(cy) + 0.5) / 100, n = n } end
+    end
+    table.sort(out, function(x, y) return x.n > y.n end)
+    return out
+end
+--------------------------------------------------------------------------------
 -- Events and commands
 --------------------------------------------------------------------------------
 local ev = CreateFrame("Frame")
-for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_XP_UPDATE", "LOOT_OPENED", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "CHAT_MSG_COMBAT_XP_GAIN", "UNIT_QUEST_LOG_CHANGED", "QUEST_WATCH_UPDATE" }) do
+for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_XP_UPDATE", "LOOT_OPENED", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "CHAT_MSG_COMBAT_XP_GAIN", "UNIT_QUEST_LOG_CHANGED", "QUEST_WATCH_UPDATE", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_DEAD" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event, a, b)
@@ -807,6 +967,12 @@ ev:SetScript("OnEvent", function(_, event, a, b)
             scanPending = true
             C_Timer.After(0.4, function() pcall(ScanQuestProgress) end)
         end
+    elseif event == "PLAYER_REGEN_DISABLED" then
+        OnFightStart()
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        pcall(OnFightEnd)
+    elseif event == "PLAYER_DEAD" then
+        pcall(OnDeath)
     elseif event == "CHAT_MSG_COMBAT_XP_GAIN" then
         pcall(OnKillXP, a)
     elseif event == "QUEST_ACCEPTED" then
@@ -825,6 +991,14 @@ local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     local word = (cmd or ""):lower()
     local arg = ((rest or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    if word == "danger" then
+        local zx, zy, map = hbd:GetPlayerZonePosition()
+        local spots = map and addon.HiveDangerSpots(map) or {}
+        if #spots == 0 then Print("no deaths recorded in this zone yet (they are collected while the Hive is on)"); return true end
+        Print("where players have died in this zone:")
+        for i = 1, math.min(6, #spots) do Print(string.format("  %d, %d: %d deaths", spots[i].zx * 100, spots[i].zy * 100, spots[i].n)) end
+        return true
+    end
     if word == "grind" then
         local zone = (arg ~= "" and arg) or (GetRealZoneText and GetRealZoneText()) or "?"
         local list = addon.HiveBestGrind(zone)
@@ -834,7 +1008,10 @@ function addon:HandleExtraCommand(cmd, rest)
         end
         Print("best grind in " .. zone .. " near your level (XP per hour, with the time between kills):")
         for i = 1, math.min(5, #list) do
-            Print(string.format("  %s: about %d XP/hr (%d XP a kill, %d kills seen)", list[i].name, list[i].rate, list[i].per, list[i].n))
+            local extra = ""
+            if list[i].ttk then extra = extra .. string.format(", dies in about %d s", list[i].ttk) end
+            if list[i].taken then extra = extra .. string.format(", costs you about %d damage", list[i].taken) end
+            Print(string.format("  %s: about %d XP/hr (%d XP a kill, %d kills seen%s)", list[i].name, list[i].rate, list[i].per, list[i].n, extra))
         end
         return true
     end

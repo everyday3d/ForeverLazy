@@ -104,7 +104,7 @@ local function RefreshItems()
     local db = DB()
     if not db then return end
     if InCombatLockdown() then pendingRefresh = true; return end
-    local items = db.questItemButton ~= false and addon.ModuleOn("quests") and QuestItems() or {}
+    local items = db.questItemButton ~= false and not db.planPaused and addon.ModuleOn("quests") and QuestItems() or {}
     for i = 1, MAXB do
         local b = buttons[i] or MakeButton(i)
         local it = items[i]

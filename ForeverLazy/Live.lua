@@ -5,7 +5,7 @@
 --   what was learned: drop counts (mob id, item ids, kill counts), quest times and zone XP rates, as plain numbers.
 --                  Everyone who has the Hive on adds what others send to their own numbers.
 -- It never sends your character name, guild, items, gold or anything you typed, and never a track of where you are:
--- the only places it shares are where a rare was seen and coarse map squares where a quest objective was done.
+-- the only places it shares are where a rare was seen and coarse map squares where a quest objective was done or someone died.
 --   /lazy hive on|off      /lazy hive who      /lazy hive rares      /lazy hive rare (arrow to the nearest)
 local ADDON, ns = ...
 local addon = ns.addon

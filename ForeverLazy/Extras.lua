@@ -182,7 +182,16 @@ function BuildGroup(q)
             if addon.HiveQuestSpots and DB().hiveSpots ~= false then
                 local ok, spots, total = pcall(addon.HiveQuestSpots, q.id)
                 if ok and spots and #spots > 0 then
-                    if total >= 4 then
+                    -- the learned places only take over when I am near enough to them to be doing the quest there;
+                    -- from far away they are added next to Questie's, so a closer spawn is never thrown out
+                    local nearLearned = false
+                    local px, py, pinst = hbd:GetPlayerWorldPosition()
+                    if px then
+                        for _, s in ipairs(spots) do
+                            if s.instance == pinst and api.D2(s.x, s.y, px, py) <= 1500 * 1500 then nearLearned = true; break end
+                        end
+                    end
+                    if total >= 4 and nearLearned then
                         g.spawns = spots
                     else
                         for _, s in ipairs(spots) do g.spawns[#g.spawns + 1] = s end
@@ -409,6 +418,9 @@ function addon.ArrowTarget()
     elseif src == "books" then
         local b = addon.NearestBook and addon.NearestBook()
         if b then return b end
+    elseif src == "nodes" then
+        local nd = addon.NearestNode and addon.NearestNode()
+        if nd then return nd end
     elseif src == "partner" then
         local pt = PartnerTarget()
         if pt then return pt end
@@ -928,9 +940,61 @@ function addon.ZoneWorthPlanning(zoneId)
     if not ok then return nil end
     return #givers > 0
 end
+-- /lazy plan debug: everything the planner works from, so a wrong plan can be understood instead of guessed at
+function addon.PlanDebug()
+    local db = DB()
+    local QDB = api.GetQuestie()
+    if not (QDB and api.QuestieReady()) then Print("plan debug: needs Questie loaded and ready"); return end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then Print("plan debug: can't read your position"); return end
+    local here = { x = px, y = py }
+    local zoneId = hbd:GetPlayerZone()
+    local zi = zoneId and C_Map.GetMapInfo(zoneId)
+    local function ZoneName(id) local i = id and C_Map.GetMapInfo(id); return i and i.name or "?" end
+    Print(string.format("plan debug: you are in %s (map %s), level %d", zi and zi.name or "?", tostring(zoneId), UnitLevel("player") or 0))
+    Print(string.format("  settings: planAuto=%s zoneOnly=%s batch=%s autoTrip=%s hiveSpots=%s lastPlanAll=%s planActive=%s",
+        tostring(db.planAuto ~= false), tostring(db.planZoneOnly ~= false), tostring(db.planBatch ~= false), tostring(db.autoTrip == true),
+        tostring(db.hiveSpots ~= false), tostring(lastPlanAll and true or false), tostring(planActive and true or false)))
+    Print("  your quests (spots = places the planner knows for it):")
+    for _, q in ipairs(ReadQuestLog()) do
+        local ok, g = pcall(BuildGroup, q)
+        if ok and g then
+            local inScope, nearD, nearZone = 0, nil, nil
+            for _, s in ipairs(g.spawns) do
+                if s.instance == pinst then
+                    if InScope(db, false, zoneId, here, s) then inScope = inScope + 1 end
+                    local d = Dist(s, here)
+                    if not nearD or d < nearD then nearD, nearZone = d, s.uiMapId end
+                end
+            end
+            local flags = {}
+            if q.complete then flags[#flags + 1] = "done" end
+            if g.grey then flags[#flags + 1] = "grey" end
+            if db.planSkip and db.planSkip[q.id] then flags[#flags + 1] = "SKIPPED" end
+            Print(string.format("    %s [%s%s]: %d spots, %d in this zone, nearest %s", tostring(q.title), tostring(g.tier),
+                #flags > 0 and (", " .. table.concat(flags, ", ")) or "", #g.spawns, inScope,
+                nearD and string.format("%d yd away (%s)", nearD, ZoneName(nearZone)) or "none on this continent"))
+        end
+    end
+    Print("  the plan, as it stands:")
+    local shown = 0
+    for i, w in ipairs(db.waypoints or {}) do
+        if shown >= 8 then break end
+        shown = shown + 1
+        local d = (w.x and w.instance == pinst) and string.format("%d yd", Dist(w, here)) or "other area"
+        Print(string.format("    %d. %s  (%s%s)", i, tostring(w.name or w.label), d, w.go and ", TRIP STOP" or (w.lazy and ", lazy" or "")))
+    end
+    if shown == 0 then Print("    no stops") end
+end
 function addon:PlanRoute(allZones, quiet, auto)
     local Print = quiet and function() end or Print
     local db = DB()
+    if db.planPaused then
+        -- the plan is switched off: only me asking for a new one (not an automatic replan) brings it back
+        if quiet or auto then return end
+        db.planPaused, db.planSaved = nil, nil
+        Print("a new plan replaces the paused one")
+    end
     if not api.QuestieReady() then Print("planning needs Questie loaded and ready"); return end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if not px then Print("can't read your position here"); return end
@@ -1245,6 +1309,58 @@ function addon:PlanRoute(allZones, quiet, auto)
     if elsewhere > 0 then Print(string.format("%d quest%s on another continent left out", elsewhere, elsewhere == 1 and "" or "s")) end
 end
 
+-- Turn the plan off but keep my place: the stops still to do are put aside, and nothing replans or re-adds arrows.
+function addon.PlanPause()
+    local db = DB()
+    if db.planPaused then Print("the plan is already off. /lazy plan on picks it up where you left it"); return end
+    local keep, rest = {}, {}
+    for _, w in ipairs(db.waypoints or {}) do
+        if w.label and not w.go and not w.gather then keep[#keep + 1] = w else rest[#rest + 1] = w end
+    end
+    if #keep == 0 then Print("there is no plan to turn off"); return end
+    local zone = GetRealZoneText and GetRealZoneText() or "?"
+    db.planSaved = { stops = api.DeepCopy(keep), zone = zone, time = time and time() or 0, all = lastPlanAll and true or false }
+    db.waypoints = rest
+    db.planPaused = true
+    planActive = false
+    addon:RefreshPins()
+    if addon.DrawRouteLines then pcall(addon.DrawRouteLines) end
+    if addon.DrawXPHeat then pcall(addon.DrawXPHeat) end
+    if addon.RefreshQuestItems then pcall(addon.RefreshQuestItems) end
+    if addon.UpdateTomTom then addon:UpdateTomTom() end
+    if addon.RefreshOptions then addon.RefreshOptions() end
+    Print(string.format("plan off. I kept your place: %d stop%s still to do, next was %s. /lazy plan on resumes it.",
+        #keep, #keep == 1 and "" or "s", tostring(keep[1].name or keep[1].label)))
+end
+
+-- Pick the plan up where it was left.
+function addon.PlanResume()
+    local db = DB()
+    local saved = db.planSaved
+    if not db.planPaused then Print("the plan is not off"); return end
+    db.planPaused = nil
+    db.planSaved = nil
+    if not saved or not saved.stops or #saved.stops == 0 then
+        Print("nothing was saved, planning fresh")
+        addon:PlanRoute()
+        return
+    end
+    local wps = db.waypoints or {}
+    for i = #saved.stops, 1, -1 do table.insert(wps, 1, saved.stops[i]) end
+    db.waypoints = wps
+    lastPlanAll = saved.all
+    planActive = true
+    addon:RefreshPins()
+    if addon.DrawXPHeat then pcall(addon.DrawXPHeat) end
+    if addon.RefreshQuestItems then pcall(addon.RefreshQuestItems) end
+    if addon.UpdateTomTom then addon:UpdateTomTom() end
+    if addon.RefreshOptions then addon.RefreshOptions() end
+    local here = GetRealZoneText and GetRealZoneText() or "?"
+    Print(string.format("plan back on: %d stop%s, next is %s%s", #saved.stops, #saved.stops == 1 and "" or "s",
+        tostring(saved.stops[1].name or saved.stops[1].label),
+        saved.zone and saved.zone ~= here and (" (it was in " .. saved.zone .. "; /lazy plan makes a new one for here)") or ""))
+end
+
 -- A quest was just taken: slot it into the plan where it adds the least walking.
 -- A quest closer than the next stop naturally ends up in front of it.
 local function RenumberPlan(wps)
@@ -1255,7 +1371,7 @@ end
 
 local function AddQuestToPlan(questId)
     local db = DB()
-    if db.planAuto == false then return end
+    if db.planAuto == false or db.planPaused then return end
     local wps = db.waypoints
     if #wps == 0 and planActive then
         -- the last stop was the quest giver: now the new quest's objectives become the plan
@@ -1362,6 +1478,45 @@ local function ReplanForZone()
         Print(string.format("new zone, plan rebuilt: %d stop%s. First: %s", #now, #now == 1 and "" or "s", now[1].name))
     end
 end
+
+-- Moved somewhere else in the same zone (or flew, or hearthed): the plan was made for where I stood, so when the next stop is
+-- now far away and another stop is much closer, build it again from here.
+local lastDrift = 0
+local driftAcc = 0
+local driftFrame = CreateFrame("Frame")
+driftFrame:SetScript("OnUpdate", function(_, dt)
+    driftAcc = driftAcc + dt
+    if driftAcc < 5 then return end
+    driftAcc = 0
+    local db = DB()
+    if not db or db.planAuto == false or not planActive then return end
+    if GetTime() - lastDrift < 90 then return end
+    if (UnitOnTaxi and UnitOnTaxi("player")) or (UnitIsGhost and UnitIsGhost("player")) then return end
+    if InCombatLockdown and InCombatLockdown() then return end
+    local wps = db.waypoints
+    local first = wps and wps[1]
+    if not (first and first.label and first.instance and first.x) then return end        -- only while a plan stop is next
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px or first.instance ~= pinst then return end
+    local d1 = math.sqrt(api.D2(first.x, first.y, px, py))
+    if d1 < 800 then return end
+    local nearest
+    for i = 2, #wps do
+        local w = wps[i]
+        if w.label and w.instance == pinst and w.x then
+            local d = math.sqrt(api.D2(w.x, w.y, px, py))
+            if not nearest or d < nearest then nearest = d end
+        end
+    end
+    if nearest and nearest < d1 * 0.5 and d1 - nearest > 600 then
+        lastDrift = GetTime()
+        pcall(addon.PlanRoute, addon, lastPlanAll and true or false, true)
+        local after = db.waypoints
+        if after and after[1] and after[1].label then
+            Print("you moved on, plan rebuilt from here. Next: " .. after[1].name)
+        end
+    end
+end)
 
 -- A quest got finished (ready to hand in) or handed in / dropped: move the plan on.
 local questState, questProgress, questCheck
@@ -1926,6 +2081,10 @@ function addon:HandleExtraCommand(cmd, rest)
         return true
 
     elseif cmd == "plan" or cmd == "route!" then
+        local arg = (rest or ""):lower()
+        if arg == "debug" then addon.PlanDebug(); return true end
+        if arg == "off" or arg == "pause" or arg == "stop" then addon.PlanPause(); return true end
+        if arg == "on" or arg == "resume" or arg == "continue" then addon.PlanResume(); return true end
         addon:PlanRoute((rest or ""):lower() == "all"); return true
 
     elseif cmd == "compass" then

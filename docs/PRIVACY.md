@@ -16,6 +16,6 @@ sent to your guild and your group.
 small channel called `ForeverLazyHive` (kept out of your chat windows) and send hidden addon messages that hold ids and
 numbers only: drop counts, quest times and zone XP rates; a rare spawn you spotted (its id, name and the place it was seen);
 and "someone is in this zone, level 10-14" with no name and no position; and a coarse map square (about 1% of a zone) where one of your quest objectives was done, with the
-quest id and no name or time. It never sends your character name, guild, realm, items, gold or anything you typed, and never a
+quest id, or where you died, with no name or time. It never sends your character name, guild, realm, items, gold or anything you typed, and never a
 track of where you are. Details and how incoming numbers are checked are in [the Hive](HIVE.md).
 Players without the addon see nothing at all.

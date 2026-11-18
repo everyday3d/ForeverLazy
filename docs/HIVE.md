@@ -16,6 +16,7 @@ they measured with each other. **There is one switch:** Options > AddOns > Forev
 | **Rare timers** | When a rare dies and is seen again, the gap is a measurement of its respawn. The pin of a dead rare stays as a timer ("killed 20 minutes ago, usually back after about 45"), and you get a line in chat when it should be back. | the world map pins, `/lazy hive rares` |
 | **Real quest spots** | Where you stood when a quest objective counted up. Once a quest has enough sightings (yours and other players') the planner uses those places instead of the original data's guesses. | the plan and the arrow |
 | **The Coach** | Compares quests here, the best grind, and other zones by measured XP per hour and tells you the best thing to do now, with a button that sets it up. | `/lazy coach`, the arrow menu |
+| **Fights and deaths** | How long each kind of mob takes to kill and how much damage it costs you (from the game's own damage meter, no other addon needed), and where players die. You get a word when you walk into a place where people keep dying. | `/lazy grind`, `/lazy danger`, the Coach |
 | **This session** | XP, quests, kills and gold since you logged in. | `/lazy session` |
 | **Numbers from other players** | Drop counts, quest times and zone paces that other players with the Hive on send. They are added to your own numbers, so drop rates and quest times are good from the start. | the same places as above |
 | **Rare spawns** | When anyone spots a rare, others get a pin on the world map, and a line in chat when it is in their zone. `/lazy hive rare` points an arrow at the nearest. | world map, chat |
@@ -33,13 +34,14 @@ addon messages go over it, and they carry **only ids and numbers**:
 - quest times: a quest id with how many times, seconds and XP,
 - zone XP rates: a zone name with a level, XP and seconds,
 - grind numbers: a zone, a mob name, your level band, kills, XP and seconds,
+- a death: a map square (about 1% of a zone) where a player died, with no name or time,
 - a quest spot: a quest id and a map square (about 1% of a zone, some tens of yards) where one of its objectives counted up; no name, no time,
 - a rare spawn: the rare's id and name, the zone and the place it was seen, and a "dead" note when you loot it,
 - how long a rare took to come back (a number of seconds),
 - a zone count: "someone is in this zone, level 10-14", about every 90 seconds,
 - a "hello" when you join, answered by one other player with a short snapshot of what they know.
 
-It **never** sends your character name, guild, realm, items, gold or anything you typed, and never a track of where you are. The only places it shares are where a rare was seen and coarse map squares where a quest objective was done.
+It **never** sends your character name, guild, realm, items, gold or anything you typed, and never a track of where you are. The only places it shares are where a rare was seen and coarse map squares where a quest objective was done or someone died.
 
 ## How shared numbers are kept honest
 

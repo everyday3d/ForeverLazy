@@ -233,18 +233,21 @@ autoFrame:SetScript("OnUpdate", function(_, dt)
     if autoAcc < 4 then return end
     autoAcc = 0
     local db = DB()
-    if not db or db.autoTrip == false or not addon.ModuleOn("go") or not addon.GoWithFlight then return end
+    if not db or db.autoTrip ~= true or not addon.ModuleOn("go") or not addon.GoWithFlight then return end
     if addon.GoStatus and addon.GoStatus() then return end                 -- a trip is already under way
     if UnitOnTaxi and UnitOnTaxi("player") then return end
     if InCombatLockdown and InCombatLockdown() then return end
     if UnitIsGhost and UnitIsGhost("player") then return end
     local w = db.waypoints and db.waypoints[1]
     if not (w and w.label and w.uiMapId and w.zx and w.x and w.instance) then return end    -- only plan stops
-    if autoTried[w] or GetTime() - lastAuto < 90 then return end
+    local key = tostring(w.label)
+    if autoTried[key] and GetTime() - autoTried[key] < 1800 then return end        -- the same stop: not again for 30 minutes
+    if GetTime() - lastAuto < 300 then return end
+    if addon.GoLastCancel and GetTime() - addon.GoLastCancel < 1200 then return end   -- I cancelled a trip: leave me alone for a while
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if not px or w.instance ~= pinst then return end
     if math.sqrt((w.x - px) ^ 2 + (w.y - py) ^ 2) <= 1500 then return end
-    autoTried[w] = true
+    autoTried[key] = GetTime()
     lastAuto = GetTime()
     pcall(addon.GoWithFlight, w.uiMapId, w.zx, w.zy, tostring(w.name or w.label))
 end)

@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.11.2-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.12.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
@@ -15,6 +15,29 @@
 Forever Lazy is a levelling companion for WoW Forever that does the thinking for you.<br>
 It knows your quests, your bags, your professions and the map, and it points an arrow at the next thing worth doing.
 </p>
+
+---
+
+## What's new in 0.12.0
+
+This is a big one.
+
+- **Ore and herb nodes on your map.** Mine a vein or pick a flower and it is remembered: a round pin on the world map and
+  the minimap, showing the ore, with a tooltip for what it is and when you last found it. Pins fade while a node should
+  still be respawning. **Farm them with the arrow** (`/lazy nodes farm ore`) and it walks you from node to node with the route drawn.
+  `/lazy nodes silver` opens a window of the zones that have it, each with a Take me there button.
+- **Turn the plan off and keep your place.** `/lazy plan off` puts the stops aside and clears the lines, markers, heat and
+  quest item bar. `/lazy plan on` puts them back.
+- **Don't sell that.** `/lazy keep <item>` protects an item from vendors (your Cozy Sleeping Bag is protected from the start):
+  a clear warning on the tooltip, a list when you open a vendor, and a sale is bought straight back.
+- **A damage meter in its own chat tab**, using the game's built-in meter, no other addon needed.
+- **The Hive learns fights and deaths**: how long each mob takes to kill, what it costs you, and where players keep dying
+  (with a warning as you walk in).
+- **Big fixes:** leftover trip stops no longer stay on the arrow after a reload or cancel; trips by tram, boat and flight
+  finish properly; the plan rebuilds when you move somewhere else in the zone; the craft panel no longer covers the
+  profession tabs; the automatic flight trip is off by default.
+
+[Everything in every version](CHANGELOG.md)
 
 ---
 
@@ -58,11 +81,15 @@ No spreadsheets. No second monitor. No typing, unless you want to.
 | **One-button Lazy Mode** | Click, and the arrow points at the best next thing: quest, vendor, trainer, or the next zone. |
 | **A route that respects your time** | Your quest log planned for XP per minute, with stops numbered on the world map. |
 | **Take me there** | Type a place and get a whole trip by flight, boat, tram and hearthstone. |
+| **Ore and herb nodes** | Nodes you gather are pinned on the map and minimap, and the arrow can farm them node to node. |
+| **Plan off, place kept** | Switch the plan off and clear the lines and bars, then pick it up where you left it. |
+| **Items to keep** | Protect your sleeping bag and the like from vendors: warning on the tooltip, sales bought back. |
 | **Crafting that tells you what to make** | The recipe to craft next glows in your recipe list with a count, using what is in your bags and bank, and says where to get the rest. |
 | **Buttons where you already look** | A menu on the minimap, a search box on the world map, buttons on the quest log. Nothing to memorise. |
 | **The Coach** | Compares the quests here, the best grind and other zones by your measured XP per hour and tells you the best thing to do now. |
 | **A levelling guide** | Your whole journey to 60 in one window, with your pace and the dungeons that fit. Its text scales for the couch and TV. |
 | **The Hive** | Learns from real play (your pace, drops, quest times, where objectives are done) and, if you turn it on, shares those numbers with other players. Off until you switch it on. |
+| **A damage meter out of the way** | Its own chat tab, using the game's built-in meter, so no other addon is needed. |
 | **One arrow, your choice** | Right-click it to pick what it points at: what is next, your plan, a quest, your partner, a library book. |
 | **Duo mode** | Level with a friend who has the addon: shared plan, partner on your compass. |
 

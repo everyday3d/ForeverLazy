@@ -60,11 +60,41 @@ The Hive learns from real play, because the original game's data does not always
 - **Drop rates** (`/lazy drops <item>`): every corpse you loot is counted; item tooltips and the crafting plan use them.
 - **Quest times** (`/lazy pace quests`): quests that were slow for you are marked in the skip menu.
 - **Best grind** (`/lazy grind`): XP per hour for each kind of mob, and where you killed it most.
+- **Fights and deaths**: how long each kind of mob takes to kill and what it costs you, shown in the grind advice, and a
+  warning when you walk into a place where players keep dying (`/lazy danger`).
 - **Real quest spots**: where objectives were really done replaces the original data once there are enough sightings.
 - **Rare timers and pins**: rares reported by other players appear on the world map; a dead rare stays as a timer with how
   long it usually takes to come back.
 - **Shared with other players who have it on**: drop counts, quest times, zone paces, grind numbers, quest spots, rares and
   zone counts, as hidden messages of ids and numbers only. Details and how it is kept honest: [the Hive](HIVE.md).
+
+## Damage meter
+
+- **A damage meter in its own chat tab** called **Meter**, so it stays out of the way (`/lazy meter`). It reads the game's
+  built-in damage meter, so no other addon is needed. Pick what to show (damage per second, damage done, healing, damage
+  taken, interrupts, deaths), this fight or everything since the last reset, and how many players to list. In combat the
+  game hides the numbers from addons, so the tab keeps the last picture until the fight is over. If a chat tab cannot be
+  made, it uses a small window instead.
+
+## Ore and herb nodes
+
+- **Every node you gather is remembered** and marked on the world map and the minimap as a round pin showing the ore
+  (hover for what it is and when you last found it). A node you just took fades while it respawns, and with Find Minerals or
+  Find Herbs on, the minimap pins stay faint so the game's own blip shows through.
+- **Farm them with the arrow**: `/lazy nodes farm`, or right-click the arrow. It walks you node to node, skipping ones you
+  just emptied, with the route drawn on the map and minimap.
+- **Find a node by name** (`/lazy nodes silver`): a window of the zones that have it, from Questie's data and your own
+  finds, each with a Take me there button.
+
+## Your plan, off and on
+
+- `/lazy plan off` puts the stops still to do aside and clears the route lines, numbered markers, XP heat and the quest item
+  bar, and nothing replans on its own. `/lazy plan on` puts them back where you left them.
+
+## Items to keep
+
+- `/lazy keep <item>` protects an item from vendors (your Cozy Sleeping Bag is protected from the start). The tooltip says
+  DO NOT SELL, opening a vendor lists protected items in your bags, and one sold anyway is bought back at once.
 
 ## Crafting and gathering
 

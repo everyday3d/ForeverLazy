@@ -179,6 +179,31 @@ local function Fish(n)
     end)
 end
 
+-- which zones have a node like this? cb(list of { zone, n }, list of distinct node names), biggest zone first
+function addon.NodeZones(want, cb)
+    WithIndex(function()
+        local matches = MatchIds(function(n) return n:find(want, 1, true) ~= nil end)
+        local by, names, nameList = {}, {}, {}
+        for i, o in ipairs(matches) do
+            if i > 80 then break end
+            if not names[o.name] then names[o.name] = true; nameList[#nameList + 1] = o.name end
+            local sp = {}
+            api.AddObjects(sp, { o.id })
+            for _, s in ipairs(sp) do
+                if s.uiMapId then
+                    local e = by[s.uiMapId]
+                    if not e then e = { n = 0, zx = s.zx, zy = s.zy }; by[s.uiMapId] = e end
+                    e.n = e.n + 1
+                end
+            end
+        end
+        local list = {}
+        for map, e in pairs(by) do list[#list + 1] = { zone = MapName(map), n = e.n, map = map, zx = e.zx, zy = e.zy } end
+        table.sort(list, function(a, b) return a.n > b.n end)
+        cb(list, nameList)
+    end)
+end
+
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     local word = (cmd or ""):lower()

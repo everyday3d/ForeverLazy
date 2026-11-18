@@ -362,6 +362,18 @@ local function BuildControls(parent)
     Button(content, "Plan my route (replaces waypoints)", 16, 240, function() addon:PlanRoute() end, true)
     Label(content, "Same as /lazy plan. Orders your quest spots into a walking route, one waypoint each.")
     y = y - 26
+    do
+        local b
+        local function show() b:SetText(DB().planPaused and "Plan is OFF: turn it back on" or "Turn the plan off (keeps my place)") end
+        b = Button(content, "", 16, 240, function()
+            if DB().planPaused then addon.PlanResume() else addon.PlanPause() end
+            show()
+        end, true)
+        refreshers[#refreshers + 1] = show
+        show()
+    end
+    Label(content, "Off stops all planning and replanning, and remembers the stops still to do. On puts them back. Same as /lazy plan off and /lazy plan on.")
+    y = y - 26
     Check(content, "Plan for XP: do the quests that give the most XP for the walking first", 16,
         function() return DB().planXP ~= false end, function(v) DB().planXP = v end)
     Check(content, "Keep the plan to the zone I'm in (/lazy plan all ignores this)", 16,
@@ -405,8 +417,8 @@ local function BuildControls(parent)
         function() return DB().classAlert ~= false end, function(v) DB().classAlert = v end)
     Check(content, "Put class quest givers in my plan when they are in this zone", 16,
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
-    Check(content, "When the next plan stop is a long way off and a flight is quicker, start the trip by itself", 16,
-        function() return DB().autoTrip ~= false end, function(v) DB().autoTrip = v end)
+    Check(content, "When the next plan stop is a long way off and a flight is quicker, start the trip by itself (off by default)", 16,
+        function() return DB().autoTrip == true end, function(v) DB().autoTrip = v end)
     Check(content, "Finish the quests in an area before walking back to hand any in (unless it continues a chain)", 16,
         function() return DB().planBatch ~= false end, function(v) DB().planBatch = v end)
     Check(content, "Draw my plan's route on the world map", 16,
@@ -468,12 +480,14 @@ local function BuildControls(parent)
     end
     Toggle(16, 200, "The Hive", function() return DB().hiveOn == true end,
         function(v) if addon.HiveLiveSet then addon.HiveLiveSet(v) else DB().hiveOn = v end end, true)
-    Label(content, "ON: it learns your real XP per hour, the drops you loot and how long quests take, and exchanges those numbers, rare spawns and zone counts with other players who have it on, as hidden addon messages. It never sends your name, guild, items or chat, and never a track of where you are. The only places shared are rare sightings and coarse map squares where a quest objective was done (no name, no time). OFF: nothing is learned or shared.")
+    Label(content, "ON: it learns your real XP per hour, the drops you loot and how long quests take, and exchanges those numbers, rare spawns and zone counts with other players who have it on, as hidden addon messages. It never sends your name, guild, items or chat, and never a track of where you are. The only places shared are rare sightings and coarse map squares where a quest objective was done or someone died (no name, no time). OFF: nothing is learned or shared.")
     y = y - 70
     Check(content, "Use the places where quest objectives were really done (learned from play) instead of the original data", 16,
         function() return DB().hiveSpots ~= false end, function(v) DB().hiveSpots = v end)
     Check(content, "Item tooltips show the mobs seen dropping the item", 16,
         function() return DB().hiveTooltip ~= false end, function(v) DB().hiveTooltip = v end)
+    Check(content, "Warn me when I walk into a place where players keep dying", 16,
+        function() return DB().dangerAlert ~= false end, function(v) DB().dangerAlert = v end)
     Check(content, "Tell me when a rare shows up in my zone", 16,
         function() return DB().hiveRareAlert ~= false end, function(v) DB().hiveRareAlert = v end)
     Check(content, "Show reported rares as pins on the world map", 16,
@@ -486,6 +500,35 @@ local function BuildControls(parent)
     Label(content, "Commands: /lazy hive on|off, /lazy hive, /lazy pace, /lazy drops <item>, /lazy session, /lazy hive who, /lazy hive rares.")
     y = y - 26
 
+    Header(content, "Ore and herb nodes")
+    Label(content, "Every node you mine or pick is remembered and marked on the world map. Hover a pin to see what it is. The arrow can walk you from node to node to farm them (right-click the arrow, or /lazy nodes farm).")
+    y = y - 50
+    Check(content, "Show my found nodes on the world map", 16,
+        function() return DB().nodePins ~= false end, function(v) DB().nodePins = v; if addon.RefreshNodePins then addon.RefreshNodePins() end end)
+    Check(content, "Also show them on the minimap", 16,
+        function() return DB().nodeMini ~= false end, function(v) DB().nodeMini = v; if addon.RefreshNodePins then addon.RefreshNodePins() end end)
+    Radio(content, "Show and farm:", "nodeFilter", { { "all", "Ore and herbs" }, { "ore", "Ore only" }, { "herb", "Herbs only" } })
+    Button(content, "Farm them with the arrow", 16, 190, function() addon:HandleExtraCommand("nodes", "farm " .. (DB().nodeFilter or "all")) end, false)
+    Button(content, "What do I have?", 216, 130, function() addon:HandleExtraCommand("nodes", "") end, true)
+
+    Header(content, "Damage meter")
+    Label(content, "A damage meter in its own chat tab called Meter, so it stays out of the way. It reads the game's built-in meter (the same source Details uses on this client). In combat the game hides the numbers, so the tab keeps the last picture until the fight ends.")
+    y = y - 50
+    local function MeterToggle()
+        local b
+        local function show() b:SetText("Damage meter: " .. ((DB().meterOn == true) and "|cff55ff55ON|r" or "|cffff5555OFF|r")) end
+        b = Button(content, "", 16, 200, function() if addon.MeterSet then addon.MeterSet(not (DB().meterOn == true)) end; show() end, false)
+        refreshers[#refreshers + 1] = show
+        show()
+    end
+    MeterToggle()
+    Button(content, "Clear the data", 226, 130, function() addon:HandleExtraCommand("meter", "reset") end, false)
+    Button(content, "What does it see?", 366, 150, function() addon:HandleExtraCommand("meter", "debug") end, true)
+    Radio(content, "Show:", "meterMetric", {
+        { "dps", "Damage per second" }, { "damage", "Damage done" }, { "healing", "Healing done" }, { "taken", "Damage taken" },
+        { "hps", "Healing per second" }, { "interrupts", "Interrupts" }, { "deaths", "Deaths" } })
+    Radio(content, "Fight:", "meterSegment", { { "current", "This fight" }, { "overall", "Everything since the last reset" } })
+    Slider(content, "Players listed", 3, 20, 1, "%d", function() return DB().meterRows or 8 end, function(v) DB().meterRows = v end)
     Header(content, "My waypoints")
     Label(content, "Set one with /lazy way <x> <y> [name], /lazy way here, or Ctrl + right-click on the world map.")
     y = y - 26

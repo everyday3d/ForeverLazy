@@ -66,5 +66,10 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy hive on` `off` | Turn the Hive on or off (learning and sharing) |
 | `/lazy hive who` `rares` `rare` | Other players per zone, reported rares, and an arrow to the nearest rare |
 | `/lazy grind` | The best mobs to grind in this zone near your level, by XP per hour |
+| `/lazy meter` `meter off` `meter dps` `meter overall` `meter rows 8` `meter reset` `meter debug` | The damage meter in a chat tab: on, off, what to show, this fight or overall, how many players, clear it, what it sees |
+| `/lazy danger` | The places in this zone where the most players have died |
 | `/lazy coach` `coach say` | The Coach: the best thing to do now by measured XP per hour (a window, or a few lines in chat) |
+| `/lazy nodes` `nodes <name>` `nodes farm [ore|herb]` `nodes pins on|off` `nodes clear` `nodes debug` | Saved ore and herb nodes: what you have, find a node by name (a window), farm them with the arrow, the map pins, forget them, check tracking |
+| `/lazy plan off` `plan on` | Turn the plan off and keep your place, then pick it up again |
+| `/lazy keep` `keep <item>` `keep remove <item>` `keep off` `keep on` | Items a vendor must not keep (the tooltip warns, a sale is bought back) |
 | `/lazy pace reset` | Clear your measured XP per hour and start measuring again (drop counts and quest times are kept) |

@@ -273,6 +273,14 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.12.0", {
+        "A damage meter in its own chat tab called Meter (/lazy meter). It reads the game's built-in meter, so no other addon is needed.",
+        "The Hive learns how long each kind of mob takes to kill and what it costs you (/lazy grind), and where players die: you get a word when you walk into a place where people keep dying (/lazy danger).",
+        "Ore and herb nodes you gather are marked on the map and minimap, and the arrow can farm them (/lazy nodes farm). /lazy nodes silver lists the zones that have it.",
+        "Turn the plan off and keep your place: /lazy plan off, /lazy plan on. The route lines, markers and quest item bar go away while it is off.",
+        "Protect items from vendors: /lazy keep <item>. Your Cozy Sleeping Bag is protected from the start; a sale gets bought back.",
+        "Fix: the craft plan panel no longer covers the profession window tabs.",
+    } },
     { "0.11.2", {
         "Fix: a trip step by tram, boat or flight now finishes when it has taken you away from where you boarded, so the arrow no longer points back at the boarding spot.",
     } },
