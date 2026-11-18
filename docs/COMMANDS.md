@@ -70,6 +70,9 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy danger` | The places in this zone where the most players have died |
 | `/lazy coach` `coach say` | The Coach: the best thing to do now by measured XP per hour (a window, or a few lines in chat) |
 | `/lazy nodes` `nodes <name>` `nodes farm [ore|herb]` `nodes pins on|off` `nodes clear` `nodes debug` | Saved ore and herb nodes: what you have, find a node by name (a window), farm them with the arrow, the map pins, forget them, check tracking |
+| `/lazy level` `level <zone>` `level steps` | Plan the whole zone for the fastest levelling (a window of what to get, where to kill, what to hand in); with a zone name, go there first |
+| `/lazy class quest` `class here` `class list` | Your class quests and what to do for each, what the zone you are in needs, or the plain chat list |
+| `/lazy dungeons why <quest>` `dungeons purge` | Why a quest counts as a dungeon quest, and take dungeon quests out of the plan |
 | `/lazy plan off` `plan on` | Turn the plan off and keep your place, then pick it up again |
 | `/lazy keep` `keep <item>` `keep remove <item>` `keep off` `keep on` | Items a vendor must not keep (the tooltip warns, a sale is bought back) |
 | `/lazy pace reset` | Clear your measured XP per hour and start measuring again (drop counts and quest times are kept) |

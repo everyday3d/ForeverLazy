@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.12.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.13.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
@@ -18,9 +18,24 @@ It knows your quests, your bags, your professions and the map, and it points an 
 
 ---
 
-## What's new in 0.12.0
+## What's new in 0.13.0
 
-This is a big one.
+- **Level a whole zone.** `/lazy level` (or `/lazy level ashenvale` for another zone) plans every quest worth doing there and
+  opens a window of what to get and from whom, where to kill or collect, and what to hand in. Quests of an area stay open
+  and are handed in together.
+- **Ask a guard, get an arrow.** Ask a guard where the trainer, bank or inn is and the arrow takes you there, then goes away.
+- **Class quests** pop up once when you enter a zone that has something for one. `/lazy class quest` shows what to do for each.
+- **No dungeon quests in your plan**, and the plan **follows you across continents** after a hearthstone, boat or tram.
+- **Walk close to a hand-in and it comes next.** A quest you have not finished no longer sends you to hand it in early.
+- **Smarter crafting.** The craft plan stops where your trainer has new recipes, one batch at a time.
+- **Big fixes:** skip works and sticks, the craft panel no longer covers the profession tabs, and a protected item that gets
+  sold anyway shows a big message on screen.
+
+[Everything in every version](CHANGELOG.md)
+
+### Also in 0.12.0
+
+This was a big one.
 
 - **Ore and herb nodes on your map.** Mine a vein or pick a flower and it is remembered: a round pin on the world map and
   the minimap, showing the ore, with a tooltip for what it is and when you last found it. Pins fade while a node should

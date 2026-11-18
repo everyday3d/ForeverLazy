@@ -121,6 +121,7 @@ local function Quests(now)
             else
                 ok = need > lvl and need <= lvl + 4 and HasRace(QDB.QueryQuestSingle(id, "requiredRaces"))
             end
+            if ok and api.IsDungeonQuest and api.IsDungeonQuest(id, false) then ok = false end   -- a dungeon quest: not for the plan
             if ok then
                 local spawns, npc = Giver(QDB, id)
                 if #spawns > 0 then
@@ -265,11 +266,333 @@ ev:SetScript("OnEvent", function(_, event)
     end
 end)
 
+--------------------------------------------------------------------------------
+-- Walking into a zone that has something for a class quest: say so once
+--------------------------------------------------------------------------------
+local toast
+local lastZone
+
+local function ClassSet()
+    local set = {}
+    for _, id in ipairs(list or {}) do set[id] = true end
+    return set
+end
+
+-- the id of a class quest by its title (for plan stops that only carry a name)
+local titleToId
+function addon.ClassQuestIdByTitle(title)
+    if not list then return nil end
+    if not titleToId then
+        titleToId = {}
+        local QDB = api.GetQuestie()
+        if QDB then
+            for _, id in ipairs(list) do
+                local n = QDB.QueryQuestSingle(id, "name")
+                if n then titleToId[n:lower()] = id end
+            end
+        end
+    end
+    return titleToId[(title or ""):lower()]
+end
+
+-- what my class quests need in this zone: who to take quests from, and the objectives or hand-ins of quests in my log.
+-- each entry: { text = one line saying what, from whom and where, spawn, label }
+local function NpcNameOf(QDB, list)
+    local id = type(list) == "table" and list[1]       -- the first npc id of a start/finish list
+    return id and QDB.QueryNPCSingle(id, "name") or nil
+end
+
+local function HereNeeds(zoneId)
+    local out = {}
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return out end
+    local from = { x = px, y = py }
+    local QDB = api.GetQuestie()
+    if not QDB then return out end
+    -- quests I can take now, with the giver in this zone
+    for _, q in ipairs(Quests(true)) do
+        local best, bd
+        for _, s in ipairs(q.spawns) do
+            if s.instance == pinst and s.uiMapId == zoneId then
+                local d = Dist(s, from)
+                if not bd or d < bd then best, bd = s, d end
+            end
+        end
+        if best then
+            out[#out + 1] = {
+                text = string.format("Take: %s (level %d)\n     from %s at %.0f, %.0f, about %d yards",
+                    q.name, q.level or 0, q.npc or "the quest giver", best.zx * 100, best.zy * 100, bd),
+                spawn = best, label = "Class quest: " .. q.name }
+        end
+    end
+    -- quests already in my log
+    if addon.QuestLogSpawns then
+        local set = ClassSet()
+        for _, g in ipairs(addon.QuestLogSpawns()) do
+            if g.id and set[g.id] and (g.complete or not (api.IsDungeonQuest and api.IsDungeonQuest(g.id, false))) then
+                local best, bd
+                for _, s in ipairs(g.spawns) do
+                    if s.instance == pinst and s.uiMapId == zoneId then
+                        local d = Dist(s, from)
+                        if not bd or d < bd then best, bd = s, d end
+                    end
+                end
+                if best then
+                    local name = (g.label or ""):gsub("^Turn in: ", "")
+                    local text
+                    if g.complete then
+                        local npc = NpcNameOf(QDB, QDB.QueryQuestSingle(g.id, "finishedBy") and QDB.QueryQuestSingle(g.id, "finishedBy")[1])
+                        text = string.format("Hand in: %s\n     to %s at %.0f, %.0f, about %d yards",
+                            name, npc or "the quest giver", best.zx * 100, best.zy * 100, bd)
+                    else
+                        text = string.format("Do: %s\n     the nearest spot is at %.0f, %.0f, about %d yards",
+                            name, best.zx * 100, best.zy * 100, bd)
+                    end
+                    out[#out + 1] = { text = text, spawn = best, label = g.label }
+                end
+            end
+        end
+    end
+    return out
+end
+local function ShowToast(zoneId, needs)
+    if not toast then
+        local f = CreateFrame("Frame", "ForeverLazy_ClassToast", UIParent)
+        f:SetSize(420, 150)
+        f:SetPoint("TOP", 0, -270)
+        f:SetFrameStrata("DIALOG")
+        f:SetClampedToScreen(true)
+        f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.94)
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        f.title:SetPoint("TOP", 0, -12); f.title:SetWidth(400)
+        f.body = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        f.body:SetPoint("TOP", f.title, "BOTTOM", 0, -8); f.body:SetWidth(396); f.body:SetJustifyH("LEFT")
+        local show = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        show:SetSize(130, 22); show:SetPoint("BOTTOMLEFT", 16, 12); show:SetText("Show me")
+        show:SetScript("OnClick", function()
+            f:Hide()
+            local n = f.needs and f.needs[1]
+            if n and n.spawn and n.spawn.uiMapId then
+                addon:AddWaypointZone(n.spawn.uiMapId, n.spawn.zx, n.spawn.zy, n.label or n.text)
+                local w = DB().waypoints[1]
+                if w then w.guard = true end          -- like a guard's directions: the arrow goes away when I get there
+            end
+        end)
+        local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        close:SetSize(90, 22); close:SetPoint("LEFT", show, "RIGHT", 8, 0); close:SetText("Close")
+        close:SetScript("OnClick", function() f:Hide() end)
+        f:Hide()
+        toast = f
+    end
+    toast.needs = needs
+    toast.title:SetText("Class quest in " .. MapName(zoneId))
+    local lines = {}
+    for i, n in ipairs(needs) do
+        if i > 4 then lines[#lines + 1] = string.format("...and %d more", #needs - 4); break end
+        lines[#lines + 1] = n.text
+    end
+    toast.body:SetText(table.concat(lines, "\n"))
+    toast:SetHeight(math.max(110, 78 + toast.body:GetStringHeight()))
+    toast:Show()
+    if C_Timer then
+        local mine = zoneId
+        C_Timer.After(40, function() if toast and toast:IsShown() and toast.needs == needs then toast:Hide() end end)
+    end
+end
+
+local function CheckZone()
+    local db = DB()
+    if not db or db.classZoneAlert == false or not addon.ModuleOn("classq") then return end
+    local zoneId = hbd:GetPlayerZone()
+    if not zoneId or zoneId == lastZone then return end
+    lastZone = zoneId
+    if toast then toast:Hide() end
+    if not list then Scan(); return end
+    if UnitOnTaxi and UnitOnTaxi("player") then lastZone = nil; return end        -- still flying: ask again when I land
+    if IsInInstance and IsInInstance() then return end
+    local needs = HereNeeds(zoneId)
+    if #needs > 0 then ShowToast(zoneId, needs) end
+end
+
+-- /lazy class here: exactly what my class quests need in this zone, any time
+function addon.ClassHere()
+    if not list then Scan(); Print("looking up your class quests, try again in a moment"); return end
+    local zoneId = hbd:GetPlayerZone()
+    if not zoneId then Print("can't tell which zone you are in"); return end
+    local needs = HereNeeds(zoneId)
+    if #needs == 0 then Print("your class quests need nothing in " .. MapName(zoneId)); return end
+    ShowToast(zoneId, needs)
+end
+
+--------------------------------------------------------------------------------
+-- /lazy class quest: every class quest I have, can take or will soon, and what to do for each
+--------------------------------------------------------------------------------
+local cwin, crows = nil, {}
+
+local function ObjectiveLines(QDB, id)
+    local lines = {}
+    -- what the game says about my progress, when the quest is in my log
+    if C_QuestLog and C_QuestLog.GetQuestObjectives then
+        local ok, objs = pcall(C_QuestLog.GetQuestObjectives, id)
+        if ok and type(objs) == "table" then
+            for _, o in ipairs(objs) do
+                if o.text and o.text ~= "" then lines[#lines + 1] = (o.finished and "|cff55ff55done:|r " or "") .. o.text end
+            end
+        end
+    end
+    if #lines == 0 then
+        local t = QDB.QueryQuestSingle(id, "objectivesText")
+        if type(t) == "table" then
+            for _, s in ipairs(t) do if type(s) == "string" and s ~= "" then lines[#lines + 1] = s end end
+        elseif type(t) == "string" and t ~= "" then
+            lines[1] = t
+        end
+    end
+    return lines
+end
+
+local function ClassEntries()
+    local out = {}
+    local QDB = api.GetQuestie()
+    if not (QDB and list) then return out end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    local from = px and { x = px, y = py }
+    local function Nearest2(spawns)
+        local best, bd
+        for _, s in ipairs(spawns or {}) do
+            local d = (from and s.instance == pinst) and Dist(s, from) or nil
+            if not best or (d and (not bd or d < bd)) then best, bd = s, d end
+        end
+        return best, bd
+    end
+    local function Place(s, d)
+        if not s then return "location unknown" end
+        return string.format("%s %.0f, %.0f%s", MapName(s.uiMapId), s.zx * 100, s.zy * 100, d and string.format(", about %d yards", d) or "")
+    end
+    local set = ClassSet()
+    -- 1. in my log
+    if addon.QuestLogSpawns then
+        for _, g in ipairs(addon.QuestLogSpawns()) do
+            if g.id and set[g.id] and (g.complete or not (api.IsDungeonQuest and api.IsDungeonQuest(g.id, false))) then
+                local s, d = Nearest2(g.spawns)
+                local name = (g.label or ""):gsub("^Turn in: ", "")
+                local body
+                if g.complete then
+                    local by = QDB.QueryQuestSingle(g.id, "finishedBy")
+                    local npc = by and by[1] and by[1][1] and QDB.QueryNPCSingle(by[1][1], "name")
+                    body = "Finished. Hand it in to " .. (npc or "the quest giver") .. " at " .. Place(s, d)
+                else
+                    local lines = ObjectiveLines(QDB, g.id)
+                    body = (#lines > 0 and table.concat(lines, "\n") or "No objective text found.") .. "\nNearest spot: " .. Place(s, d)
+                end
+                out[#out + 1] = { title = name .. (g.complete and "  (ready to hand in)" or "  (in your quest log)"), body = body,
+                                  spawn = s, label = g.label, rank = 1 }
+            end
+        end
+    end
+    -- 2. I can take them now, and 3. soon
+    for pass = 1, 2 do
+        for _, q in ipairs(Quests(pass == 1)) do
+            local s, d = Nearest2(q.spawns)
+            local lines = ObjectiveLines(QDB, q.id)
+            local body = (#lines > 0 and (table.concat(lines, "\n") .. "\n") or "")
+                .. "Get it from " .. (q.npc or "the quest giver") .. " at " .. Place(s, d)
+            if pass == 2 then body = "Opens at level " .. q.need .. ".\n" .. body end
+            out[#out + 1] = { title = q.name .. string.format("  (level %d, %s)", q.level or 0, pass == 1 and "you can take it now" or "coming soon"),
+                              body = body, spawn = s, label = "Class quest: " .. q.name, rank = pass + 1 }
+        end
+    end
+    table.sort(out, function(a, b) return a.rank < b.rank end)
+    return out
+end
+
+function addon.ClassWindow()
+    if not list then Scan(); Print("looking up your class quests, try again in a moment"); return end
+    if not cwin then
+        local f = CreateFrame("Frame", "ForeverLazy_ClassWindow", UIParent)
+        f:SetSize(520, 460)
+        f:SetPoint("CENTER", 0, 30)
+        f:SetFrameStrata("DIALOG")
+        f:SetClampedToScreen(true)
+        f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+        f.title:SetPoint("TOPLEFT", 16, -14)
+        f.title:SetText("Your class quests")
+        f.empty = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        f.empty:SetPoint("TOPLEFT", 16, -56); f.empty:SetWidth(480); f.empty:SetJustifyH("LEFT")
+        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT", 2, 2)
+        local scroll = CreateFrame("ScrollFrame", "ForeverLazy_ClassWindowScroll", f, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", 16, -50); scroll:SetPoint("BOTTOMRIGHT", -34, 16)
+        f.content = CreateFrame("Frame", nil, scroll)
+        f.content:SetSize(460, 10)
+        scroll:SetScrollChild(f.content)
+        table.insert(UISpecialFrames, "ForeverLazy_ClassWindow")
+        f:Hide()
+        cwin = f
+    end
+    local scale = math.min(2.6, math.max(0.8, tonumber(DB().guideScale) or 1))
+    cwin:SetScale(scale)
+    for _, r in ipairs(crows) do r.title:Hide(); r.body:Hide(); r.btn:Hide() end
+    local entries = ClassEntries()
+    cwin.empty:SetText(#entries == 0 and "No class quests in your log, open to you now, or coming in the next few levels." or "")
+    local y = 0
+    for i, e in ipairs(entries) do
+        local r = crows[i]
+        if not r then
+            r = {}
+            r.title = cwin.content:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+            r.title:SetJustifyH("LEFT")
+            r.body = cwin.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            r.body:SetJustifyH("LEFT")
+            r.btn = CreateFrame("Button", nil, cwin.content, "UIPanelButtonTemplate")
+            r.btn:SetSize(120, 22)
+            crows[i] = r
+        end
+        r.title:ClearAllPoints(); r.title:SetPoint("TOPLEFT", cwin.content, "TOPLEFT", 0, -y)
+        r.title:SetWidth(450); r.title:SetText((e.rank == 1 and "|cff55ff55" or "") .. e.title .. (e.rank == 1 and "|r" or "")); r.title:Show()
+        y = y + math.max(22, r.title:GetStringHeight()) + 4
+        r.body:ClearAllPoints(); r.body:SetPoint("TOPLEFT", cwin.content, "TOPLEFT", 8, -y)
+        r.body:SetWidth(440); r.body:SetText(e.body); r.body:Show()
+        y = y + r.body:GetStringHeight() + 6
+        r.btn:ClearAllPoints(); r.btn:SetPoint("TOPLEFT", cwin.content, "TOPLEFT", 8, -y)
+        r.btn:SetText("Show me")
+        r.btn:SetScript("OnClick", function()
+            cwin:Hide()
+            if e.spawn and e.spawn.uiMapId then
+                addon:AddWaypointZone(e.spawn.uiMapId, e.spawn.zx, e.spawn.zy, e.label or e.title)
+                local w = DB().waypoints[1]
+                if w then w.guard = true end
+            end
+        end)
+        r.btn:Show()
+        y = y + 40
+    end
+    cwin.content:SetHeight(math.max(y, 40))
+    cwin:Show()
+end
+
+local zoneEv = CreateFrame("Frame")
+for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA" }) do pcall(zoneEv.RegisterEvent, zoneEv, e) end
+zoneEv:SetScript("OnEvent", function()
+    if not C_Timer or not C_Timer.After then return end
+    C_Timer.After(4, function() pcall(CheckZone) end)
+end)
+
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     if cmd == "class" then
         local sub, arg = (rest or ""):match("^(%S*)%s*(.-)$")
-        if sub == "go" then Go(arg) else Show() end
+        if sub == "go" then Go(arg)
+        elseif sub == "here" or sub == "zone" then addon.ClassHere()
+        elseif sub == "list" or sub == "chat" then Show()
+        else addon.ClassWindow() end
         return true
     end
     if prev then return prev(self, cmd, rest) end

@@ -174,6 +174,96 @@ local function DungeonQuests()
     return out
 end
 
+-- Is this a quest that can only be done inside a dungeon? (plans leave these out: they are for a group, inside)
+local dungeonQuestCache = {}
+function api.IsDungeonQuest(id, complete, noTitle)
+    if not id then return false end
+    local key = id .. (complete and "c" or "o") .. (noTitle and "n" or "")
+    local c = dungeonQuestCache[key]
+    if c == true then return true end
+    if c and GetTime() - c < 30 then return false end      -- a "no" is only trusted for a while (tags load late)
+    if not (Build() and api.QuestieReady and api.QuestieReady()) then return false end   -- not known yet: do not cache
+    local QDB = api.GetQuestie()
+    local result = false
+    -- 0. the quest is tagged Dungeon or Raid: by the game itself (quests in my log), or by Questie's own tag data
+    local DUNGEON_TAGS = { [81] = true, [62] = true, [88] = true, [89] = true, [85] = true }
+    if C_QuestLog and C_QuestLog.GetQuestTagInfo then
+        local okT, info = pcall(C_QuestLog.GetQuestTagInfo, id)
+        if okT and type(info) == "table" and DUNGEON_TAGS[info.tagID or -1] then result = true end
+    end
+    if not result and QDB.GetQuestTagInfo then
+        local okT, tagId = pcall(QDB.GetQuestTagInfo, id)
+        if okT and DUNGEON_TAGS[tagId or -1] then result = true end
+    end
+    -- 1. the quest is filed under a dungeon
+    local okZ, zone = pcall(QDB.QueryQuestSingle, id, "zoneOrSort")
+    if not result and okZ and type(zone) == "number" and zone > 0 and areaTo[zone] then result = true end
+    -- 2. everything I would have to do is inside a dungeon
+    if not result then
+        local ok, set = pcall(QuestAreas, QDB, { id = id, complete = complete and true or false })
+        if ok and type(set) == "table" then
+            local inRec, outside = false, false
+            for areaId in pairs(set) do
+                if areaTo[areaId] then inRec = true else outside = true end
+            end
+            result = inRec and not outside
+        end
+    end
+    -- 3. it is given inside a dungeon, so it cannot be started out here
+    if not result then
+        local by = QDB.QueryQuestSingle(id, "startedBy")
+        if type(by) == "table" then
+            local set = {}
+            if type(by[1]) == "table" then
+                for _, npc in pairs(by[1]) do
+                    local sp = QDB.QueryNPCSingle(npc, "spawns")
+                    if type(sp) == "table" then for areaId in pairs(sp) do set[areaId] = true end end
+                end
+            end
+            local inRec, outside = false, false
+            for areaId in pairs(set) do
+                if areaTo[areaId] then inRec = true else outside = true end
+            end
+            result = inRec and not outside
+        end
+    end
+    -- 4. another quest with exactly this title is a dungeon quest (the same quest under a second id, such as a Forever copy)
+    if not result and not noTitle and api.DungeonTitle then
+        local name = QDB.QueryQuestSingle(id, "name")
+        if not name and C_QuestLog and C_QuestLog.GetTitleForQuestID then
+            local okN, n = pcall(C_QuestLog.GetTitleForQuestID, id)
+            if okN then name = n end
+        end
+        if name and api.DungeonTitle(name) then result = true end
+    end
+    dungeonQuestCache[key] = result and true or GetTime()
+    return result
+end
+
+-- Is there a dungeon quest with exactly this title? (for plan stops that only carry a name). Reads Questie's quest names once.
+local nameIndex
+function api.DungeonTitle(title)
+    if not title or title == "" then return false end
+    local QDB = api.GetQuestie()
+    if not (QDB and QDB.QuestPointers and api.QuestieReady and api.QuestieReady()) then return false end
+    if not nameIndex then
+        nameIndex = {}
+        for id in pairs(QDB.QuestPointers) do
+            local n = QDB.QueryQuestSingle(id, "name")
+            if n then
+                local k = n:lower()
+                local l = nameIndex[k]
+                if not l then l = {}; nameIndex[k] = l end
+                l[#l + 1] = id
+            end
+        end
+    end
+    for _, id in ipairs(nameIndex[title:lower()] or {}) do
+        if api.IsDungeonQuest(id, false, true) then return true, id end
+    end
+    return false
+end
+
 --------------------------------------------------------------------------------
 -- Commands
 --------------------------------------------------------------------------------
@@ -247,11 +337,53 @@ local function Go(arg)
     addon:AddWaypointZone(e.uiMapId, e.zx, e.zy, rec.name .. " entrance")
 end
 
+-- /lazy dungeons why <part of a quest title>: why a quest in my plan or log is, or is not, counted as a dungeon quest
+function addon.DungeonWhy(text)
+    text = (text or ""):lower()
+    if not Build() then Print("dungeon data needs Questie loaded and ready"); return end
+    local QDB = api.GetQuestie()
+    local seen, n = {}, 0
+    local function Report(id, title)
+        if seen[id] then return end
+        seen[id] = true
+        n = n + 1
+        local gameTag = "none"
+        if C_QuestLog and C_QuestLog.GetQuestTagInfo then
+            local ok, info = pcall(C_QuestLog.GetQuestTagInfo, id)
+            if ok and type(info) == "table" then gameTag = tostring(info.tagID) .. " " .. tostring(info.tagName) end
+        end
+        local qTag = QDB.GetQuestTagInfo and select(2, pcall(QDB.GetQuestTagInfo, id))
+        local zone = QDB.QueryQuestSingle(id, "zoneOrSort")
+        local group = QDB.QueryQuestSingle(id, "groupSize") or QDB.QueryQuestSingle(id, "suggestedGroup")
+        dungeonQuestCache[id .. "o"] = nil; dungeonQuestCache[id .. "c"] = nil
+        local verdict = api.IsDungeonQuest(id, false)
+        Print(string.format("%s (id %d): dungeon = %s | game tag: %s | Questie tag: %s | zoneOrSort: %s (dungeon area: %s) | group: %s",
+            tostring(title), id, tostring(verdict), gameTag, tostring(qTag), tostring(zone),
+            tostring(type(zone) == "number" and areaTo[zone] and true or false), tostring(group)))
+    end
+    for _, w in ipairs(addon.GetDB().waypoints or {}) do
+        for _, q in ipairs(w.quests or {}) do
+            local title = q.label or ""
+            if q.id and (text == "" or title:lower():find(text, 1, true)) then Report(q.id, title) end
+        end
+    end
+    if api.ReadQuestLog then
+        for _, q in ipairs(api.ReadQuestLog()) do
+            if q.id and (text == "" or (q.title or ""):lower():find(text, 1, true)) then Report(q.id, q.title) end
+        end
+    end
+    if n == 0 then Print("no quest in your plan or log matches '" .. text .. "'") end
+end
+
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     if cmd == "dungeons" or cmd == "dungeon" then
         local sub, arg = (rest or ""):match("^(%S*)%s*(.-)$")
-        if sub == "go" then Go(arg) else Summary() end
+        if sub == "go" then Go(arg)
+        elseif sub == "why" then addon.DungeonWhy(arg)
+        elseif sub == "purge" then
+            if addon.PurgeDungeonStops then addon.PurgeDungeonStops(true) end
+        else Summary() end
         return true
     end
     if prev then return prev(self, cmd, rest) end

@@ -186,7 +186,7 @@ end
 
 -- a stop on the route: a plan stop, or a stop made by a trip, boat, gathering, service or Lazy Mode
 local function RouteStop(s)
-    return s.label or s.go or s.gather or s.lazy or s.boat or s.service or s.craft or s.farm or s.hearth
+    return s.label or s.guard or s.go or s.gather or s.lazy or s.boat or s.service or s.craft or s.farm or s.hearth
 end
 -- the points of my route in order: the rest of a trip in progress, then the plan's stops.
 -- { x, y, instance, kind, stop = { name, detail } }; kind says how I get there (walk, fly, boat, tram, hearth)

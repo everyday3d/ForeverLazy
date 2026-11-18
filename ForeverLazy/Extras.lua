@@ -101,10 +101,23 @@ local function RebuildMine(keepGrey)
     for _, q in ipairs(ReadQuestLog()) do
         local g = BuildGroup(q)
         if #g.spawns > 0 then
-            if Wanted(g, keepGrey) then mine.groups[#mine.groups + 1] = g else mine.skipped = mine.skipped + 1 end
+            if not g.complete and g.id and api.IsDungeonQuest and api.IsDungeonQuest(g.id, false) then
+                -- a dungeon quest: no arrow to it, neither my quest arrow nor the plan
+            elseif Wanted(g, keepGrey) then mine.groups[#mine.groups + 1] = g else mine.skipped = mine.skipped + 1 end
         end
     end
     return true
+end
+
+-- for other files: my quest log as groups with their spots (objectives, or the hand-in when finished)
+function addon.QuestLogSpawns()
+    local out = {}
+    if not api.QuestieReady() then return out end
+    for _, q in ipairs(ReadQuestLog()) do
+        local ok, g = pcall(BuildGroup, q)
+        if ok and g and #g.spawns > 0 then out[#out + 1] = g end
+    end
+    return out
 end
 
 -- XP a quest gives me now (Questie's own table, already scaled for my level), and whether it is grey
@@ -805,11 +818,12 @@ local function ApplyFocus(wps)
 end
 
 local lastPlanZone, lastPlanAll
+local lastPlanInst  -- the continent (world instance) the plan was last made on
 local planActive    -- a plan is being followed (it refills itself when it runs out)
 
 -- Quests I can pick up in this zone (Questie already works out which ones I may take), worth doing
 -- by colour, nearest givers first. Used when none of my own quests are here.
-local function CollectGivers(zoneId, pinst, from)
+local function CollectGivers(zoneId, pinst, from, all)
     local ql = _G.QuestieLoader
     local QDB = api.GetQuestie()
     if not (ql and QDB and zoneId) then return {} end
@@ -822,7 +836,8 @@ local function CollectGivers(zoneId, pinst, from)
         local need = QDB.QueryQuestSingle(id, "requiredLevel") or 0     -- Questie can list quests above my level
         local g = { id = id, level = level, complete = false, grey = IsGrey(QDB, level) }
         g.tier = Tier(level, g.grey)
-        if need <= (UnitLevel("player") or 1) and not g.grey and Wanted(g) then
+        if need <= (UnitLevel("player") or 1) and not g.grey and Wanted(g)
+            and not (api.IsDungeonQuest and api.IsDungeonQuest(id, false)) then
             local by = QDB.QueryQuestSingle(id, "startedBy")
             local sp, here = {}, {}
             if by then api.AddNpcs(sp, by[1]); api.AddObjects(sp, by[2]) end
@@ -854,6 +869,12 @@ local function CollectGivers(zoneId, pinst, from)
                 if Dist(s, hub) < 200 then kept[#kept + 1] = g; break end
             end
         end
+    end
+    if all then
+        -- the whole zone: every hub, nearest first (a zone plan walks them in the order that suits the route)
+        kept = out
+        for i = #kept, 26, -1 do kept[i] = nil end
+        return kept
     end
     for i = #kept, 13, -1 do kept[i] = nil end
     return kept
@@ -995,9 +1016,12 @@ function addon:PlanRoute(allZones, quiet, auto)
         db.planPaused, db.planSaved = nil, nil
         Print("a new plan replaces the paused one")
     end
+    local zonePlanNow = addon.zonePlanFlag      -- set by /lazy plan zone for this one call
+    addon.zonePlanFlag = nil
     if not api.QuestieReady() then Print("planning needs Questie loaded and ready"); return end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if not px then Print("can't read your position here"); return end
+    lastPlanInst = pinst
     RebuildMine(db.planSkipGrey == false)
     mine.dirty = true      -- the arrow rebuilds its own list again afterwards
 
@@ -1028,7 +1052,9 @@ function addon:PlanRoute(allZones, quiet, auto)
     local pool, elsewhere, otherZone, greyCount, totalXP = {}, 0, 0, mine.skipped or 0, 0
     local groupSkipped = 0
     for _, g in ipairs(mine.groups) do
-        if db.planSkip and g.id and db.planSkip[g.id] then
+        if g.id and api.IsDungeonQuest and api.IsDungeonQuest(g.id, g.complete) and not g.complete then
+            -- a dungeon quest: not part of a plan (a finished one is still handed in)
+        elseif db.planSkip and g.id and db.planSkip[g.id] then
             -- skipped by me from the arrow's right-click menu
         elseif g.group and g.group > 1 and not g.complete and db.planSkipGroup ~= false and g.tier ~= "green"
             and (GetNumGroupMembers and GetNumGroupMembers() or 0) < 2 then
@@ -1090,6 +1116,20 @@ function addon:PlanRoute(allZones, quiet, auto)
             if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) then
                 pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) * 1.5 }
                 totalXP = totalXP + (g.xp or 0)
+            end
+        end
+    end
+    -- a zone plan (/lazy plan zone): besides the quests I hold, every quest worth taking in this zone goes in, so the plan
+    -- covers the whole zone; it stays a zone plan while I stay in the zone, and ends with an ordinary plan request
+    if zonePlanNow then db.zonePlan = zoneId elseif not quiet and not auto then db.zonePlan = nil end
+    if not allZones and zoneId and (zonePlanNow or db.zonePlan == zoneId) then
+        local have = {}
+        for _, it in ipairs(pool) do if it.g.id then have[it.g.id] = true end end
+        for _, g in ipairs(CollectGivers(zoneId, pinst, here0, true)) do
+            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) then
+                pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) }
+                totalXP = totalXP + (g.xp or 0)
+                have[g.id] = true
             end
         end
     end
@@ -1280,7 +1320,11 @@ function addon:PlanRoute(allZones, quiet, auto)
                             uiMapId = st.s.uiMapId, zx = st.s.zx, zy = st.s.zy, quests = st.quests }
     end
 
+    -- a place a guard just pointed me to stays the next stop through a replan
+    local guardStop
+    for _, w in ipairs(db.waypoints or {}) do if w.guard then guardStop = w; break end end
     db.waypoints = list
+    if guardStop then table.insert(list, 1, guardStop) end
     ApplyFocus(db.waypoints)
     list = db.waypoints
     planActive = true
@@ -1307,7 +1351,60 @@ function addon:PlanRoute(allZones, quiet, auto)
         Print(string.format("%d quest%s in other zones left out. /lazy plan all includes them", otherZone, otherZone == 1 and "" or "s"))
     end
     if elsewhere > 0 then Print(string.format("%d quest%s on another continent left out", elsewhere, elsewhere == 1 and "" or "s")) end
+    if addon.PurgeDungeonStops then pcall(addon.PurgeDungeonStops) end       -- belt and braces: no dungeon quest in a fresh plan
 end
+
+-- Plan the whole zone for the fastest levelling: my quests plus every quest worth taking here, in a walking order that
+-- earns the most XP for the walk. With a zone name (/lazy level ashenvale) it takes me there first, then plans on arrival.
+function addon.PlanZone(name)
+    local db = DB()
+    if db.planPaused then db.planPaused, db.planSaved = nil, nil end
+    name = name and name:gsub("^%s+", ""):gsub("%s+$", "") or ""
+    if name:lower() == "steps" or name:lower() == "list" or name:lower() == "window" then
+        if addon.ZonePlanWindow then addon.ZonePlanWindow() end       -- the plan I already have, written out
+        return
+    end
+    if name ~= "" then
+        local want = name:lower()
+        local here = (GetRealZoneText and GetRealZoneText() or ""):lower()
+        if not here:find(want, 1, true) then
+            local seg
+            for _, s in ipairs(addon.JourneySegments and addon.JourneySegments() or {}) do
+                if s.map and (s.zone or ""):lower():find(want, 1, true) then seg = s; break end
+            end
+            if not seg then Print("I don't know a zone called '" .. name .. "'. /lazy guide lists the zones on your way.") return end
+            db.zonePlanPending = { zone = seg.zone, t = time() }
+            if addon.GoTo then addon.GoTo(seg.map, seg.zx, seg.zy, seg.zone) end
+            Print("on the way to " .. seg.zone .. ": I will plan the zone when you arrive")
+            return
+        end
+    end
+    addon.zonePlanFlag = true
+    addon:PlanRoute(false)
+    if addon.ZonePlanWindow then pcall(addon.ZonePlanWindow) end
+    local ok, opts = pcall(addon.CoachOptions)
+    local best = ok and opts and opts[1]
+    if best and best.key == "grind" then
+        Print("tip: by your measured numbers, " .. best.label:lower() .. " is faster right now (/lazy coach)")
+    end
+end
+
+local pendingEv = CreateFrame("Frame")
+for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA" }) do pcall(pendingEv.RegisterEvent, pendingEv, e) end
+pendingEv:SetScript("OnEvent", function()
+    if not C_Timer then return end
+    C_Timer.After(3, function()
+        local db = DB()
+        local p = db and db.zonePlanPending
+        if not p then return end
+        if time() - (p.t or 0) > 1800 then db.zonePlanPending = nil; return end
+        local here = (GetRealZoneText and GetRealZoneText() or ""):lower()
+        if here ~= "" and here == (p.zone or ""):lower() then
+            db.zonePlanPending = nil
+            pcall(addon.PlanZone)
+        end
+    end)
+end)
 
 -- Turn the plan off but keep my place: the stops still to do are put aside, and nothing replans or re-adds arrows.
 function addon.PlanPause()
@@ -1391,6 +1488,7 @@ local function AddQuestToPlan(questId)
     local g = BuildGroup(q)
     if not Wanted(g, db.planSkipGrey == false) then return end   -- grey, or orange/red and not done: not worth a stop
     if db.planSkip and db.planSkip[g.id] then return end         -- I skipped this one
+    if not g.complete and api.IsDungeonQuest and api.IsDungeonQuest(g.id, false) then return end   -- dungeon quests stay out of the plan
 
     -- candidate spots on this continent, in the zone I am in
     local start = { x = px, y = py }
@@ -1465,15 +1563,34 @@ end
 -- Walked or flew into a new zone: the plan only covers the zone it was made in, so build it again here.
 local function ReplanForZone()
     local db = DB()
-    if db.planAuto == false or db.planZoneOnly == false or lastPlanAll then return end
+    if db.planAuto == false or db.planPaused then return end
+    local _, _, inst = hbd:GetPlayerWorldPosition()
+    -- a new continent (hearthstone, boat, tram, zeppelin, portal): the old stops are all out of reach, always rebuild
     local wps = db.waypoints
+    local planInst = lastPlanInst or (wps and wps[1] and wps[1].label and wps[1].instance)    -- after a reload: the first stop says
+    local newContinent = planInst and inst and inst ~= planInst
+    if not newContinent and (db.planZoneOnly == false or lastPlanAll) then return end
     if not wps or (#wps > 0 and not (wps[1] and wps[1].label)) then return end   -- keep my own waypoints
     if UnitOnTaxi and UnitOnTaxi("player") then return end              -- the landing will trigger this again
     if UnitIsGhost and UnitIsGhost("player") then return end
     local zone = hbd:GetPlayerZone()
-    if not zone or zone == lastPlanZone then return end
+    if not zone or (zone == lastPlanZone and not newContinent) then return end
     addon:PlanRoute(false, true)
     local now = db.waypoints
+    if newContinent and inst then
+        -- stops left over from the other continent cannot be walked to: take them out of the plan
+        local removed = 0
+        for i = #now, 1, -1 do
+            local w = now[i]
+            if w.label and w.instance and w.instance ~= inst and not w.go then table.remove(now, i); removed = removed + 1 end
+        end
+        if removed > 0 then
+            RenumberPlan(now)
+            addon:RefreshPins()
+            if addon.RefreshOptions then addon.RefreshOptions() end
+            Print(string.format("new continent: %d plan stop%s from the other one put away. /lazy plan rebuilds when you are back", removed, removed == 1 and "" or "s"))
+        end
+    end
     if now and now[1] and now[1].label then
         Print(string.format("new zone, plan rebuilt: %d stop%s. First: %s", #now, #now == 1 and "" or "s", now[1].name))
     end
@@ -1561,6 +1678,154 @@ local function QuestChanged()
         Print("quest progress, plan updated. Next: " .. after[1].name)
     end
 end
+
+-- Does this plan stop still have a quest whose objectives (kills, items) I have not finished?
+local function QuestOpen(id)
+    if not (id and C_QuestLog and C_QuestLog.GetLogIndexForQuestID and C_QuestLog.IsComplete) then return false end
+    local okI, idx = pcall(C_QuestLog.GetLogIndexForQuestID, id)
+    if not okI or not idx or idx == 0 then return false end           -- not in my log: nothing open
+    local okC, done = pcall(C_QuestLog.IsComplete, id)
+    return okC and not done
+end
+function addon.StopHasOpenObjectives(wp)
+    for _, q in ipairs(wp and wp.quests or {}) do
+        local lbl = q.label or ""
+        if not (lbl:find("^Turn in:") or lbl:find("^Pick up:") or lbl:find("^Class quest:")) and QuestOpen(q.id) then
+            return true
+        end
+    end
+    return false
+end
+
+-- Dungeon quests do not belong in a plan: take them out of every stop (alone or joined with other quests), unless the quest
+-- is finished and only waits for its hand-in. verbose = say what was found (/lazy dungeons purge).
+function addon.PurgeDungeonStops(verbose)
+    local db = DB()
+    if not (db and db.waypoints and api.IsDungeonQuest) then return 0 end
+    local ids, count = {}, 0
+    for si, s in ipairs(db.waypoints) do
+        for _, q in ipairs(s.quests or {}) do
+            local verdict = q.id and api.IsDungeonQuest(q.id, false)
+            if verbose then Print(string.format("  stop %d: %s (id %s): dungeon = %s", si, tostring(q.label), tostring(q.id), tostring(verdict))) end
+            if q.id and verdict and not ids[q.id] then
+                local done = false
+                if C_QuestLog and C_QuestLog.IsComplete then
+                    local okC, c = pcall(C_QuestLog.IsComplete, q.id)
+                    done = okC and c and true or false
+                end
+                if verbose then Print("     finished and waiting for a hand-in: " .. tostring(done)) end
+                if not done then ids[q.id] = true; count = count + 1 end
+            end
+        end
+    end
+    if count > 0 and addon.ScrubQuest then
+        for id in pairs(ids) do pcall(addon.ScrubQuest, id) end
+        Print(string.format("took %d dungeon quest%s out of your plan", count, count == 1 and "" or "s"))
+    end
+    -- stops that only carry a name (no quest list): match them by title against my log and my class quests
+    local byTitle = {}
+    if api.ReadQuestLog then
+        local okL, log = pcall(api.ReadQuestLog)
+        if okL and type(log) == "table" then
+            for _, q in ipairs(log) do if q.id and q.title then byTitle[q.title:lower()] = q.id end end
+        end
+    end
+    local named = 0
+    for i = #db.waypoints, 1, -1 do
+        local s = db.waypoints[i]
+        local shownName = s.label or s.name       -- a stop made by "Show me" or /lazy class go has a name but no label
+        if shownName and not s.go and not s.gather and not (s.quests and #s.quests > 0) then
+            local title = tostring(shownName):gsub("^%d+%.%s*", ""):gsub("^Class quest: ", ""):gsub("^Pick up: ", ""):gsub("^Turn in: ", "")
+            local id = byTitle[title:lower()] or (addon.ClassQuestIdByTitle and addon.ClassQuestIdByTitle(title))
+            local byName = (not id) and api.DungeonTitle and api.DungeonTitle(title)
+            if verbose then Print(string.format("  named stop %d: %s -> id %s%s", i, tostring(shownName), tostring(id), byName and " (a dungeon quest by name)" or "")) end
+            if byName or (id and api.IsDungeonQuest(id, false)) then
+                local done = false
+                if C_QuestLog and C_QuestLog.IsComplete then
+                    local okC, c = pcall(C_QuestLog.IsComplete, id)
+                    done = okC and c and true or false
+                end
+                if not done then table.remove(db.waypoints, i); named = named + 1 end
+            end
+        end
+    end
+    if named > 0 then
+        addon:RefreshPins()
+        if addon.RefreshOptions then addon.RefreshOptions() end
+        Print(string.format("took %d dungeon quest stop%s out of your arrow list", named, named == 1 and "" or "s"))
+    end
+    if verbose and count == 0 and named == 0 then
+        Print("no dungeon quests to take out (" .. #db.waypoints .. " stops looked at)")
+    end
+    return count + named
+end
+-- a hand-in must never come up while the quest is not finished: rebuild the plan so the objectives come first
+local lastFix = 0
+local fixTick = CreateFrame("Frame")
+local fixAcc = 0
+fixTick:SetScript("OnUpdate", function(_, dt)
+    fixAcc = fixAcc + dt
+    if fixAcc < 4 then return end
+    fixAcc = 0
+    local db = DB()
+    if db and GetTime() - (addon.lastDungeonPurge or 0) > 20 then addon.lastDungeonPurge = GetTime(); pcall(addon.PurgeDungeonStops) end
+    local w = db and db.waypoints and db.waypoints[1]
+    if not w or db.planPaused or db.planAuto == false or not (w.label and w.label:find("^Turn in:")) then return end
+    for _, q in ipairs(w.quests or {}) do
+        if QuestOpen(q.id) and GetTime() - lastFix > 30 then
+            lastFix = GetTime()
+            pcall(addon.PlanRoute, addon, lastPlanAll and true or false, true)
+            return
+        end
+    end
+end)
+
+-- a finished quest whose hand-in is right here: do it now, whatever the plan says is next
+local function QuestFinished(id)
+    if not (id and C_QuestLog and C_QuestLog.GetLogIndexForQuestID and C_QuestLog.IsComplete) then return false end
+    local okI, idx = pcall(C_QuestLog.GetLogIndexForQuestID, id)
+    if not okI or not idx or idx == 0 then return false end
+    local okC, done = pcall(C_QuestLog.IsComplete, id)
+    return okC and done and true or false
+end
+local nearTick = CreateFrame("Frame")
+local nearAcc, nearAt = 0, setmetatable({}, { __mode = "k" })
+nearTick:SetScript("OnUpdate", function(_, dt)
+    nearAcc = nearAcc + dt
+    if nearAcc < 2 then return end
+    nearAcc = 0
+    local db = DB()
+    local wps = db and db.waypoints
+    if not wps or #wps < 2 or db.planPaused or db.planAuto == false then return end
+    local first = wps[1]
+    if not (first and first.label) then return end              -- the arrow is on something that is not the plan
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return end
+    local d1 = first.instance == pinst and math.sqrt(api.D2(first.x, first.y, px, py)) or nil
+    for i = 2, #wps do
+        local w = wps[i]
+        if w.label and w.instance == pinst and w.x and w.quests and #w.quests > 0 and not nearAt[w] then
+            local allHandIns = true
+            for _, q in ipairs(w.quests) do
+                if not ((q.label or ""):find("^Turn in:") and QuestFinished(q.id)) then allHandIns = false; break end
+            end
+            if allHandIns then
+                local d = math.sqrt(api.D2(w.x, w.y, px, py))
+                -- close by (about a minute's walk), and nearer than where the arrow points now
+                if d < 250 and (not d1 or d1 > d + 60) then
+                    nearAt[w] = GetTime()
+                    table.remove(wps, i)
+                    table.insert(wps, 1, w)
+                    RenumberPlan(wps)
+                    addon:RefreshPins()
+                    if addon.RefreshOptions then addon.RefreshOptions() end
+                    Print("you are close to a hand-in: " .. tostring(w.label):gsub("^Turn in: ", "Turn in "))
+                    return
+                end
+            end
+        end
+    end
+end)
 
 -- A quest was handed in (in any order) or dropped: take it out of every stop of the plan right away, wherever the
 -- stop is in the list, so the arrow never sends me back to a quest giver I have already seen.
@@ -1725,6 +1990,111 @@ function addon.WaypointDetail(wp)
     return text
 end
 
+-- The zone plan written out: for each stop, what to pick up and from whom, what to kill or collect and where, and what to
+-- hand in. The plan already keeps quests of an area open and hands them in together, so this reads top to bottom.
+local zpWin, zpRows = nil, {}
+
+function addon.ZonePlanLines(maxStops)
+    local out = {}
+    local db = DB()
+    local n = 0
+    for i, w in ipairs(db.waypoints or {}) do
+        if w.label and not w.go and not w.gather and not w.guard then
+            n = n + 1
+            if n > (maxStops or 25) then break end
+            local head = string.format("%d. %s", i, PlainTitle(w.label))
+            if w.zx and w.zy then head = head .. string.format("   |cffaaaaaa(%.0f, %.0f)|r", w.zx * 100, w.zy * 100) end
+            local lines = {}
+            for _, q in ipairs(w.quests or {}) do
+                local title = PlainTitle(q.label)
+                local lbl = q.label or ""
+                if lbl:find("^Turn in:") then
+                    local npc = GiverName(q.id, "finishedBy")
+                    lines[#lines + 1] = "|cffffd100?|r Hand in " .. title .. (npc and (" to " .. npc) or "")
+                elseif lbl:find("^Pick up:") or lbl:find("^Class quest:") then
+                    local npc = GiverName(q.id, "startedBy")
+                    lines[#lines + 1] = "|cffffd100!|r Get " .. title .. (npc and (" from " .. npc) or "")
+                else
+                    local objs = ObjectiveLines(q.id, q.src)
+                    if #objs > 0 then
+                        for _, o in ipairs(objs) do lines[#lines + 1] = "- " .. title .. ": " .. o end
+                    else
+                        lines[#lines + 1] = "- " .. title
+                    end
+                end
+            end
+            if #lines == 0 then lines[1] = "- " .. PlainTitle(w.label) end
+            out[#out + 1] = { head = head, lines = lines }
+        end
+    end
+    return out
+end
+
+function addon.ZonePlanWindow()
+    if not zpWin then
+        local f = CreateFrame("Frame", "ForeverLazy_ZonePlan", UIParent)
+        f:SetSize(540, 500)
+        f:SetPoint("CENTER", 0, 20)
+        f:SetFrameStrata("DIALOG")
+        f:SetClampedToScreen(true)
+        f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+        f.title:SetPoint("TOPLEFT", 16, -14)
+        f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+        f.sub:SetPoint("TOPLEFT", 16, -46); f.sub:SetWidth(500); f.sub:SetJustifyH("LEFT")
+        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT", 2, 2)
+        local scroll = CreateFrame("ScrollFrame", "ForeverLazy_ZonePlanScroll", f, "UIPanelScrollFrameTemplate")
+        scroll:SetPoint("TOPLEFT", 16, -84); scroll:SetPoint("BOTTOMRIGHT", -34, 16)
+        f.content = CreateFrame("Frame", nil, scroll)
+        f.content:SetSize(480, 10)
+        scroll:SetScrollChild(f.content)
+        table.insert(UISpecialFrames, "ForeverLazy_ZonePlan")
+        f:Hide()
+        zpWin = f
+    end
+    local scale = math.min(2.6, math.max(0.8, tonumber(DB().guideScale) or 1))
+    zpWin:SetScale(scale)
+    local zone = GetRealZoneText and GetRealZoneText() or "this zone"
+    zpWin.title:SetText("Level " .. zone)
+    zpWin.sub:SetText("In order. Get the quests, do their objectives together, and the plan hands them in in one go, unless a hand-in opens the next quest of a chain. Stop 1 is where the arrow points now.")
+    for _, r in ipairs(zpRows) do r.head:Hide(); r.body:Hide() end
+    local steps = addon.ZonePlanLines(25)
+    local y = 0
+    for i, s in ipairs(steps) do
+        local r = zpRows[i]
+        if not r then
+            r = {}
+            r.head = zpWin.content:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+            r.head:SetJustifyH("LEFT")
+            r.body = zpWin.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            r.body:SetJustifyH("LEFT")
+            zpRows[i] = r
+        end
+        r.head:ClearAllPoints(); r.head:SetPoint("TOPLEFT", zpWin.content, "TOPLEFT", 0, -y)
+        r.head:SetWidth(470); r.head:SetText(s.head); r.head:Show()
+        y = y + math.max(18, r.head:GetStringHeight()) + 2
+        r.body:ClearAllPoints(); r.body:SetPoint("TOPLEFT", zpWin.content, "TOPLEFT", 10, -y)
+        r.body:SetWidth(455); r.body:SetText(table.concat(s.lines, "\n")); r.body:Show()
+        y = y + r.body:GetStringHeight() + 10
+    end
+    if #steps == 0 then
+        local r = zpRows[1]
+        if not r then
+            r = { head = zpWin.content:CreateFontString(nil, "OVERLAY", "GameFontNormal"), body = zpWin.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight") }
+            zpRows[1] = r
+        end
+        r.head:ClearAllPoints(); r.head:SetPoint("TOPLEFT", zpWin.content, "TOPLEFT", 0, 0); r.head:SetWidth(470)
+        r.head:SetText("There is no plan yet. /lazy level makes one for this zone."); r.head:Show()
+        y = 30
+    end
+    zpWin.content:SetHeight(math.max(y, 40))
+    zpWin:Show()
+end
+
 --------------------------------------------------------------------------------
 -- Right-click the plan arrow to skip a quest (or just this stop)
 --------------------------------------------------------------------------------
@@ -1750,7 +2120,9 @@ local function SkipQuest(id, label)
     db.planSkip = db.planSkip or {}
     db.planSkip[id] = PlainTitle(label)
     Print("skipping " .. PlainTitle(label) .. " (/lazy skip clear brings skipped quests back)")
-    ReplanAfterSkip()
+    -- take it out of the plan I have right now, so it is gone even before (or if) the plan is rebuilt
+    pcall(addon.ScrubQuest, id)
+    if db.waypoints[1] and db.waypoints[1].label then ReplanAfterSkip() else addon:RefreshPins() end
 end
 
 addon.SkipQuest = SkipQuest
@@ -1812,8 +2184,10 @@ end
 
 function addon:OpenSkipMenu()
     local db = DB()
-    local wp = db.waypoints[1]
-    if not (wp and wp.label) then Print("no plan stop to skip. /lazy plan builds a plan"); return end
+    -- the first quest stop of the plan, even when something else (directions, a trip) is in front of it
+    local wp, wpIndex
+    for i, w in ipairs(db.waypoints) do if w.label then wp, wpIndex = w, i; break end end
+    if not wp then Print("no plan stop to skip. /lazy plan builds a plan"); return end
     skipMenu = skipMenu or BuildSkipMenu()
     local f = skipMenu
     f.title:SetText(wp.name or wp.label)
@@ -1832,7 +2206,7 @@ function addon:OpenSkipMenu()
         end }
     end
     items[#items + 1] = { text = "Skip this stop for now", fn = function()
-        addon:RemoveWaypoint(1)
+        addon:RemoveWaypoint(wpIndex)
         local nxt = db.waypoints[1]
         Print(nxt and ("skipped. Next: " .. (nxt.name or "?")) or "skipped. That was the last stop")
     end }
@@ -2080,9 +2454,14 @@ function addon:HandleExtraCommand(cmd, rest)
         end
         return true
 
+    elseif cmd == "level" or cmd == "levelzone" then
+        addon.PlanZone(rest)
+        return true
+
     elseif cmd == "plan" or cmd == "route!" then
         local arg = (rest or ""):lower()
         if arg == "debug" then addon.PlanDebug(); return true end
+        if arg == "zone" or arg == "level" then addon.PlanZone(); return true end
         if arg == "off" or arg == "pause" or arg == "stop" then addon.PlanPause(); return true end
         if arg == "on" or arg == "resume" or arg == "continue" then addon.PlanResume(); return true end
         addon:PlanRoute((rest or ""):lower() == "all"); return true

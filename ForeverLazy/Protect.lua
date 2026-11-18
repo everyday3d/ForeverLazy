@@ -97,6 +97,39 @@ local function BagItems()
     return out
 end
 
+-- a big message in the middle of the screen that fades after a few seconds
+local alertFrame
+local function Alert(text, r, g, b)
+    if not alertFrame then
+        local f = CreateFrame("Frame", "ForeverLazy_ProtectAlert", UIParent)
+        f:SetSize(700, 60)
+        f:SetPoint("TOP", UIParent, "TOP", 0, -180)
+        f:SetFrameStrata("FULLSCREEN_DIALOG")
+        f.text = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+        f.text:SetPoint("CENTER")
+        f.text:SetShadowOffset(2, -2)
+        f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        f.sub:SetPoint("TOP", f.text, "BOTTOM", 0, -4)
+        f.sub:SetTextColor(1, 1, 1)
+        f.sub:SetShadowOffset(1, -1)
+        f:Hide()
+        alertFrame = f
+    end
+    local f = alertFrame
+    f.shown = GetTime()
+    f.text:SetText(text)
+    f.text:SetTextColor(r or 1, g or 0.2, b or 0.2)
+    f.sub:SetText("")
+    f:SetAlpha(1)
+    f:Show()
+    f:SetScript("OnUpdate", function(self)
+        local age = GetTime() - self.shown
+        if age > 5 then self:Hide(); self:SetScript("OnUpdate", nil)
+        elseif age > 3.5 then self:SetAlpha(1 - (age - 3.5) / 1.5) end
+    end)
+    return f
+end
+
 local tried = {}     -- buyback slot + name -> time of my last try, so one failure does not loop
 
 local function CheckBuyback()
@@ -110,8 +143,12 @@ local function CheckBuyback()
                 local ok = pcall(BuybackItem, i)
                 if ok then
                     Print("|cffff6060" .. name .. " was sold, but it is protected: buying it back|r")
+                    local f = Alert("PROTECTED ITEM: " .. name, 1, 0.3, 0.2)
+                    f.sub:SetText("It was sold by mistake. Buying it back now.")
                 else
                     Print("|cffff6060" .. name .. " was sold and I could not buy it back. Do it from the Buyback tab.|r")
+                    local f = Alert("YOU SOLD " .. name .. "!", 1, 0.1, 0.1)
+                    f.sub:SetText("It is protected. Buy it back from the Buyback tab.")
                 end
                 return           -- the list shifts after a buyback; the next update checks the rest
             end

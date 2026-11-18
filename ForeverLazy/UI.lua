@@ -293,8 +293,14 @@ function addon:OpenServicesMenu()
     for _, it in ipairs(ArrowChoices(false)) do items[#items + 1] = it end
     items[#items + 1] = { text = " ", header = true }
     if addon.ModuleOn("services") then items[#items + 1] = { text = "Services near me", sub = ServicesList } end
-    if wp and wp.label and addon.OpenSkipMenu then
+    -- the plan's next quest stop may sit behind another stop (a guard's directions, a trip, a node): still offer to skip it
+    local hasPlanStop = false
+    for _, w in ipairs((db and db.waypoints) or {}) do if w.label then hasPlanStop = true; break end end
+    if hasPlanStop and addon.OpenSkipMenu then
         items[#items + 1] = { text = "Skip this quest stop, or do it next...", fn = function() addon:OpenSkipMenu() end }
+    end
+    if wp and not wp.label then
+        items[#items + 1] = { text = "Clear this stop: " .. tostring(wp.name or "arrow"), fn = function() addon:RemoveWaypoint(1) end }
     end
     items[#items + 1] = { text = "Ask the Coach: what should I do?", fn = function() Cmd("coach") end }
     items[#items + 1] = { text = "Do the next thing (Lazy Mode)", fn = function() Cmd("now") end, module = "lazymode" }
@@ -325,6 +331,7 @@ end)
 function addon:OpenMenu()
     addon.ShowMenu({
         { text = "Do the next thing (Lazy Mode)", fn = function() Cmd("now") end, module = "lazymode" },
+        { text = "Plan this zone for the fastest levelling", fn = function() addon.PlanZone() end, module = "plan" },
         { text = "Plan my route", fn = function() addon:PlanRoute() end, module = "plan" },
         { text = (DB().planPaused and "Turn the plan back on (where I left it)" or "Turn the plan off (keeps my place)"),
           fn = function() if DB().planPaused then addon.PlanResume() else addon.PlanPause() end end, module = "plan" },

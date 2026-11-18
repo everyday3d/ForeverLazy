@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.13.0
+- **Level a whole zone** (`/lazy level`, or `/lazy level ashenvale` to be taken there first): one plan from your quests plus every quest worth taking in the zone, and a window that says what to get and from whom, where to kill or collect, and what to hand in. It keeps quests of an area open and hands them in together, unless a hand-in opens the next quest of a chain.
+- **Ask a guard, get an arrow**: when a guard points you to a trainer, the bank or the inn, the arrow guides you there, plan on or off, and goes away when you arrive.
+- **Class quests**: a pop-up once when you enter a zone where a class quest needs something (who to get it from, where to kill, what to hand in), `/lazy class quest` for a window of every class quest and what to do for it, and `/lazy class here` for the zone you are in.
+- **No dungeon quests in any plan**, found from the game's own Dungeon tag and Questie's data, including the same quest under a second id. A finished one can still be handed in.
+- **The plan follows you between continents**: it rebuilds after a hearthstone, boat, tram, zeppelin or portal, and puts away stops left on the other continent.
+- **Hand-ins near you come first**: walk close to a quest you can hand in and the plan puts it next.
+- **Crafting**: the craft plan stops where your profession trainer next has something and plans one batch at a time, because training changes the best recipe.
+- **Protected items**: a protected item that gets sold anyway shows a big message in the middle of the screen. The tooltip warning is bigger.
+- **Nodes**: pins show the same hover tooltip on the minimap, fade while a node should be respawning, and stay faint with Find Minerals or Find Herbs on so the real blip shows. When the arrow farms nodes, the route is drawn on the map and minimap.
+- **Fixes**: a stop for a quest you have not finished stays until its objectives are done (arriving is not enough, so it no longer sends you to hand in early); skipping a quest takes it out of your plan at once; the arrow menu keeps its skip option when another stop is in front; leftover stops from a "Show me" or `/lazy class go` no longer stay on the arrow; the craft panel no longer covers the profession tabs.
+
 ## 0.12.0
 - **Ore and herb nodes** (`/lazy nodes`): every node you mine or pick is remembered and marked on the world map and the minimap, as a round pin showing the ore (copper, tin, silver and so on). Hover a pin for what it is and when you last found it. A node you just emptied fades until it should be back, and with Find Minerals or Find Herbs on, the minimap pins stay faint so the game's own blip shows through. The arrow can **farm** them (`/lazy nodes farm ore`, or right-click the arrow): it walks you from node to node, with the route drawn on the map and minimap.
 - **Find a node by name** (`/lazy nodes silver`): a window lists the zones that have it, from Questie's data and from your own finds, each with a Take me there button.

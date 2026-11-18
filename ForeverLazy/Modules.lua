@@ -35,7 +35,7 @@ for _, m in ipairs(addon.MODULES) do LABEL[m[1]] = m[2] end
 -- which command belongs to which module
 local COMMANDS = {
     lazymode = { "now" },
-    plan = { "plan", "route!", "window", "list", "stops", "skip", "why", "own", "xpmap", "heat", "hotspots" },
+    plan = { "plan", "level", "levelzone", "route!", "window", "list", "stops", "skip", "why", "own", "xpmap", "heat", "hotspots" },
     follow = { "follow" },
     books = { "books", "book", "arrow" },
     classq = { "class" },
@@ -168,7 +168,7 @@ function addon.CheckInstall()
     }
     local FILES = { "ForeverLazy.lua", "Options.lua", "Extras.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
         "ClassQuests.lua", "Boats.lua", "Services.lua", "FlightData.lua", "Travel.lua", "Party.lua", "Quests.lua", "PlanWindow.lua", "Journey.lua",
-        "Community.lua", "Crafting.lua", "Inventory.lua", "Hive.lua", "Live.lua", "Gather.lua", "Nodes.lua", "Protect.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Coach.lua", "Meter.lua", "Modules.lua" }
+        "Community.lua", "Crafting.lua", "Inventory.lua", "Hive.lua", "Live.lua", "Gather.lua", "Nodes.lua", "Protect.lua", "GuardPoi.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Coach.lua", "Meter.lua", "Modules.lua" }
     for _, f in ipairs(FILES) do
         check("file loaded: " .. f, addon.loaded and addon.loaded[f], "this file stopped on a Lua error while loading. Turn errors on with /console scriptErrors 1, then /reload")
     end

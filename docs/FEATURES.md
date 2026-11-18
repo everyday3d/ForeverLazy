@@ -76,6 +76,17 @@ The Hive learns from real play, because the original game's data does not always
   game hides the numbers from addons, so the tab keeps the last picture until the fight is over. If a chat tab cannot be
   made, it uses a small window instead.
 
+## Levelling a zone
+
+- **`/lazy level`** plans the whole zone for the fastest levelling: your quests plus every quest worth taking there, in a
+  walking order that earns the most XP for the walk, and a window that says what to get and from whom, where to kill or
+  collect, and what to hand in. `/lazy level ashenvale` takes you there first. `/lazy level steps` reopens the window.
+- **Ask a guard** where something is and the arrow takes you there and goes away when you arrive.
+- **Class quests**: a pop-up once when you enter a zone that has something for one, and `/lazy class quest` lists every
+  class quest with what to do for it.
+- **Dungeon quests are never in a plan.** The plan rebuilds when you change continent, and a hand-in you walk close to comes
+  next.
+
 ## Ore and herb nodes
 
 - **Every node you gather is remembered** and marked on the world map and the minimap as a round pin showing the ore

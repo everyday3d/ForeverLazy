@@ -359,6 +359,9 @@ local function BuildControls(parent)
     Check(content, "Follow the quest I have selected or tracked (otherwise the nearest of all)", 16,
         function() return DB().ownFocus ~= false end, function(v) DB().ownFocus = v; Changed() end)
     ColorRow(content, "My quests arrow color", "colorMine")
+    Button(content, "Plan this zone for the fastest levelling", 16, 270, function() addon.PlanZone() end, true)
+    Label(content, "Same as /lazy level, or /lazy level ashenvale for another zone: I take you there, then plan it. Includes every quest worth taking in the zone, not just the ones in your log.")
+    y = y - 26
     Button(content, "Plan my route (replaces waypoints)", 16, 240, function() addon:PlanRoute() end, true)
     Label(content, "Same as /lazy plan. Orders your quest spots into a walking route, one waypoint each.")
     y = y - 26
@@ -415,6 +418,8 @@ local function BuildControls(parent)
         function() return DB().bagGuide ~= false end, function(v) DB().bagGuide = v end)
     Check(content, "Tell me when a new class quest opens up", 16,
         function() return DB().classAlert ~= false end, function(v) DB().classAlert = v end)
+    Check(content, "A pop-up when I walk into a zone that has something for a class quest (/lazy class here lists it any time)", 16,
+        function() return DB().classZoneAlert ~= false end, function(v) DB().classZoneAlert = v end)
     Check(content, "Put class quest givers in my plan when they are in this zone", 16,
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
     Check(content, "When the next plan stop is a long way off and a flight is quicker, start the trip by itself (off by default)", 16,

@@ -324,6 +324,33 @@ local function Plan(profName, goalArg)
         goal = goal or maxRank
     end
     if rank >= goal then Say(string.format("%s is already %d, past %d", prof, rank, goal)); return end
+    -- Training changes the plan: new recipes open up and the best one to craft changes. So the plan stops where the
+    -- trainer next has something (as last seen), and never runs more than one batch before it asks me to look again.
+    local stopNote
+    local tr = Section("crafttrain")[prof]
+    if tr then
+        if (tr.learnNow or 0) > 0 then
+            stopNote = string.format("the trainer had %d recipe%s you could learn right away: train first, it may change what is best",
+                tr.learnNow, tr.learnNow == 1 and "" or "s")
+        end
+        local nextReq
+        for _, rq in ipairs(tr.reqs or {}) do
+            if rq > rank and (not nextReq or rq < nextReq) then nextReq = rq end
+        end
+        if nextReq and nextReq < goal then
+            goal = nextReq
+            stopNote = (stopNote and (stopNote .. ". ") or "")
+                .. string.format("this stops at skill %d, where the trainer has more: visit the trainer, then plan again", nextReq)
+        end
+    else
+        stopNote = "I have not seen your trainer's recipe list yet; visit the profession trainer once so I can stop where new recipes open up"
+    end
+    local BATCH = 25
+    if goal - rank > BATCH then
+        goal = rank + BATCH
+        stopNote = (stopNote and (stopNote .. ". ") or "")
+            .. string.format("one batch only (to %d): the colours change as your skill rises, so open the window and plan again after it", goal)
+    end
     Say(string.format("%s %d/%d, planning up to %d (recipes as of the last time you opened the window)", prof, rank, maxRank, goal))
 
     local r = Pick(pd)
@@ -337,6 +364,7 @@ local function Plan(profName, goalArg)
     lastPick = { id = r.id, crafts = crafts, prof = prof }
     Say(string.format("  craft %d x %s (%s, about %d skill points). Open the window again afterwards and plan again as it turns green.",
         crafts, r.name, COLOR[r.kind] or r.kind, math.floor(crafts * chance)))
+    if stopNote then Say("  " .. stopNote) end
 
     needs = {}
     lastIds = {}
@@ -559,6 +587,34 @@ ev:SetScript("OnEvent", function(_, event)
             end
         end
     end)
+end)
+
+-- a profession trainer's list: what I could learn right now, and the skill at which each recipe opens
+local function ReadProfessionTrainer()
+    if not (IsTradeskillTrainer and IsTradeskillTrainer() and GetNumTrainerServices and GetTrainerServiceInfo) then return end
+    local n = GetNumTrainerServices() or 0
+    if n == 0 then return end
+    local prof = GetTrainerServiceSkillLine and GetTrainerServiceSkillLine(1)
+    if not prof then return end
+    local reqs, learnNow = {}, 0
+    for i = 1, n do
+        local name, _, category = GetTrainerServiceInfo(i)
+        if name and category ~= "header" and category ~= "used" then
+            if category == "available" then learnNow = learnNow + 1 end
+            if GetTrainerServiceSkillReq then
+                local _, lvl = GetTrainerServiceSkillReq(i)
+                if tonumber(lvl) then reqs[#reqs + 1] = tonumber(lvl) end
+            end
+        end
+    end
+    table.sort(reqs)
+    Section("crafttrain")[prof] = { t = time(), learnNow = learnNow, reqs = reqs }
+end
+local trainEv = CreateFrame("Frame")
+pcall(trainEv.RegisterEvent, trainEv, "TRAINER_SHOW")
+pcall(trainEv.RegisterEvent, trainEv, "TRAINER_UPDATE")
+trainEv:SetScript("OnEvent", function()
+    if C_Timer then C_Timer.After(0.4, function() pcall(ReadProfessionTrainer) end) else pcall(ReadProfessionTrainer) end
 end)
 
 local prev = addon.HandleExtraCommand

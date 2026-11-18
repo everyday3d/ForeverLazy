@@ -273,6 +273,16 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.13.0", {
+        "Level a zone: /lazy level (or /lazy level ashenvale). Plans every quest worth doing in the zone and opens a window of what to get, where to kill and what to hand in.",
+        "Ask a guard where something is and the arrow takes you there, then goes away.",
+        "Class quests: a pop-up when you enter a zone that has something for one, /lazy class quest for what to do, /lazy class here for this zone.",
+        "Plans never include dungeon quests, and the plan rebuilds by itself when you change continent.",
+        "Walk close to a quest you can hand in and the plan puts it next. A stop for a quest you have not finished no longer clears just because you arrived.",
+        "The craft plan stops where the trainer has new recipes, one batch at a time.",
+        "A protected item that is sold anyway puts a big message on the screen. Node pins show a hover tooltip on the minimap too, and fade while the node respawns.",
+        "Fixes: skip works again, the arrow menu keeps its skip option, and the craft panel no longer covers the tabs.",
+    } },
     { "0.12.0", {
         "A damage meter in its own chat tab called Meter (/lazy meter). It reads the game's built-in meter, so no other addon is needed.",
         "The Hive learns how long each kind of mob takes to kill and what it costs you (/lazy grind), and where players die: you get a word when you walk into a place where people keep dying (/lazy danger).",
