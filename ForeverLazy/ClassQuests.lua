@@ -13,10 +13,7 @@ local function DB() return addon.GetDB() end
 local function Dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) end
 
 local function Mod(name)
-    local ql = _G.QuestieLoader
-    if not ql then return nil end
-    local ok, m = pcall(ql.ImportModule, ql, name)
-    return ok and m or nil
+    return ns.data.Module(name)
 end
 
 local function HasClass(mask)
@@ -88,7 +85,8 @@ end
 
 local function Completed(id)
     local Q = _G.Questie
-    return Q and Q.db and Q.db.char and Q.db.char.complete and Q.db.char.complete[id] and true or false
+    if Q and Q.db and Q.db.char and Q.db.char.complete then return Q.db.char.complete[id] and true or false end
+    return C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted and C_QuestLog.IsQuestFlaggedCompleted(id) and true or false
 end
 
 local function Giver(QDB, id)

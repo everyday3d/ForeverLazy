@@ -82,3 +82,13 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy plan off` `plan on` | Turn the plan off and keep your place, then pick it up again |
 | `/lazy keep` `keep <item>` `keep remove <item>` `keep off` `keep on` | Items a vendor must not keep (the tooltip warns, a sale is bought back) |
 | `/lazy pace reset` | Clear your measured XP per hour and start measuring again (drop counts and quest times are kept) |
+| `/lazy data` `data verify` `data misses` | What our own quest data knows, how it compares with Questie (a window), and anything neither knows |
+| `/lazy selftest` `selftest off` | Try the addon without Questie (reloads the screen, shows a results window); and back to normal |
+| `/lazy data first on` `off` | Ask our own data before Questie, or after it |
+| `/lazy questmap on` `off` `objectives on` `off` `areas on` `off` `givers on` `off` | The quest map: objective pins, coloured areas, `!` and `?` |
+| `/lazy tooltips on` `off` `auto` | Quest lines on mob, object and item tooltips |
+| `/lazy questie` `questie off` `on` | Talk to Questie users in your group: who we have heard from, switch it off or on |
+| `/lazy moblevels` `moblevels all` `<zone>` `<mob>` `clear` | The level range of the hostile mobs you have met, by zone |
+| `/lazy couch on` `off` `say` | Couch mode: big text, quests accept and hand in by themselves, steps read aloud |
+| `/lazy talents` `talents guide` | Unspent talent points and the key talents for your class |
+| `/lazy later` `later back` `later list` | Put a quest off for a while and bring it back |

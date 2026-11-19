@@ -354,12 +354,8 @@ local reality = { t0 = nil, xp0 = 0, est = nil, told = false, lastCheck = 0 }
 local gainedXP, lastXP, lastMax = 0, nil, nil
 
 local function QuestXPNow(id)
-    local ql = _G.QuestieLoader
-    if not ql then return 0 end
-    local ok, mod = pcall(ql.ImportModule, ql, "QuestXP")
-    if not ok or not mod or not mod.GetQuestLogRewardXP then return 0 end
-    local ok2, xp = pcall(mod.GetQuestLogRewardXP, mod, id, false)
-    return (ok2 and tonumber(xp)) or 0
+    return ns.data.QuestXP(id)
+
 end
 
 -- XP per hour this plan should give: the XP of its quests over the walking plus the time the quests take

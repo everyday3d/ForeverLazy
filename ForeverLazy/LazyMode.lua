@@ -199,6 +199,7 @@ local function Now()
 end
 addon.LazyNow = Now
 addon.LazyDecide = Decide
+addon.LazyTrainerDue = TrainerDue
 function _G.ForeverLazy_LazyNow() Now() end
 _G.BINDING_NAME_FOREVERLAZY_NOW = "Lazy mode: point me at the next thing"
 

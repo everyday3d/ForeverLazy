@@ -481,6 +481,27 @@ end
 --------------------------------------------------------------------------------
 local HighlightRecipes          -- defined further down, used by the panel above it
 local craftPanel
+local craftClosed                -- set when I close the panel: { sel = the recipe that was selected }; cleared when it should come back
+
+-- the recipe selected in whichever profession window is open (nil when I cannot tell)
+local function CraftSelection()
+    local id
+    local pf = _G.ProfessionsFrame
+    if pf and pf.CraftingPage and pf.CraftingPage.SchematicForm then
+        local s = pf.CraftingPage.SchematicForm
+        local rs = s.recipeSchematic
+        id = rs and (rs.recipeID or rs.recipeId)
+    end
+    if not id and GetTradeSkillSelectionIndex then
+        local ok, v = pcall(GetTradeSkillSelectionIndex)
+        if ok then id = v end
+    end
+    if not id and GetCraftSelectionIndex then
+        local ok, v = pcall(GetCraftSelectionIndex)
+        if ok then id = v end
+    end
+    return id
+end
 local function RefreshCraftPanel()
     if not craftPanel or not craftPanel:IsShown() then return end
     local lines = addon.CraftPlanText and addon.CraftPlanText() or { "crafting is switched off" }
@@ -551,6 +572,13 @@ local function BuildCraftPanel(frame)
     bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.92)
     local t = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     t:SetPoint("TOPLEFT", 10, -8); t:SetText("Forever Lazy: craft plan")
+    -- close it; it comes back the next time the crafting window opens, or when a different recipe is selected
+    local closeBtn = CreateFrame("Button", nil, p, "UIPanelCloseButton")
+    closeBtn:SetSize(22, 22); closeBtn:SetPoint("TOPRIGHT", 2, 2)
+    closeBtn:SetScript("OnClick", function()
+        craftClosed = { sel = CraftSelection() }
+        p:Hide()
+    end)
     p.text = p:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     p.text:SetPoint("TOPLEFT", 10, -28)
     p.text:SetWidth(310); p.text:SetJustifyH("LEFT"); p.text:SetJustifyV("TOP")
@@ -647,12 +675,19 @@ craftWatch:SetScript("OnUpdate", function(_, dt)
     for _, name in ipairs({ "ProfessionsFrame", "TradeSkillFrame", "CraftFrame" }) do
         local f = _G[name]
         if f and f.IsShown and f:IsShown() then
+            -- I closed the panel: it stays closed for this recipe, and comes back when a different one is selected
+            if craftClosed then
+                local sel = CraftSelection()
+                if sel == nil or sel == craftClosed.sel then return end
+                craftClosed = nil
+            end
             if not (craftPanel and craftPanel:IsShown() and craftPanel:GetParent() == f) then
                 if not Try("craft", ShowCraft, { name }) then CraftWarn("error", "error building it: " .. tostring(problems.craft)) end
             end
             return
         end
     end
+    craftClosed = nil           -- no profession window open: next time it opens the panel is back
 end)
 
 --------------------------------------------------------------------------------

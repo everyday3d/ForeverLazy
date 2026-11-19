@@ -25,10 +25,7 @@ local LEVELS = {
 api.DungeonLevels = LEVELS
 
 local function Zone()
-    local ql = _G.QuestieLoader
-    if not ql then return nil end
-    local ok, m = pcall(ql.ImportModule, ql, "ZoneDB")
-    return ok and m or nil
+    return ns.data.Module("ZoneDB")
 end
 
 local function Key(name)
@@ -455,6 +452,124 @@ function addon.DungeonHere(auto)
     ShowDungeonToast(name, quests)
 end
 
+--------------------------------------------------------------------------------
+-- Inside a dungeon: the arrow takes me to what my quests need, spot by spot
+--------------------------------------------------------------------------------
+-- where the things a quest still needs are inside this dungeon, in world coordinates of the dungeon's own map
+local function DungeonSpotsFor(QDB, id, rec, pinst)
+    local spots, grid = {}, {}
+    local texts = {}
+    if C_QuestLog and C_QuestLog.GetQuestObjectives then
+        local ok, objs = pcall(C_QuestLog.GetQuestObjectives, id)
+        if ok and type(objs) == "table" then
+            for _, o in ipairs(objs) do
+                if not o.finished and o.text then texts[#texts + 1] = o.text:lower() end
+            end
+        end
+    end
+    -- an objective is still open when its name is in the text of an unfinished objective
+    local function wanted(name)
+        if not name then return true end
+        local n = name:lower()
+        for _, tx in ipairs(texts) do if tx:find(n, 1, true) then return true end end
+        return #texts == 0
+    end
+    local Z = Zone()
+    local function addSpawns(spawns)
+        if type(spawns) ~= "table" or not Z then return end
+        for areaId, list in pairs(spawns) do
+            if areaTo[areaId] == rec and type(list) == "table" then
+                local uiMapId = Z:GetUiMapIdByAreaId(areaId)
+                if uiMapId then
+                    for _, c in ipairs(list) do
+                        local zx, zy = (c[1] or 0) / 100, (c[2] or 0) / 100
+                        local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(zx, zy, uiMapId)
+                        if wx and inst == pinst then
+                            local key = math.floor(wx / 25) .. ":" .. math.floor(wy / 25)
+                            if not grid[key] then
+                                grid[key] = true
+                                spots[#spots + 1] = { x = wx, y = wy, instance = inst, uiMapId = uiMapId, zx = zx, zy = zy, key = key }
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    local obj = QDB.QueryQuestSingle(id, "objectives")
+    if type(obj) == "table" then
+        for _, c in pairs(obj[1] or {}) do
+            if c[1] and wanted(QDB.QueryNPCSingle(c[1], "name")) then addSpawns(QDB.QueryNPCSingle(c[1], "spawns")) end
+        end
+        for _, c in pairs(obj[2] or {}) do
+            if c[1] and wanted(QDB.QueryObjectSingle(c[1], "name")) then addSpawns(QDB.QueryObjectSingle(c[1], "spawns")) end
+        end
+        for _, c in pairs(obj[3] or {}) do
+            if c[1] and wanted(QDB.QueryItemSingle(c[1], "name")) then
+                local n = 0
+                local drops = QDB.QueryItemSingle(c[1], "npcDrops")
+                if type(drops) == "table" then
+                    for _, npc in pairs(drops) do
+                        n = n + 1
+                        if n > 40 then break end
+                        addSpawns(QDB.QueryNPCSingle(npc, "spawns"))
+                    end
+                end
+                local odrops = QDB.QueryItemSingle(c[1], "objectDrops")
+                if type(odrops) == "table" then
+                    for _, o in pairs(odrops) do addSpawns(QDB.QueryObjectSingle(o, "spawns")) end
+                end
+            end
+        end
+    end
+    return spots
+end
+
+local dungeonKey = {}
+local daCache = { name = nil, t = 0, ids = {} }
+
+local function InDungeonName()
+    local name, itype = GetInstanceInfo and GetInstanceInfo()
+    if name and (itype == "party" or itype == "raid") then return name end
+end
+
+-- the arrow's target while I am inside a dungeon with quests that need something here (nil otherwise)
+function addon.DungeonArrowTarget()
+    local db = addon.GetDB()
+    if not db or db.dungeonArrow == false or not addon.PickObjectiveSpot then return nil end
+    local name = InDungeonName()
+    if not name then return nil end
+    local now = GetTime()
+    if daCache.name ~= name or now - daCache.t > 5 then
+        local ids = {}
+        for _, q in ipairs(addon.DungeonQuestsHere(name)) do ids[#ids + 1] = q.id end
+        daCache = { name = name, t = now, ids = ids }
+    end
+    -- only the quests that are not finished
+    local open = {}
+    for _, id in ipairs(daCache.ids) do
+        local okC, done = pcall(C_QuestLog.IsComplete, id)
+        if okC and not done then open[#open + 1] = id end
+    end
+    if #open == 0 then return nil end
+    local rec = byKey and byKey[Key(name)]
+    if not rec then return nil end
+    local QDB = api.GetQuestie()
+    return addon.PickObjectiveSpot(dungeonKey, open, "Dungeon: " .. name, {}, function(ids, pinst)
+        local out, grid = {}, {}
+        for _, id in ipairs(ids) do
+            for _, s in ipairs(DungeonSpotsFor(QDB, id, rec, pinst)) do
+                if not grid[s.key] then grid[s.key] = true; out[#out + 1] = s end
+            end
+        end
+        return out
+    end)
+end
+
+-- the arrows are normally hidden inside a dungeon; this one is not, while it has somewhere to point
+function addon.DungeonArrowActive()
+    return addon.DungeonArrowTarget() ~= nil
+end
 local shownIn = {}
 local dEv = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA" }) do pcall(dEv.RegisterEvent, dEv, e) end

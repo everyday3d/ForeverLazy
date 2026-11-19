@@ -33,12 +33,8 @@ local function NpcName(QDB, id, field)
 end
 
 local function QuestXP(id)
-    local ql = _G.QuestieLoader
-    if not ql then return 0 end
-    local ok, mod = pcall(ql.ImportModule, ql, "QuestXP")
-    if not (ok and mod and mod.GetQuestLogRewardXP) then return 0 end
-    local ok2, xp = pcall(mod.GetQuestLogRewardXP, mod, id, false)
-    return (ok2 and tonumber(xp)) or 0
+    return ns.data.QuestXP(id)
+
 end
 
 -- Inside a dungeon: the quests that have something to do in it, found from where their objectives are (so a class quest that
@@ -112,10 +108,13 @@ local function Describe(e, first)
         dungeon and "|cff999999" or "|cffffffff", tostring(q.title or ("quest " .. q.id)), "|r")
     if xp > 0 then head = head .. "  |cff80c0ff" .. xp .. " xp|r" end
     if dungeon then head = head .. "  |cff999999(dungeon)|r" end
+    local db = DB()
+    if db and db.planLater and db.planLater[q.id] and db.planLater[q.id] > (time and time() or 0) then head = head .. "  |cffff9933(later)|r" end
     local lines = {}
     if q.complete then
         local npc = QDB and NpcName(QDB, q.id, "finishedBy")
-        lines[#lines + 1] = "|cff55ff55Ready:|r turn in" .. (npc and (" to " .. npc) or "")
+        -- the whole line in green, so a quest you can hand in stands out
+        lines[#lines + 1] = "|cff55ff55Ready: turn in" .. (npc and (" to " .. npc) or "") .. "|r"
     else
         local added = false
         if C_QuestLog and C_QuestLog.GetQuestObjectives then
@@ -158,6 +157,7 @@ local function Select(id) if C_QuestLog and C_QuestLog.SetSelectedQuest then pca
 local function OpenMenu(q)
     local items = {
         { text = "Do this quest next", fn = function() if addon.FocusQuest then addon:FocusQuest(q.id, q.title) end end },
+        { text = "Come back to this quest later (too crowded?)", fn = function() if addon.PlanLater then addon.PlanLater(q.id, q.title) end end },
         { text = "Skip this quest (keep it out of the plan)", fn = function() if addon.SkipQuest then addon.SkipQuest(q.id, q.title) end end },
         { text = "Show in the quest log", fn = function()
             Select(q.id)
@@ -313,6 +313,7 @@ local function Build()
                 dirty = true
             elseif addon.ShowMenu then
                 addon.ShowMenu({
+                    { text = (db.trackerCollapsed and "Restore the tracker" or "Minimize the tracker"), fn = function() db.trackerCollapsed = not db.trackerCollapsed; dirty = true; if addon.RefreshOptions then addon.RefreshOptions() end end },
                     { text = (db.trackerNoBg and "Show the background" or "No background"), fn = function() db.trackerNoBg = not db.trackerNoBg; ApplyLook(); if addon.RefreshOptions then addon.RefreshOptions() end end },
                     { text = (db.trackerCompact and "Show every quest's objectives" or "Compact: objectives only for the quest I am on"), fn = function() db.trackerCompact = not db.trackerCompact; dirty = true; if addon.RefreshOptions then addon.RefreshOptions() end end },
                     { text = "Hide WoW's own tracker: " .. ((db.trackerHideBlizzard ~= false) and "on" or "off"), fn = function() addon.TrackerSet(true, db.trackerHideBlizzard == false) end },
@@ -375,7 +376,15 @@ local function Build()
     grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
     grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
     -- the text size buttons and the corner grip only show while the mouse is over the window
-    local hoverItems = { bigger, smaller, grip }
+    local mini = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+    mini:SetSize(22, 18); mini:SetText("_"); mini:SetPoint("RIGHT", smaller, "LEFT", -2, 0)
+    mini:SetFrameLevel(f:GetFrameLevel() + 6)
+    mini:SetScript("OnClick", function()
+        DB().trackerCollapsed = not DB().trackerCollapsed
+        dirty = true
+        if addon.RefreshOptions then addon.RefreshOptions() end
+    end)
+    local hoverItems = { bigger, smaller, mini, grip }
     local overAcc = 0
     local function ShowTools(on)
         for _, b in ipairs(hoverItems) do if b:IsShown() ~= on then b:SetShown(on) end end
@@ -402,6 +411,31 @@ end
 --------------------------------------------------------------------------------
 -- Layout
 --------------------------------------------------------------------------------
+-- a zone heading: click to fold the zone's quests away (or open them again)
+local headers = {}
+local function Header(i)
+    local h = headers[i]
+    if h then return h end
+    h = CreateFrame("Button", nil, win.content)
+    h:RegisterForClicks("LeftButtonUp")
+    h:RegisterForDrag("LeftButton")
+    h:SetScript("OnDragStart", function() if not DB().locked then win:StartMoving() end end)
+    h:SetScript("OnDragStop", function() local f = win:GetScript("OnDragStop"); if f then f(win) end end)
+    h.text = h:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    h.text:SetPoint("LEFT", 0, 0); h.text:SetJustifyH("LEFT")
+    local hl = h:CreateTexture(nil, "HIGHLIGHT")
+    hl:SetAllPoints(); hl:SetColorTexture(1, 1, 1, 0.08)
+    h:SetScript("OnClick", function(self)
+        local db = DB()
+        db.trackerZoneOff = db.trackerZoneOff or {}
+        db.trackerZoneOff[self.zone] = (not db.trackerZoneOff[self.zone]) or nil
+        dirty = true
+    end)
+    h:Hide()
+    headers[i] = h
+    return h
+end
+
 local function Layout()
     local db = DB()
     if not (db and win) then return end
@@ -417,25 +451,52 @@ local function Layout()
     win.empty:SetWidth(width)
     win.empty:SetShown(#list == 0 and not db.trackerCollapsed)
 
-    -- who sits in which row: only reassigned out of combat (the item buttons are secure and cannot change in a fight)
+    -- by zone: the zone I am in first, then the others in the order their quests come
+    local here = GetRealZoneText and GetRealZoneText() or ""
+    local groups, byZone = {}, {}
+    local curId
+    for _, e in ipairs(list) do
+        if e.inPlan and not curId then curId = e.q.id end
+        local z = e.q.zone or "Other"
+        local g = byZone[z]
+        if not g then g = { zone = z, quests = {} }; byZone[z] = g; groups[#groups + 1] = g end
+        g.quests[#g.quests + 1] = e
+    end
+    for i, g in ipairs(groups) do
+        if g.zone == here and i > 1 then table.remove(groups, i); table.insert(groups, 1, g); break end
+    end
+
+    -- who sits in which row, in the order they are shown: only reassigned out of combat (the item buttons are secure)
     if not inCombat then
-        for i = 1, MAXROWS do rowQuest[i] = list[i] and list[i].q.id or nil end
+        local n = 0
+        for i = 1, MAXROWS do rowQuest[i] = nil end
+        for _, g in ipairs(groups) do
+            for _, e in ipairs(g.quests) do
+                n = n + 1
+                if n <= MAXROWS then rowQuest[n] = e.q.id end
+            end
+        end
     else
         dirtyAfterCombat = true
     end
+    local rowOf = {}
+    for i = 1, MAXROWS do if rowQuest[i] then rowOf[rowQuest[i]] = i end end
+    local off = db.trackerZoneOff or {}
 
     -- what each row says (worked out first, so the window can be as wide as the text needs and no wider)
-    local desc, first0 = {}, true
-    for i = 1, MAXROWS do
-        local id = rowQuest[i]
-        local e = id and byId[id]
-        if e and not db.trackerCollapsed then
-            local cur = first0 and e.inPlan
-            first0 = false
-            local head, body = Describe(e, cur)
-            -- compact: only the quest I am on shows its objectives; the others are one line (finished ones keep their line)
-            if db.trackerCompact and not cur and not e.q.complete then body = "" end
-            desc[i] = { e = e, head = head, body = body, cur = cur }
+    local desc = {}
+    for _, g in ipairs(groups) do
+        if not off[g.zone] then
+            for _, e in ipairs(g.quests) do
+                local i = rowOf[e.q.id]
+                if i then
+                    local cur = (e.q.id == curId)
+                    local head, body = Describe(e, cur)
+                    -- compact: only the quest I am on shows its objectives; the others are one line (finished ones keep their line)
+                    if db.trackerCompact and not cur and not e.q.complete then body = "" end
+                    desc[i] = { e = e, head = head, body = body, cur = cur }
+                end
+            end
         end
     end
     local fixedWidth = db.pos and db.pos.trackerSize and db.pos.trackerSize.w
@@ -448,10 +509,14 @@ local function Layout()
         for i, d in pairs(desc) do
             local hasItem = rows[i].item.link and true or false
             win.mT:SetText(d.head)
-            local w1 = win.mT:GetStringWidth() + (hasItem and 34 or 0)
+            local w1 = win.mT:GetStringWidth() + 8 + (hasItem and 34 or 0)
             local w2 = 0
-            if d.body ~= "" then win.mB:SetText(d.body); w2 = win.mB:GetStringWidth() + 10 + (hasItem and 34 or 0) end
+            if d.body ~= "" then win.mB:SetText(d.body); w2 = win.mB:GetStringWidth() + 18 + (hasItem and 34 or 0) end
             need = math.max(need, w1, w2)
+        end
+        for _, g in ipairs(groups) do
+            win.mT:SetText("[-] " .. g.zone .. " (" .. #g.quests .. ")")
+            need = math.max(need, win.mT:GetStringWidth())
         end
         win.mT:SetText(win.title:GetText() or "")
         local maxW = math.min(460, UIParent:GetWidth() * 0.4 / math.max(0.5, win:GetScale()))
@@ -460,48 +525,73 @@ local function Layout()
     width = math.max(140, win:GetWidth() - 16)
     win.empty:SetWidth(width)
 
-    local y = 0
+    -- every row starts hidden; the ones shown are laid out in order
     for i = 1, MAXROWS do
-        local r = rows[i]
-        local id = rowQuest[i]
-        local e = id and byId[id]
-        if db.trackerCollapsed or not e then
-            r:Hide(); r.quest = nil
-            if not inCombat then r.item:Hide(); r.item.link = nil end
-        else
-            local d = desc[i]
-            local head, body = d.head, d.body
-            r.quest = e.q
-            local link, itemStr, icon
-            if not inCombat then link, itemStr, icon = SpecialItem(id) end
-            local hasItem = (not inCombat and link) or (inCombat and r.item.link)
-            r.title:SetWidth(width - (hasItem and 34 or 0))
-            r.title:SetText(head)
-            r.body:ClearAllPoints()
-            r.body:SetPoint("TOPLEFT", r, "TOPLEFT", 10, -(r.title:GetStringHeight() + 2))
-            r.body:SetWidth(width - 10 - (hasItem and 34 or 0))
-            r.body:SetText(body)
-            local h = r.title:GetStringHeight() + (body == "" and 6 or (2 + r.body:GetStringHeight() + 8))
-            r:ClearAllPoints()
-            r:SetPoint("TOPLEFT", win.content, "TOPLEFT", 0, -y)
-            r:SetSize(width, h)
-            r:Show()
-            if not inCombat then
-                if link then
-                    r.item.link = link
-                    r.item:SetAttribute("item", itemStr)
-                    r.item.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-                    r.item:Show()
-                else
-                    r.item.link = nil; r.item:Hide()
+        if not (desc[i]) then
+            rows[i]:Hide(); rows[i].quest = nil
+            if not inCombat then rows[i].item:Hide(); rows[i].item.link = nil end
+        end
+    end
+    for _, h in pairs(headers) do h:Hide() end
+
+    local y, hdrIndex = 0, 0
+    if not db.trackerCollapsed then
+        for _, g in ipairs(groups) do
+            hdrIndex = hdrIndex + 1
+            local h = Header(hdrIndex)
+            h.zone = g.zone
+            h:ClearAllPoints(); h:SetPoint("TOPLEFT", win.content, "TOPLEFT", 0, -y); h:SetSize(width, 18)
+            h.text:SetText(string.format("%s %s |cffaaaaaa(%d)|r", off[g.zone] and "|cffffd100[+]|r" or "|cffffd100[-]|r",
+                (g.zone == here and "|cffffffff" or "|cffffd100") .. g.zone .. "|r", #g.quests))
+            h:Show()
+            y = y + 20
+            if not off[g.zone] then
+                for _, e in ipairs(g.quests) do
+                    local i = rowOf[e.q.id]
+                    local d = i and desc[i]
+                    if d then
+                        local r = rows[i]
+                        local head, body = d.head, d.body
+                        r.quest = e.q
+                        local link, itemStr, icon
+                        if not inCombat then link, itemStr, icon = SpecialItem(e.q.id) end
+                        local hasItem = (not inCombat and link) or (inCombat and r.item.link)
+                        r.title:SetWidth(width - 8 - (hasItem and 34 or 0))
+                        r.title:SetText(head)
+                        r.body:ClearAllPoints()
+                        r.body:SetPoint("TOPLEFT", r, "TOPLEFT", 18, -(r.title:GetStringHeight() + 2))
+                        r.body:SetWidth(width - 18 - (hasItem and 34 or 0))
+                        r.body:SetText(body)
+                        local rh = r.title:GetStringHeight() + (body == "" and 6 or (2 + r.body:GetStringHeight() + 8))
+                        r:ClearAllPoints()
+                        r:SetPoint("TOPLEFT", win.content, "TOPLEFT", 8, -y)
+                        r:SetSize(width - 8, rh)
+                        r:Show()
+                        if not inCombat then
+                            if link then
+                                r.item.link = link
+                                r.item:SetAttribute("item", itemStr)
+                                r.item.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
+                                r.item:Show()
+                            else
+                                r.item.link = nil; r.item:Hide()
+                            end
+                        end
+                        y = y + rh
+                    end
                 end
             end
-            y = y + h
         end
     end
     win.content:SetSize(width, math.max(y, 10))
     -- no size of my own yet: fit the list, but never more than 40% of the screen's height; the rest scrolls
-    if not fixedHeight and not win.sizing then
+    if win.sizing then
+        -- being resized by hand: leave the height alone
+    elseif db.trackerCollapsed then
+        win:SetHeight(26)                                           -- minimized: just the title
+    elseif fixedHeight then
+        win:SetHeight(fixedHeight)
+    else
         local maxH = UIParent:GetHeight() * 0.4 / (win:GetScale() > 0 and win:GetScale() or 1)
         local want = 28 + 20 + y + (#list == 0 and 20 or 0)
         win:SetHeight(math.max(70, math.min(maxH, want)))
@@ -565,12 +655,24 @@ end
 --------------------------------------------------------------------------------
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "QUEST_LOG_UPDATE", "QUEST_ACCEPTED", "QUEST_TURNED_IN", "QUEST_REMOVED",
-                     "UNIT_QUEST_LOG_CHANGED", "QUEST_WATCH_UPDATE", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED" }) do
+                     "UNIT_QUEST_LOG_CHANGED", "QUEST_WATCH_UPDATE", "BAG_UPDATE_DELAYED", "PLAYER_REGEN_ENABLED", "PLAYER_REGEN_DISABLED" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event)
     local db = DB()
     if not db then return end
+    if event == "PLAYER_REGEN_DISABLED" then
+        -- out of the way in a fight (the window is a plain frame, so hiding it is allowed in combat)
+        if db.trackerOn and db.trackerHideCombat ~= false and win and win:IsShown() then win:Hide(); win.hiddenByCombat = true end
+        return
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        if win and win.hiddenByCombat then
+            win.hiddenByCombat = nil
+            if db.trackerOn then win:Show() end
+        end
+        dirty = true
+        return
+    end
     if event == "PLAYER_LOGIN" or event == "PLAYER_ENTERING_WORLD" then
         if db.trackerOn and C_Timer then
             C_Timer.After(2, function()
@@ -603,6 +705,10 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         if a == "on" then addon.TrackerSet(true)
         elseif a == "off" then addon.TrackerSet(false)
+        elseif a == "min" or a == "minimize" or a == "mini" then
+            DB().trackerCollapsed = not DB().trackerCollapsed
+            dirty = true
+            Print("tracker " .. (DB().trackerCollapsed and "minimized" or "restored"))
         elseif a == "refresh" then
             ApplyLook(); dirty = true
         elseif a == "bg" or a == "background" then

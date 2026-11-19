@@ -4,4 +4,5 @@
 	<Binding name="FOREVERLAZY_NOW">ForeverLazy_LazyNow()</Binding>
 	<Binding name="FOREVERLAZY_PANEL">ForeverLazy_TogglePanel()</Binding>
 	<Binding name="FOREVERLAZY_WAYPOINT">ForeverLazy_DropWaypoint()</Binding>
+	<Binding name="FOREVERLAZY_SPEAK">ForeverLazy_SpeakStep()</Binding>
 </Bindings>

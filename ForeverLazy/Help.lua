@@ -218,7 +218,7 @@ local function BuildBox()
     local bg = f:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    f.title:SetPoint("TOPLEFT", 14, -12)
+    f.title:SetPoint("TOPLEFT", 14, -24)
     f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.hint:SetPoint("TOPLEFT", 14, -36); f.hint:SetWidth(390); f.hint:SetJustifyH("LEFT")
     local ebBg = f:CreateTexture(nil, "BORDER")
@@ -273,7 +273,13 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
-    { "0.14.0", {
+    { "0.15.0", {
+        "Forever Lazy no longer needs Questie: it carries its own quest data and rules, checked against Questie's. Questie still works as a second source. The addon is now GPL-3.0.",
+        "The quest map: where your quests' mobs, items and objects are, on the world map and minimap, with coloured areas, a yellow ! for quests to pick up and a yellow ? for hand-ins. The route lines are gone.",
+        "Quest tooltips: hover a mob, object or item a quest needs and it says which quest, in bold gold, and how far along you are. In a group it shows each person's progress too, including people who run Questie.",
+        "Turn-ins come first in an area that has them. Yellow quests rank above orange. The Ready line in the tracker is green.",
+        "Couch mode (/lazy couch), talent reminders (/lazy talents), come back to a quest later, a tracker grouped by zone, mob level ranges (/lazy moblevels), and an update notice with a What's new button.",
+    } },    { "0.14.0", {
         "Forever Lazy's own quest tracker (/lazy tracker): your quests in plan order with XP, live objectives and who to turn in to. Click to do one next, right-click for more. It can replace WoW's, has a no-background option, scrolls, resizes and fits its text.",
         "Autopilot (/lazy autopilot on): vendor and trainer stops between quests, then the next zone and a plan for it, by itself.",
         "The arrow points at the nearest spot where the kills or items are, and moves on when you have cleared it.",
@@ -382,7 +388,7 @@ local NEW = {
 }
 
 local newWin
-local function ShowNew(current)
+local function ShowNew(current, newer, who)
     newWin = newWin or (function()
         local f = CreateFrame("Frame", "ForeverLazy_New", UIParent)
         f:SetSize(420, 380)
@@ -393,10 +399,10 @@ local function ShowNew(current)
         local bg = f:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
         f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-        f.title:SetPoint("TOPLEFT", 14, -12)
+        f.title:SetPoint("TOPLEFT", 14, -24)
         f.title:SetWidth(320); f.title:SetJustifyH("LEFT")
         f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-        f.sub:SetPoint("TOPLEFT", f.title, "BOTTOMLEFT", 0, -4)
+        f.sub:SetPoint("TOPLEFT", f.title, "BOTTOMLEFT", 0, -4); f.sub:SetWidth(320); f.sub:SetJustifyH("LEFT")
         -- Sam, top right (photo: media\CREDITS.txt, CC BY-SA 2.0)
         local face = f:CreateTexture(nil, "ARTWORK")
         face:SetSize(56, 56)
@@ -406,6 +412,9 @@ local function ShowNew(current)
         local ohh = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         ohh:SetPoint("TOP", face, "BOTTOM", 0, -2)
         ohh:SetText("|cffff3333OH Oh OHH|r")
+        local by = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        by:SetPoint("TOPLEFT", 14, -6); by:SetWidth(330); by:SetJustifyH("LEFT")
+        by:SetText("Brought to you by Sam Skinison and Tank Hanks")
         local credit = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         credit:SetPoint("BOTTOM", 0, 14)
         credit:SetWidth(170)
@@ -418,6 +427,13 @@ local function ShowNew(current)
         f.scroll:SetScrollChild(f.content)
         f.text = f.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         f.text:SetPoint("TOPLEFT", 0, 0); f.text:SetWidth(360); f.text:SetJustifyH("LEFT"); f.text:SetJustifyV("TOP")
+        -- shown when a newer version exists: where to get it (select the line and copy it)
+        f.url = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+        f.url:SetSize(300, 20); f.url:SetPoint("BOTTOMLEFT", 20, 44); f.url:SetAutoFocus(false)
+        f.url:SetText("https://github.com/everyday3d/ForeverLazy/releases")
+        f.url:SetScript("OnEscapePressed", function(s) s:ClearFocus() end)
+        f.url:SetScript("OnTextChanged", function(s, user) if user then s:SetText("https://github.com/everyday3d/ForeverLazy/releases") end end)
+        f.url:Hide()
         local tourBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         tourBtn:SetSize(120, 24); tourBtn:SetPoint("BOTTOMLEFT", 14, 12); tourBtn:SetText("Take the tour")
         tourBtn:SetScript("OnClick", function() f:Hide(); addon.StartTour() end)
@@ -434,13 +450,22 @@ local function ShowNew(current)
         lines[#lines + 1] = ""
     end
     newWin.title:SetText("What's new new |cffff3333NEWWW!|r")
-    newWin.sub:SetText("Forever Lazy " .. (current or Version()))
+    newWin.sub:SetText("Forever Lazy " .. (current or Version()) .. " (installed)")
+    if newer then
+        newWin.sub:SetText("You have Forever Lazy " .. (current or Version()) .. ". Version " .. newer .. " is out" .. (who and (" (" .. who .. " runs it)") or "") ..
+            ". Get it from the link below (select it, Ctrl+C), then reload. The list shows what your installed version has.")
+        newWin.url:Show()
+        newWin.scroll:SetPoint("TOPLEFT", 14, -160); newWin.scroll:SetPoint("BOTTOMRIGHT", -34, 72)
+    else
+        newWin.url:Hide()
+        newWin.scroll:SetPoint("TOPLEFT", 14, -104); newWin.scroll:SetPoint("BOTTOMRIGHT", -34, 46)
+    end
     newWin.text:SetText(table.concat(lines, "\n"))
     newWin.content:SetHeight(newWin.text:GetStringHeight() + 10)
     if newWin.scroll.SetVerticalScroll then newWin.scroll:SetVerticalScroll(0) end
     newWin:Show()
 end
-function addon.ShowWhatsNew() ShowNew(Version()) end
+function addon.ShowWhatsNew() ShowNew(Version(), addon.newerVersion, addon.newerFrom) end
 
 --------------------------------------------------------------------------------
 -- When these show by themselves

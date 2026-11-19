@@ -36,6 +36,7 @@ local hbdp = LibStub("HereBeDragons-Pins-2.0", true)
 
 local addon = {}
 ns.addon = addon
+addon.loaded = addon.loaded or {}; addon.loaded["Data.lua"] = ns.data ~= nil
 LibStub("AceComm-3.0"):Embed(addon)
 AceSerializer:Embed(addon)
 
@@ -97,7 +98,12 @@ local DEFAULTS = {
 }
 addon.DEFAULTS = DEFAULTS
 
-local function Print(msg) print("|cff33ccffForeverLazy:|r " .. tostring(msg)) end
+-- while a report command runs, its lines are collected (addon.capture) and shown in a window instead of the chat
+local function Print(msg)
+    local cap = addon.capture
+    if cap then cap[#cap + 1] = tostring(msg); return end
+    print("|cff33ccffForeverLazy:|r " .. tostring(msg))
+end
 addon.Print = Print
 
 -- each module can be switched off in the options: db.modules[key] == false means off
@@ -211,11 +217,8 @@ local indexBuilding, indexReady = false, false
 
 local function GetQuestie()
     if QuestieDB and ZoneDB then return true end
-    local loader = _G.QuestieLoader
-    if not loader then return false end
-    local ok1, d = pcall(loader.ImportModule, loader, "QuestieDB")
-    local ok2, z = pcall(loader.ImportModule, loader, "ZoneDB")
-    if ok1 and ok2 and d and z then QuestieDB, ZoneDB = d, z; return true end
+    local d, z = ns.data.Module("QuestieDB"), ns.data.Module("ZoneDB")
+    if d and z then QuestieDB, ZoneDB = d, z; return true end
     return false
 end
 
@@ -956,7 +959,7 @@ driver:SetScript("OnUpdate", function(_, dt)
     local simple = db.simpleArrows ~= false      -- simple arrows: only the one main arrow (plus ghost and follow)
     UpdateQuestArrows(show and not simple)
     UpdateFriendArrow(show and not simple)
-    UpdateWaypointArrow(not ShouldHide())
+    UpdateWaypointArrow((not ShouldHide()) or (addon.DungeonArrowActive and addon.DungeonArrowActive()) or false)
     if addon.panel then
         addon.panel:SetShown(db.showPanel and state.stepText ~= nil and not ShouldHide() and db.rxpListen ~= false)
     end
@@ -1254,7 +1257,7 @@ ns.api = {
     PointAt = PointAt, FindUnit = FindUnit, PlayAlert = PlayAlert, ShouldHide = ShouldHide,
     QuestieReady = QuestieReady, D2 = D2, DeepCopy = DeepCopy, MakeArrow = MakeArrow, StyleTexture = StyleTexture,
     AddSpawns = AddSpawns, AddNpcs = AddNpcs, AddObjects = AddObjects, AddItemSources = AddItemSources,
-    GetQuestie = function() GetQuestie(); return QuestieDB, ZoneDB end,
+    GetQuestie = function() GetQuestie(); return ns.data.Facade(QuestieDB), ZoneDB end,
     IsMapHooked = function() return mapHooked end,
     IndexReady = function() return indexReady end,
 }
@@ -1298,7 +1301,16 @@ SlashCmdList["FOREVERLAZY"] = function(msg)
     elseif cmd == "" or cmd == "options" or cmd == "config" then
         addon:OpenOptions()
     elseif addon.HandleExtraCommand and (function()
+            local asWindow = addon.IsReportCommand and addon.IsReportCommand(cmd, rest)
+            if asWindow then addon.capture = {} end
             local ok, res = pcall(addon.HandleExtraCommand, addon, cmd, rest)
+            local lines = addon.capture
+            addon.capture = nil
+            if asWindow and lines and #lines > 1 and addon.ReportWindow then
+                addon.ReportWindow("/lazy " .. tostring(cmd) .. ((rest and rest ~= "") and (" " .. rest) or ""), lines)
+            elseif lines then
+                for _, l in ipairs(lines) do Print(l) end
+            end
             if not ok then Print("|cffff5555error in /" .. tostring(cmd) .. ":|r " .. tostring(res)); return true end
             return res
         end)() then

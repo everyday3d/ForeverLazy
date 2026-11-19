@@ -232,6 +232,26 @@ local function BuildControls(parent)
     Button(content, "Export settings", 276, 130, function() if addon.ExportSettings then addon.ExportSettings() end end, false)
     Button(content, "Import settings", 416, 130, function() if addon.ImportSettings then addon.ImportSettings() end end, true)
 
+    Header(content, "Quest map")
+    Label(content, "Where your quests' mobs, items and objects are, on the world map and the minimap: skull = kill, purple diamond = collect, green triangle = use. Yellow ! = a quest to pick up in this zone, yellow ? = a finished quest to hand in. Hover a pin for the quest.")
+    y = y - 22
+    Check(content, "Show quest objectives on the map and minimap", 16,
+        function() return DB().questMap ~= false and DB().questMapObjectives ~= false end,
+        function(v) DB().questMapObjectives = v and nil or false; if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+    Check(content, "Draw coloured areas where the quest mobs are (world map)", 16,
+        function() return DB().questMap ~= false and DB().questMapAreas ~= false end,
+        function(v) DB().questMapAreas = v and nil or false; if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+    Check(content, "Show quest givers (!) and hand-ins (?) on the map", 16,
+        function() return DB().questMap ~= false and DB().questMapGivers ~= false end,
+        function(v) DB().questMapGivers = v and nil or false; if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+
+    Header(content, "Quest data")
+    Label(content, "The addon carries its own quest data, so it no longer needs Questie. This button tries it: it ignores Questie, reloads the screen, and shows a results window a few seconds later.")
+    y = y - 22
+    Button(content, "Test without Questie", 16, 170, function() if addon.SelfTest then addon.SelfTest(false) end end, false)
+    Button(content, "Back to normal", 196, 130, function() if addon.SelfTest then addon.SelfTest(true) end end, false)
+    Button(content, "Compare with Questie", 336, 170, function() SlashCmdList["FOREVERLAZY"]("data verify") end, true)
+
     Header(content, "Presets")
     Label(content, "One click sets which modules are on. Change any of them below afterwards.")
     y = y - 22
@@ -439,16 +459,18 @@ local function BuildControls(parent)
         function() return DB().autoTrip == true end, function(v) DB().autoTrip = v end)
     Check(content, "Finish the quests in an area before walking back to hand any in (unless it continues a chain)", 16,
         function() return DB().planBatch ~= false end, function(v) DB().planBatch = v end)
-    Check(content, "Draw my plan's route on the world map", 16,
+    Check(content, "Show my plan's numbered stops on the world map", 16,
         function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
+    Check(content, "... and draw lines between them (off by default)", 16,
+        function() return DB().mapRouteLines == true end, function(v) DB().mapRouteLines = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
     Check(content, "Item tooltips say how many I have in my bags, bank, mail and worn", 16,
         function() return DB().itemTooltip ~= false end, function(v) DB().itemTooltip = v end)
     Check(content, "... and how many my other characters have", 16,
         function() return DB().itemTooltipAlts ~= false end, function(v) DB().itemTooltipAlts = v end)
     Check(content, "Show XP hot spots on the world map (where the quests worth doing for my level are)", 16,
         function() return DB().xpHeat == true end, function(v) DB().xpHeat = v; if addon.DrawXPHeat then addon.DrawXPHeat() end end)
-    Check(content, "Draw my route on the minimap (numbered stops joined in order)", 16,
-        function() return DB().minimapLine ~= false end, function(v) DB().minimapLine = v end)
+    Check(content, "Draw my route on the minimap (numbered stops joined by lines, off by default)", 16,
+        function() return DB().minimapLine == true end, function(v) DB().minimapLine = v end)
     Check(content, "Offer to plan a new zone once I have stayed in it a while", 16,
         function() return DB().zonePrompt ~= false end, function(v) DB().zonePrompt = v end)
     Check(content, "Share boat docks I teach with my guild and group (hidden addon messages, nothing shows in chat)", 16,
@@ -540,12 +562,34 @@ local function BuildControls(parent)
     Check(content, "Hide WoW's own quest tracker while mine is on", 16,
         function() return DB().trackerHideBlizzard ~= false end,
         function(v) DB().trackerHideBlizzard = v; if addon.TrackerSet and DB().trackerOn then addon.TrackerSet(true, v) end end)
+    Check(content, "Minimized (just the title, the zones and quests fold away)", 16,
+        function() return DB().trackerCollapsed == true end,
+        function(v) DB().trackerCollapsed = v; if addon.HandleExtraCommand and DB().trackerOn then addon:HandleExtraCommand("tracker", "refresh") end end)
+    Check(content, "Hide the tracker while I am in combat", 16,
+        function() return DB().trackerHideCombat ~= false end, function(v) DB().trackerHideCombat = v end)
     Check(content, "Compact: objectives only for the quest I am on, the others take one line", 16,
         function() return DB().trackerCompact == true end, function(v) DB().trackerCompact = v; if addon.HandleExtraCommand and DB().trackerOn then addon:HandleExtraCommand("tracker", "refresh") end end)
     Check(content, "No background (just the text, with an outline)", 16,
         function() return DB().trackerNoBg == true end,
         function(v) DB().trackerNoBg = v; if addon.HandleExtraCommand and DB().trackerOn then addon:HandleExtraCommand("tracker", "refresh") end end)
     Button(content, "Put the tracker back at the top right", 16, 250, function() addon:HandleExtraCommand("tracker", "reset") end, true)
+
+    Header(content, "Talents and skills")
+    Check(content, "Remind me when I have a talent point to spend or new skills at my trainer (/lazy talents shows where my points are)", 16,
+        function() return DB().talentReminder ~= false end, function(v) DB().talentReminder = v end)
+
+    Header(content, "Couch mode")
+    Label(content, "For playing on the TV with a controller: big text, quests accept and hand in by themselves, and the steps are read aloud. A quest with a choice of rewards is never picked for you: the best one for your class and spec is starred. Hold Shift to do it by hand.")
+    y = y - 50
+    Check(content, "Couch mode (big text, auto accept and hand in, steps read aloud)", 16,
+        function() return DB().couch == true end, function(v) if addon.CouchSet then addon.CouchSet(v) end end)
+    Check(content, "Accept and hand in quests by myself (not dungeon, skipped or grey quests; never choosing a reward)", 16,
+        function() return DB().couchAuto == true end, function(v) DB().couchAuto = v end)
+    Check(content, "Read the steps aloud as they change", 16,
+        function() return DB().couchSpeak == true end, function(v) DB().couchSpeak = v end)
+    Slider(content, "Voice speed", -5, 5, 1, "%d", function() return DB().couchRate or 0 end, function(v) DB().couchRate = v end)
+    Check(content, "Inside a dungeon, point the arrow at what my quests need there", 16,
+        function() return DB().dungeonArrow ~= false end, function(v) DB().dungeonArrow = v end)
 
     Header(content, "Damage meter")
     Label(content, "A damage meter in its own chat tab called Meter, so it stays out of the way. It reads the game's built-in meter (the same source Details uses on this client). In combat the game hides the numbers, so the tab keeps the last picture until the fight ends.")
@@ -870,7 +914,7 @@ local function ShowWelcome()
 
         local by = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         by:SetPoint("TOP", caption, "BOTTOM", 0, -6)
-        by:SetText("Brought to you by Sam Skinison")
+        by:SetText("Brought to you by Sam Skinison and Tank Hanks")
 
         local text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         text:SetPoint("TOP", by, "BOTTOM", 0, -14)

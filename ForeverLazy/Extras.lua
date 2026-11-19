@@ -18,9 +18,11 @@ local mineArrow
 
 local function ReadQuestLog()
     local out = {}
+    local zone                       -- the zone header the quest sits under in the log
     if C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo then
         for i = 1, C_QuestLog.GetNumQuestLogEntries() do
             local info = C_QuestLog.GetInfo(i)
+            if info and info.isHeader then zone = info.title end
             if info and not info.isHeader and info.questID then
                 local done = C_QuestLog.IsComplete and C_QuestLog.IsComplete(info.questID)
                 local watched = false
@@ -30,17 +32,18 @@ local function ReadQuestLog()
                     watched = C_QuestLog.IsQuestWatched(info.questID) and true or false
                 end
                 out[#out + 1] = { id = info.questID, title = info.title or "Quest", complete = done and true or false,
-                                  watched = watched, level = info.level, group = info.suggestedGroup }
+                                  watched = watched, level = info.level, group = info.suggestedGroup, zone = zone }
             end
         end
     elseif GetNumQuestLogEntries and GetQuestLogTitle then
         local n = GetNumQuestLogEntries()
         for i = 1, n do
             local title, qLevel, suggested, isHeader, _, isComplete, _, questId = GetQuestLogTitle(i)
+            if title and isHeader then zone = title end
             if title and not isHeader and questId then
                 local watched = IsQuestWatched and IsQuestWatched(i) and true or false
                 out[#out + 1] = { id = questId, title = title, complete = (isComplete == 1 or isComplete == true),
-                                  watched = watched, level = qLevel, group = tonumber(suggested) }
+                                  watched = watched, level = qLevel, group = tonumber(suggested), zone = zone }
             end
         end
     end
@@ -122,12 +125,8 @@ end
 
 -- XP a quest gives me now (Questie's own table, already scaled for my level), and whether it is grey
 local function QuestXPNow(id)
-    local ql = _G.QuestieLoader
-    if not ql then return 0 end
-    local ok, mod = pcall(ql.ImportModule, ql, "QuestXP")
-    if not ok or not mod or not mod.GetQuestLogRewardXP then return 0 end
-    local ok2, xp = pcall(mod.GetQuestLogRewardXP, mod, id, false)
-    return (ok2 and tonumber(xp)) or 0
+    return ns.data.QuestXP(id)
+
 end
 
 local function IsGrey(QDB, level)
@@ -417,7 +416,9 @@ end
 -- For a stop that is kills or items: the arrow points at the nearest spot where those things are (Questie's spawns, or the places
 -- other players really did it), not at the middle of the stop. It stays at a spot while I am making progress there, and moves to
 -- the next one when I have stood there a while with nothing counting up.
-local spotState = { wp = nil, cur = nil, visited = {}, sig = nil, lastProgress = 0, cands = nil, candsAt = 0, target = nil }
+-- PickSpot does the choosing for any list of quests and any way of finding their spots (a plan stop out in the world, or the
+-- quests of a dungeon I am inside).
+local spotStates = setmetatable({}, { __mode = "k" })
 
 local function OpenObjectiveIds(wp)
     local ids = {}
@@ -448,48 +449,55 @@ local function ObjectiveProgress(ids)
     return n
 end
 
-local function ObjectiveSpot(wp)
-    local db = DB()
-    if db.arrowSpots == false or not addon.QuestLogSpawns then return nil end
-    local ids = OpenObjectiveIds(wp)
-    if #ids == 0 then spotState.wp = nil; spotState.cur = nil; return nil end
-    local px, py, pinst = hbd:GetPlayerWorldPosition()
-    if not px then return nil end
-    local now = GetTime()
-    -- the spots of these quests (rebuilt now and then; the quest log work is not free)
-    if spotState.wp ~= wp or not spotState.cands or now - spotState.candsAt > 6 then
-        local want = {}
-        for _, id in ipairs(ids) do want[id] = true end
-        local cands, grid = {}, {}
-        for _, g in ipairs(addon.QuestLogSpawns()) do
-            if g.id and want[g.id] and not g.complete then
-                for _, s in ipairs(g.spawns) do
-                    if s.instance == pinst and s.x then
-                        local key = math.floor(s.x / 25) .. ":" .. math.floor(s.y / 25)
-                        if not grid[key] then
-                            grid[key] = true
-                            cands[#cands + 1] = { x = s.x, y = s.y, instance = s.instance, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy, key = key }
-                        end
+-- the spots of these quests out in the world, from the quest log's own spawn lists
+local function WorldSpots(ids, pinst)
+    local want = {}
+    for _, id in ipairs(ids) do want[id] = true end
+    local cands, grid = {}, {}
+    for _, g in ipairs(addon.QuestLogSpawns()) do
+        if g.id and want[g.id] and not g.complete then
+            for _, s in ipairs(g.spawns) do
+                if s.instance == pinst and s.x then
+                    local key = math.floor(s.x / 25) .. ":" .. math.floor(s.y / 25)
+                    if not grid[key] then
+                        grid[key] = true
+                        cands[#cands + 1] = { x = s.x, y = s.y, instance = s.instance, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy, key = key }
                     end
                 end
             end
         end
-        if spotState.wp ~= wp then spotState.cur = nil; spotState.visited = {}; spotState.sig = nil end
-        spotState.wp, spotState.cands, spotState.candsAt = wp, cands, now
     end
-    local cands = spotState.cands
+    return cands
+end
+
+-- key: what these spots belong to (a table, kept as long as it lives); ids: the open quests; getCands(ids, pinst): the spots
+local function PickSpot(key, ids, label, quests, getCands)
+    if #ids == 0 then spotStates[key] = nil; return nil end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return nil end
+    local now = GetTime()
+    local state = spotStates[key]
+    if not state then state = { visited = {}, lastProgress = 0 }; spotStates[key] = state end
+    local sigIds = table.concat(ids, ",")
+    if state.sigIds ~= sigIds or not state.cands or now - state.candsAt > 6 then
+        state.cands = getCands(ids, pinst) or {}
+        state.candsAt = now
+        if state.sigIds ~= sigIds then state.cur = nil; state.visited = {}; state.sig = nil end
+        state.sigIds = sigIds
+    end
+    local cands = state.cands
     if #cands == 0 then return nil end
-    -- progress at this stop: while it counts up, stay
+    -- progress: while it counts up, stay
     local sig = ObjectiveProgress(ids)
-    if sig ~= spotState.sig then spotState.sig = sig; spotState.lastProgress = now end
+    if sig ~= state.sig then state.sig = sig; state.lastProgress = now end
     local function dist(s) return math.sqrt((s.x - px) ^ 2 + (s.y - py) ^ 2) end
-    local cur = spotState.cur
+    local cur = state.cur
     if cur then
         local d = dist(cur)
         if d <= 45 then
             cur.arrivedAt = cur.arrivedAt or now
-            if now - math.max(cur.arrivedAt, spotState.lastProgress) > 25 then     -- stood here, nothing counting up: next spot
-                spotState.visited[cur.key] = now
+            if now - math.max(cur.arrivedAt, state.lastProgress) > 25 then     -- stood here, nothing counting up: next spot
+                state.visited[cur.key] = now
                 cur = nil
             end
         else
@@ -499,7 +507,7 @@ local function ObjectiveSpot(wp)
     local function nearestFresh()
         local best, bd
         for _, c in ipairs(cands) do
-            local seen = spotState.visited[c.key]
+            local seen = state.visited[c.key]
             if not (seen and now - seen < 180) then
                 local d = dist(c)
                 if not bd or d < bd then best, bd = c, d end
@@ -509,22 +517,28 @@ local function ObjectiveSpot(wp)
     end
     if not cur then
         local c = nearestFresh()
-        if not c then spotState.visited = {}; c = nearestFresh() end         -- seen them all: start over
+        if not c then state.visited = {}; c = nearestFresh() end         -- seen them all: start over
         cur = c
     elseif dist(cur) > 150 then
         local c, bd = nearestFresh()
         if c and c ~= cur and bd < dist(cur) * 0.5 then cur = c end            -- a much nearer one: use that
     end
-    spotState.cur = cur
+    state.cur = cur
     if not cur then return nil end
     -- one table that is kept and updated, so "arrived" is only noticed once per stop
-    local tg = spotState.target
-    if not tg then tg = {}; spotState.target = tg end
+    local tg = state.target
+    if not tg then tg = {}; state.target = tg end
     tg.instance, tg.x, tg.y, tg.uiMapId, tg.zx, tg.zy = cur.instance, cur.x, cur.y, cur.uiMapId, cur.zx, cur.zy
-    tg.name, tg.label, tg.quests, tg.spot = wp.name, wp.label, wp.quests, true
+    tg.name, tg.label, tg.quests, tg.spot = label, label, quests, true
     return tg
 end
+addon.PickObjectiveSpot = PickSpot
 
+local function ObjectiveSpot(wp)
+    local db = DB()
+    if db.arrowSpots == false or not addon.QuestLogSpawns then return nil end
+    return PickSpot(wp, OpenObjectiveIds(wp), wp.name, wp.quests, WorldSpots)
+end
 local function BaseArrowTarget()    local db = DB()
     if not db then return nil end
     local src = db.arrowSource or "auto"
@@ -552,6 +566,9 @@ local function BaseArrowTarget()    local db = DB()
 end
 
 function addon.ArrowTarget()
+    -- inside a dungeon with quests that need something here: the spots in there come first
+    local okD, ds = pcall(function() return addon.DungeonArrowTarget and addon.DungeonArrowTarget() end)
+    if okD and ds then return ds end
     local wp = BaseArrowTarget()
     local db = DB()
     if wp and wp.quests and db and db.waypoints and wp == db.waypoints[1] then
@@ -944,11 +961,9 @@ local planActive    -- a plan is being followed (it refills itself when it runs 
 -- Quests I can pick up in this zone (Questie already works out which ones I may take), worth doing
 -- by colour, nearest givers first. Used when none of my own quests are here.
 local function CollectGivers(zoneId, pinst, from, all)
-    local ql = _G.QuestieLoader
     local QDB = api.GetQuestie()
-    if not (ql and QDB and zoneId) then return {} end
-    local ok, AQ = pcall(ql.ImportModule, ql, "AvailableQuests")
-    local avail = ok and AQ and AQ.__availableQuests
+    if not (QDB and zoneId) then return {} end
+    local avail = ns.data.Available()
     if type(avail) ~= "table" then return {} end
     local out = {}
     for id in pairs(avail) do
@@ -1030,9 +1045,7 @@ function addon.XPHotSpots(mapId)
         end
     end
     -- quests I can pick up
-    local ql = _G.QuestieLoader
-    local okAQ, AQ = pcall(function() return ql and ql:ImportModule("AvailableQuests") end)
-    local avail = okAQ and AQ and AQ.__availableQuests
+    local avail = ns.data.Available()
     if type(avail) == "table" then
         local mylvl = UnitLevel("player") or 1
         for id in pairs(avail) do
@@ -1127,6 +1140,12 @@ function addon.PlanDebug()
     end
     if shown == 0 then Print("    no stops") end
 end
+-- a quest I put off ("come back to it later"): it stays out of the plan until its time is up, or until nothing else is left
+local function LaterActive(db, id)
+    local t = db.planLater and db.planLater[id]
+    return t and t > (time and time() or 0) or false
+end
+
 function addon:PlanRoute(allZones, quiet, auto)
     local Print = quiet and function() end or Print
     local db = DB()
@@ -1153,6 +1172,13 @@ function addon:PlanRoute(allZones, quiet, auto)
         local xp = g.xp or 0
         if xp <= 0 then xp = 50 end          -- no XP data: assume a small quest
         if not g.complete then xp = xp * 0.7 end
+        -- the best quests are yellow (my level): orange ones pay more XP but are slower and riskier, so they rank below yellow;
+        -- green ones are easy but small. A finished quest (a hand-in) is not affected.
+        if not g.complete and db.planPreferYellow ~= false then
+            if g.tier == "yellow" then xp = xp * 1.25
+            elseif g.tier == "orange" then xp = xp * 0.6
+            elseif g.tier == "green" then xp = xp * 0.9 end
+        end
         -- a quest a friend in my group has too is worth more: we can do it together
         if db.planShared ~= false and addon.sharedQuests and g.id then
             local sh = addon.sharedQuests[g.id]
@@ -1194,7 +1220,7 @@ function addon:PlanRoute(allZones, quiet, auto)
     for _, g in ipairs(mine.groups) do
         if g.id and api.IsDungeonQuest and api.IsDungeonQuest(g.id, g.complete) and not g.complete then
             -- a dungeon quest: not part of a plan (a finished one is still handed in)
-        elseif db.planSkip and g.id and db.planSkip[g.id] then
+        elseif (db.planSkip and g.id and db.planSkip[g.id]) or (g.id and LaterActive(db, g.id)) then
             -- skipped by me from the arrow's right-click menu
         elseif g.group and g.group > 1 and not g.complete and db.planSkipGroup ~= false and g.tier ~= "green"
             and (GetNumGroupMembers and GetNumGroupMembers() or 0) < 2 then
@@ -1241,7 +1267,7 @@ function addon:PlanRoute(allZones, quiet, auto)
     if #pool == 0 and not allZones and zoneId then
         -- nothing of mine is here: point at the quest givers in this zone instead
         for _, g in ipairs(CollectGivers(zoneId, pinst, here0)) do
-            if not (db.planSkip and db.planSkip[g.id]) then
+            if not (db.planSkip and db.planSkip[g.id]) and not LaterActive(db, g.id) then
                 pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) }
                 totalXP = totalXP + (g.xp or 0)
                 pickup = true
@@ -1253,7 +1279,7 @@ function addon:PlanRoute(allZones, quiet, auto)
         local have = {}
         for _, it in ipairs(pool) do if it.g.id then have[it.g.id] = true end end
         for _, g in ipairs(api.ClassGivers(zoneId, pinst, here0)) do
-            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) then
+            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) and not LaterActive(db, g.id) then
                 pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) * 1.5 }
                 totalXP = totalXP + (g.xp or 0)
             end
@@ -1266,7 +1292,7 @@ function addon:PlanRoute(allZones, quiet, auto)
         local have = {}
         for _, it in ipairs(pool) do if it.g.id then have[it.g.id] = true end end
         for _, g in ipairs(CollectGivers(zoneId, pinst, here0, true)) do
-            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) then
+            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) and not LaterActive(db, g.id) then
                 pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) }
                 totalXP = totalXP + (g.xp or 0)
                 have[g.id] = true
@@ -1279,7 +1305,7 @@ function addon:PlanRoute(allZones, quiet, auto)
         local have = {}
         for _, it in ipairs(pool) do if it.g.id then have[it.g.id] = true end end
         for _, g in ipairs(CollectGivers(zoneId, pinst, here0, true)) do
-            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) and (g.near or 1e9) <= 600 then
+            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) and not LaterActive(db, g.id) and (g.near or 1e9) <= 600 then
                 pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) }
                 totalXP = totalXP + (g.xp or 0)
                 have[g.id] = true
@@ -1328,7 +1354,12 @@ function addon:PlanRoute(allZones, quiet, auto)
                 pool = kept
             end
         end
-    end    if #pool == 0 then
+    end    if #pool == 0 and db.planLater and next(db.planLater) then
+        db.planLater = nil; db.planLaterStops = nil
+        if addon.PlanLog then addon.PlanLog("plan", "nothing else is left, so the quests you put off come back now") end
+        return addon:PlanRoute(allZones, quiet, auto)
+    end
+    if #pool == 0 then
         if otherZone > 0 and not allZones then
             -- nothing to do here: plan the worthwhile quests wherever they are instead
             Print(string.format("none of your quests are in this zone, planning the %d elsewhere instead", otherZone))
@@ -1516,6 +1547,41 @@ function addon:PlanRoute(allZones, quiet, auto)
                             uiMapId = st.s.uiMapId, zx = st.s.zx, zy = st.s.zy, quests = st.quests }
     end
 
+    -- Turn-ins first: when I am in an area (about 600 yards) with quests I can hand in right now, those go to the front of the
+    -- plan, nearest first, before anything else. Only stops that are nothing but finished hand-ins move.
+    do
+        local HOIST = 600
+        local function Finished(id)
+            if not (id and C_QuestLog and C_QuestLog.IsComplete) then return false end
+            local okC, done = pcall(C_QuestLog.IsComplete, id)
+            return okC and done and true or false
+        end
+        local near, rest = {}, {}
+        for _, w in ipairs(list) do
+            local onlyTurnIns = w.quests and #w.quests > 0
+            for _, q in ipairs(w.quests or {}) do
+                if not ((q.label or ""):find("^Turn in:") and Finished(q.id)) then onlyTurnIns = false; break end
+            end
+            if onlyTurnIns and w.instance == pinst and Dist(w, start) < HOIST then near[#near + 1] = w else rest[#rest + 1] = w end
+        end
+        if #near > 0 then
+            local ordered, cur = {}, start
+            while #near > 0 do
+                local bi, bd
+                for i, w in ipairs(near) do
+                    local d = Dist(cur, w)
+                    if not bd or d < bd then bi, bd = i, d end
+                end
+                local w = table.remove(near, bi)
+                ordered[#ordered + 1] = w
+                cur = w
+            end
+            for _, w in ipairs(rest) do ordered[#ordered + 1] = w end
+            list = ordered
+            for i, w in ipairs(list) do w.name = i .. ". " .. tostring(w.label) end
+        end
+    end
+
     -- a place a guard just pointed me to stays the next stop through a replan
     local guardStop
     for _, w in ipairs(db.waypoints or {}) do if w.guard then guardStop = w; break end end
@@ -1688,6 +1754,7 @@ local function AddQuestToPlan(questId)
     local g = BuildGroup(q)
     if not Wanted(g, db.planSkipGrey == false) then return end   -- grey, or orange/red and not done: not worth a stop
     if db.planSkip and db.planSkip[g.id] then return end         -- I skipped this one
+    if LaterActive(db, g.id) then return end                     -- I put this one off for a while
     if not g.complete and api.IsDungeonQuest and api.IsDungeonQuest(g.id, false) then return end   -- dungeon quests stay out of the plan
 
     -- candidate spots on this continent, in the zone I am in
@@ -2012,6 +2079,32 @@ function addon.PurgeDungeonStops(verbose)
     end
     return count + named
 end
+-- Safety net for the accept step: any "Pick up" / "Class quest" entry whose quest is already in my log is done, whether or not the
+-- accepted event reached us (a different id, a quest taken some other way, a reload in between).
+local sweepAcc = 0
+local sweepTick = CreateFrame("Frame")
+sweepTick:SetScript("OnUpdate", function(_, dt)
+    sweepAcc = sweepAcc + dt
+    if sweepAcc < 1 then return end
+    sweepAcc = 0
+    local db = DB()
+    local wps = db and db.waypoints
+    if not wps or #wps == 0 then return end
+    local done
+    for _, w in ipairs(wps) do
+        for _, q in ipairs(w.quests or {}) do
+            local lbl = q.label or ""
+            if q.id and (lbl:find("^Pick up:") or lbl:find("^Class quest:")) and InMyLog(q.id) == true then
+                done = done or {}
+                done[q.id] = true
+            end
+        end
+    end
+    if done then
+        for id in pairs(done) do pcall(addon.PickupDone, id) end
+    end
+end)
+
 -- a hand-in must never come up while the quest is not finished: rebuild the plan so the objectives come first
 local lastFix = 0
 local fixTick = CreateFrame("Frame")
@@ -2022,7 +2115,31 @@ fixTick:SetScript("OnUpdate", function(_, dt)
     fixAcc = 0
     local db = DB()
     if db and GetTime() - (addon.lastDungeonPurge or 0) > 20 then addon.lastDungeonPurge = GetTime(); pcall(addon.PurgeDungeonStops) end
-    local w = db and db.waypoints and db.waypoints[1]
+    -- a quest I put off goes back into the plan when I am near where it was again (after I have been away from it), or when its
+    -- time is up
+    if db and db.planLaterStops and next(db.planLaterStops) and not db.planPaused then
+        local nowT = time and time() or 0
+        local px, py, pinst = hbd:GetPlayerWorldPosition()
+        local inFight = InCombatLockdown and InCombatLockdown()
+        for id, rec in pairs(db.planLaterStops) do
+            local back, why = false, nil
+            if (db.planLater and db.planLater[id] or 0) <= nowT then back, why = true, "its time is up" end
+            if not back and px then
+                local nearest
+                for _, r in ipairs(rec.recs or {}) do
+                    if r.instance == pinst and r.x then
+                        local d = math.sqrt(api.D2(r.x, r.y, px, py))
+                        if not nearest or d < nearest then nearest = d end
+                    end
+                end
+                if nearest then
+                    if nearest > 500 then rec.away = true end                 -- I have left the crowd behind
+                    if rec.away and nearest <= 350 and not inFight then back, why = true, "you are near it again" end
+                end
+            end
+            if back then pcall(addon.PlanLaterReturn, id, why) end
+        end
+    end    local w = db and db.waypoints and db.waypoints[1]
     if not w or db.planPaused or db.planAuto == false or not (w.label and w.label:find("^Turn in:")) then return end
     for _, q in ipairs(w.quests or {}) do
         if QuestOpen(q.id) and GetTime() - lastFix > 30 then
@@ -2056,6 +2173,11 @@ nearTick:SetScript("OnUpdate", function(_, dt)
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if not px then return end
     local d1 = first.instance == pinst and math.sqrt(api.D2(first.x, first.y, px, py)) or nil
+    -- is the stop the arrow is on already a hand-in? then only a clearly closer one takes over
+    local firstIsTurn = first.quests and #first.quests > 0
+    for _, q in ipairs(first.quests or {}) do
+        if not ((q.label or ""):find("^Turn in:")) then firstIsTurn = false; break end
+    end
     for i = 2, #wps do
         local w = wps[i]
         if w.label and w.instance == pinst and w.x and w.quests and #w.quests > 0 and not nearAt[w] then
@@ -2066,7 +2188,8 @@ nearTick:SetScript("OnUpdate", function(_, dt)
             if allHandIns then
                 local d = math.sqrt(api.D2(w.x, w.y, px, py))
                 -- close by (about a minute's walk), and nearer than where the arrow points now
-                if d < 250 and (not d1 or d1 > d + 60) then
+                -- in an area with hand-ins (about 600 yards): they come first, unless I am already heading to a nearer one
+                if d < 600 and (not firstIsTurn or not d1 or d1 > d + 60) then
                     nearAt[w] = GetTime()
                     table.remove(wps, i)
                     table.insert(wps, 1, w)
@@ -2368,6 +2491,10 @@ end
 function addon.StepList(max)
     local db = DB()
     local steps = {}
+    local pts = addon.TalentPointsUnspent and addon.TalentPointsUnspent() or 0
+    if pts > 0 and db.talentReminder ~= false then
+        steps[#steps + 1] = { kind = "go", key = "talents", text = "Spend " .. pts .. " talent point" .. (pts == 1 and "" or "s") .. " (press N)", done = false }
+    end
     for si, w in ipairs(db.waypoints or {}) do
         if #steps >= (max or 12) then break end
         if w.lazy and not w.label then
@@ -2620,6 +2747,83 @@ end
 
 addon.SkipQuest = SkipQuest
 
+-- Come back to a quest later (a crowded spot, say). The plan simply goes on with its next stop, in its own order. The quest
+-- waits; when I am near where it was (or its time is up) it is put back into the plan where it costs the least walking.
+local function QuestSpotsInPlan(id)
+    local recs = {}
+    for _, w in ipairs(DB().waypoints or {}) do
+        for _, q in ipairs(w.quests or {}) do
+            if q.id == id then
+                recs[#recs + 1] = { q = { id = q.id, label = q.label, src = q.src, grp = q.grp, tier = q.tier },
+                                    instance = w.instance, x = w.x, y = w.y, uiMapId = w.uiMapId, zx = w.zx, zy = w.zy }
+            end
+        end
+    end
+    return recs
+end
+
+function addon.PlanLater(id, label, minutes)
+    local db = DB()
+    if not id then return end
+    minutes = minutes or 10
+    local due = (time and time() or 0) + minutes * 60
+    db.planLater = db.planLater or {}
+    db.planLaterStops = db.planLaterStops or {}
+    local recs = QuestSpotsInPlan(id)
+    db.planLater[id] = due
+    db.planLaterStops[id] = { recs = recs, label = label }
+    if addon.PlanLog then addon.PlanLog("plan", string.format("%s put off (come back to it later): the plan goes on with its next stop", PlainTitle(label))) end
+    pcall(addon.ScrubQuest, id)                 -- out of the plan, nothing else rearranged
+    addon:RefreshPins()
+    if addon.RefreshOptions then addon.RefreshOptions() end
+    local nxt = db.waypoints[1]
+    Print(string.format("%s put off. I will fit it back in when you are near it again (or in %d minutes). Next: %s",
+        PlainTitle(label), minutes, nxt and tostring(nxt.name or nxt.label) or "nothing left in the plan"))
+end
+
+-- put a quest I put off back into the plan, where it adds the least walking
+function addon.PlanLaterReturn(id, why)
+    local db = DB()
+    local rec = db.planLaterStops and db.planLaterStops[id]
+    if db.planLater then db.planLater[id] = nil end
+    if db.planLaterStops then db.planLaterStops[id] = nil end
+    if not rec then return end
+    local wps = db.waypoints
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    local placed = 0
+    for _, r in ipairs(rec.recs or {}) do
+        if r.x and r.instance then
+            local start = { x = px or r.x, y = py or r.y }
+            local function pt(i) return i == 0 and start or wps[i] end
+            local n = #wps
+            local bestPos, bestCost
+            for pos = 0, n do
+                local a = pt(pos)
+                local b = pos < n and wps[pos + 1] or nil
+                local okA = pos == 0 or (a and a.instance == r.instance and a.x)
+                local okB = not b or (b.instance == r.instance and b.x)
+                if okA and okB then
+                    local cost = Dist(a, r) + (b and (Dist(r, b) - Dist(a, b)) or 0)
+                    if not bestCost or cost < bestCost then bestPos, bestCost = pos, cost end
+                end
+            end
+            table.insert(wps, (bestPos or 0) + 1, { name = "", label = r.q.label, instance = r.instance, x = r.x, y = r.y,
+                uiMapId = r.uiMapId, zx = r.zx, zy = r.zy, quests = { r.q } })
+            placed = placed + 1
+        end
+    end
+    if placed > 0 then
+        RenumberPlan(wps)
+        addon:RefreshPins()
+        if addon.RefreshOptions then addon.RefreshOptions() end
+        Print(string.format("%s is back in your plan (%s)", PlainTitle(rec.label), why or "back"))
+        if addon.PlanLog then addon.PlanLog("plan", string.format("%s fitted back into the plan (%s)", PlainTitle(rec.label), why or "back")) end
+    elseif addon.PlanRoute then
+        addon.planWhy = "a quest you put off came back"
+        pcall(addon.PlanRoute, addon, lastPlanAll and true or false, true)
+    end
+end
+
 -- do this quest next (the plan window and the right-click menu both use it)
 function addon:FocusQuest(id, label)
     local db = DB()
@@ -2687,6 +2891,8 @@ function addon:OpenSkipMenu()
     local items = {}
     for _, q in ipairs(wp.quests or {}) do
         local slow = addon.HiveQuestSlow and addon.HiveQuestSlow(q.id)
+        items[#items + 1] = { text = "Come back to " .. PlainTitle(q.label) .. " later (too crowded?)",
+                              fn = function() addon.PlanLater(q.id, q.label) end }
         items[#items + 1] = { text = "Skip quest: " .. PlainTitle(q.label) .. (slow and "  |cffff8800(slow for you)|r" or ""),
                               fn = function() SkipQuest(q.id, q.label) end }
     end
@@ -2944,6 +3150,34 @@ function addon:HandleExtraCommand(cmd, rest)
                 Print("  skipped: " .. tostring(title))
             end
             Print(n == 0 and "no quests skipped. Right-click the plan arrow to skip one" or "/lazy skip clear brings them back")
+        end
+        return true
+
+    elseif cmd == "later" or cmd == "comeback" then
+        local db = DB()
+        local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+        if a == "back" or a == "now" or a == "clear" then
+            db.planLater = nil; db.planLaterStops = nil
+            Print("the quests you put off are back in the plan")
+            if db.waypoints[1] and db.waypoints[1].label then ReplanAfterSkip() else addon:PlanRoute(false, true) end
+        elseif a == "list" then
+            local n = 0
+            for id, due in pairs(db.planLater or {}) do
+                n = n + 1
+                local rec = db.planLaterStops and db.planLaterStops[id]
+                Print(string.format("  %s: back when you are near it again, or in about %d minutes", PlainTitle(rec and rec.label or ("quest " .. id)), math.max(0, math.ceil((due - time()) / 60))))
+            end
+            if n == 0 then Print("no quests put off") end
+        else
+            -- put off the quests of the stop I am on
+            local w = db.waypoints and db.waypoints[1]
+            if w and w.quests and #w.quests > 0 then
+                local list = {}
+                for _, q in ipairs(w.quests) do list[#list + 1] = q end
+                for _, q in ipairs(list) do addon.PlanLater(q.id, q.label) end
+            else
+                Print("nothing to put off: the arrow is not on a quest stop")
+            end
         end
         return true
 

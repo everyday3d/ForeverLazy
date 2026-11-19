@@ -1,9 +1,9 @@
-﻿kinison.tga
+kinison.tga
 -----------
 Photo of Sam Kinison by The World Famous Comedy Store (https://www.flickr.com/photos/thecomedystore/6310196016/),
 via Wikimedia Commons ("Sam Kinison.jpg"). Licensed under Creative Commons Attribution-ShareAlike 2.0 Generic
 (https://creativecommons.org/licenses/by-sa/2.0/).
 Changes: converted to a 256 x 256 game texture (TGA) with transparent padding; the picture itself is not altered.
-This file is distributed under the same licence (CC BY-SA 2.0). The rest of the addon is under the MIT licence.
+This file is distributed under the same licence (CC BY-SA 2.0). The rest of the addon is under the GPL-3.0 licence (see LICENSE).
 
 media\icon.tga (the minimap button) is a cropped version of the same photo, under the same licence (CC BY-SA 2.0).

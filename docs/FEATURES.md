@@ -180,3 +180,27 @@ entrance for the corpse run. Optional TomTom support.
 If a friend runs RestedXP and shares their step with the party, Forever Lazy can listen and point arrows at their quest
 spots and at them. It is **off by default**; turn it on under *RestedXP friend (optional)* in the options. You do not
 need RestedXP installed yourself.
+
+## No Questie needed
+Forever Lazy carries its own copy of the quest data: quests, creatures and their positions, objects, items, the XP each quest
+gives, zones, and the vendor, trainer and inn lists, plus its own rules for which quests you can take (level, race, class,
+earlier quests, reputation, professions). `/lazy data verify` compares all of it with Questie's and the two agree. If Questie
+is installed it is still used as a second source. The addon also learns from play: every quest you hold and every creature you
+meet is noted (`/lazy data`), and it fills gaps. Click **Test without Questie** in the options to try it.
+
+## The quest map
+Your quests on the world map and the minimap: a skull for a creature to kill, a purple diamond for an item (where it drops), a
+green triangle for something to use, soft coloured areas behind them, one colour per quest, a yellow `!` on quests you can
+pick up in this zone and a yellow `?` where a finished quest is handed in. Hover a pin for the quest and what is left. The
+checkboxes are in the options under Quest map.
+
+## Quest tooltips and your group
+Hover a mob, an object or an item a quest needs and the tooltip names the quest (bold, gold) and your progress, with finished
+objectives in green. People in your group who have Forever Lazy or Questie show up too ("Alex: Redridge Brute slain 3/10").
+Forever Lazy speaks Questie's group messages, to your party or raid only, so Questie users see your progress as well.
+`/lazy questie` shows who it has heard from.
+
+## Couch mode, talents and coming back later
+`/lazy couch on` makes the text big, accepts and hands in quests by itself (rewards are advised, never picked) and reads the
+steps aloud. `/lazy talents` lists unspent points and the key talents for your class. Right-click the arrow or the tracker to
+put a quest off (too many people there) and it returns to the plan when you are near it again.

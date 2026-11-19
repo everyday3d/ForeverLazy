@@ -5,8 +5,8 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.14.0-6bd16b?style=for-the-badge">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.15.0-6bd16b?style=for-the-badge">
+  <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
 <h2 align="center">Stop alt-tabbing to guides.<br>Press one button and go.</h2>
@@ -18,7 +18,21 @@ It knows your quests, your bags, your professions and the map, and it points an 
 
 ---
 
-## What's new in 0.14.0
+## What's new in 0.15.0: QUESTIE WHO?!? OHHHH!
+
+- **NO MORE QUESTIE!!** Yeah! Forever Lazy carries its OWN quest data now, checked against Questie's, and it matched. Every
+  number! Questie still works as a second source if you have it. And it's GPL-3.0 now, so everybody can see how it works!
+- **A QUEST MAP!!** Skulls where you kill it, diamonds where it drops, triangles for the thing you click, and big colourful
+  blobs so you can SEE where to go. A yellow `!` for quests to pick up, a yellow `?` for hand-ins. And the ugly route lines?
+  GONE!
+- **TOOLTIPS THAT TALK!!** Hover a mob or an item and it tells you WHICH QUEST in bold gold, and how far along you are. In a
+  group it shows what EACH PERSON still needs, even the Questie people!
+- **TURN-INS FIRST!!** Got a quest to hand in right there? It goes first. The "Ready" line is GREEN, so you can't miss it!
+- **And there's MORE!!** Couch mode, talent reminders, come back to a quest later, a tracker grouped by zone, mob level
+  ranges, and a little button that tells you when there's a new version. OHHHHH!
+
+[Everything in every version](CHANGELOG.md)
+### Also in 0.14.0
 
 - **Your own quest tracker.** Quests in plan order with XP, live objectives and who to turn in to. It can replace WoW's,
   scrolls, resizes, fits its text, and has a no-background option.
@@ -109,6 +123,9 @@ No spreadsheets. No second monitor. No typing, unless you want to.
 | **One-button Lazy Mode** | Click, and the arrow points at the best next thing: quest, vendor, trainer, or the next zone. |
 | **A route that respects your time** | Your quest log planned for XP per minute, with stops numbered on the world map. |
 | **Take me there** | Type a place and get a whole trip by flight, boat, tram and hearthstone. |
+| **A quest map** | Where your quests' mobs, items and objects are, on the map and minimap, with coloured areas, `!` for quests to pick up and `?` for hand-ins. |
+| **Tooltips that name the quest** | Hover a mob or an item and it says which quest it is for and how far along you are, for your group too (Questie users included). |
+| **No Questie needed** | Its own quest data and its own rules for which quests you can take, checked against Questie. Questie is optional. |
 | **Ore and herb nodes** | Nodes you gather are pinned on the map and minimap, and the arrow can farm them node to node. |
 | **Plan off, place kept** | Switch the plan off and clear the lines and bars, then pick it up where you left it. |
 | **Items to keep** | Protect your sleeping bag and the like from vendors: warning on the tooltip, sales bought back. |
@@ -129,7 +146,7 @@ See everything in the [feature guide](docs/FEATURES.md).
 - **Every part switches off.** Want only the arrow? One click.
 - **Presets** set it up in seconds: Minimal, Leveler, Duo or Full.
 - **Private.** By default it only talks to your own group or guild. The Hive, which shares numbers with other players, is off until you turn it on, and it only ever sends ids and numbers. See [what it sends](docs/PRIVACY.md).
-- **Free and open source**, MIT licensed.
+- **Free and open source**, GPL-3.0 licensed.
 
 <p align="center">
   <img src="docs/options-list.png" alt="Forever Lazy's options pages: Presets, Modules, Lazy mode, Journey, Arrows and more" width="240"><br>
@@ -162,4 +179,4 @@ Built on HereBeDragons, AceComm, AceSerializer, CallbackHandler, LibDeflate and 
 The World Famous Comedy Store, via Wikimedia Commons, [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/)
 (see `ForeverLazy/media/CREDITS.txt`). Not affiliated with RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
 
-[MIT licence](LICENSE)
+[GPL-3.0 licence](LICENSE)

@@ -35,7 +35,7 @@ for _, m in ipairs(addon.MODULES) do LABEL[m[1]] = m[2] end
 -- which command belongs to which module
 local COMMANDS = {
     lazymode = { "now" },
-    plan = { "plan", "level", "levelzone", "steps", "step", "route!", "window", "list", "stops", "skip", "why", "own", "xpmap", "heat", "hotspots" },
+    plan = { "plan", "level", "levelzone", "steps", "step", "later", "comeback", "route!", "window", "list", "stops", "skip", "why", "own", "xpmap", "heat", "hotspots" },
     follow = { "follow" },
     books = { "books", "book", "arrow" },
     classq = { "class" },
@@ -151,8 +151,8 @@ function addon.CheckInstall()
         results[#results + 1] = { name = name, ok = ok and true or false, hint = hint }
     end
     local QDB = api.GetQuestie and api.GetQuestie()
-    check("Questie is ready (planner, quests, services need it)", api.QuestieReady and api.QuestieReady(), "install Questie, or wait for it to finish loading")
-    local T = _G.QuestieLoader and select(2, pcall(_G.QuestieLoader.ImportModule, _G.QuestieLoader, "Townsfolk"))
+    check("quest data is ready (planner, quests, services need it)", api.QuestieReady and api.QuestieReady(), "wait for the data to finish loading, or run /lazy check again in a moment")
+    local T = ns.data.Module("Townsfolk")
     check("Questie's service lists are loaded", type(T) == "table" and T.townsfolk and next(T.townsfolk) ~= nil, "they fill in a minute after login")
     check("the map data works", hbd and hbd.GetWorldCoordinatesFromZone and hbd:GetWorldCoordinatesFromZone(0.5, 0.5, 1429) ~= nil, "HereBeDragons did not load")
     check("options page is registered in the AddOns list", addon.OptionsBuilt and addon.OptionsBuilt(), addon.OptionsError or "it is made 3 seconds after login; try /lazy check again in a moment")
@@ -166,9 +166,9 @@ function addon.CheckInstall()
         { "levelling guide (Guide.lua)", addon.ToggleGuide }, { "damage meter (Meter.lua)", addon.MeterSet }, { "XP hot spots", addon.XPHotSpots }, { "arrow choice", addon.ArrowTarget },
         { "menu and buttons (UI.lua)", addon.ShowMenu }, { "tour and settings sharing (Help.lua)", addon.StartTour },
     }
-    local FILES = { "ForeverLazy.lua", "Options.lua", "Extras.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
+    local FILES = { "Data.lua", "ForeverLazy.lua", "Report.lua", "Options.lua", "Extras.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
         "ClassQuests.lua", "Boats.lua", "Services.lua", "FlightData.lua", "Travel.lua", "Party.lua", "Quests.lua", "PlanWindow.lua", "Journey.lua",
-        "Community.lua", "Crafting.lua", "Inventory.lua", "Hive.lua", "Live.lua", "Gather.lua", "Nodes.lua", "Protect.lua", "GuardPoi.lua", "PlanGuard.lua", "Tracker.lua", "Autopilot.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Coach.lua", "Meter.lua", "Modules.lua" }
+        "Community.lua", "Crafting.lua", "Inventory.lua", "Hive.lua", "Live.lua", "Gather.lua", "Nodes.lua", "Protect.lua", "GuardPoi.lua", "PlanGuard.lua", "Tracker.lua", "Autopilot.lua", "Couch.lua", "TalentGuide.lua", "Talents.lua", "MobLevels.lua", "Learn.lua", "DataExport.lua", "Availability.lua", "Townsfolk.lua", "Independence.lua", "Spare1.lua", "Spare2.lua", "QuestieLink.lua", "Spare3.lua", "Spare4.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Coach.lua", "Meter.lua", "Modules.lua" }
     for _, f in ipairs(FILES) do
         check("file loaded: " .. f, addon.loaded and addon.loaded[f], "this file stopped on a Lua error while loading. Turn errors on with /console scriptErrors 1, then /reload")
     end

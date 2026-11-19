@@ -269,7 +269,8 @@ function addon.DrawRouteLines()
         end
     end
     local n = 0
-    for i = 1, #pts - 1 do
+    -- the lines between the stops are off unless I ask for them (db.mapRouteLines); the numbered stops stay
+    for i = 1, (db.mapRouteLines == true) and (#pts - 1) or 0 do
         local a, b = screen[i], screen[i + 1]
         if a and b then
             n = n + 1
@@ -404,7 +405,7 @@ end
 local function UpdateMinimapRoute()
     local db = DB()
     local mm = _G.Minimap
-    if not (db and mm) or db.minimapLine == false or db.mode == "off" then return HideMinimapRoute() end
+    if not (db and mm) or db.minimapLine ~= true or db.mode == "off" then return HideMinimapRoute() end
     if api.ShouldHide and api.ShouldHide() then return HideMinimapRoute() end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     if not px then return HideMinimapRoute() end

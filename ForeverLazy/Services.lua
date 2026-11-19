@@ -15,10 +15,7 @@ local hbd = api.hbd
 local function DB() return addon.GetDB() end
 
 local function Mod(name)
-    local ql = _G.QuestieLoader
-    if not ql then return nil end
-    local ok, m = pcall(ql.ImportModule, ql, name)
-    return ok and m or nil
+    return ns.data.Module(name)
 end
 
 local PROFESSIONS = {   -- words -> Questie profession key name
