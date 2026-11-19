@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.15.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.15.1-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -20,7 +20,11 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.15.0: QUESTIE WHO?!? OHHHH!
+## What's new in 0.15.1: DROP RATES!! OHHHH!
+
+- **The REAL drop chances, no Questie needed!!** How often does that boar drop that thing? Now it KNOWS. Every creature, every
+  quest item, taken from Questie's own drop tables. So the best place to farm it is a real answer, not a guess!
+### Also in 0.15.0: QUESTIE WHO?!? OHHHH!
 
 - **NO MORE QUESTIE!!** Yeah! Forever Lazy carries its OWN quest data now, checked against Questie's, and it matched. Every
   number! Questie still works as a second source if you have it. And it's GPL-3.0 now, so everybody can see how it works!

@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.15.1
+- **DROP RATES WITHOUT QUESTIE!!** The addon now carries the real chance that every creature drops every quest item, taken from Questie's own drop tables and merged the way Questie merges them: manual corrections first, then the private-server numbers, then Wowhead's. 16,683 pairs, 1,252 items! So "where's the best place to farm this?" is a REAL answer now, not a flat guess. With Questie running it still asks Questie first. `/lazy data verify` has a new line that compares a sample of the chances.
 ## 0.15.0
 - **Forever Lazy no longer needs Questie.** It carries its own quest data (quests, creatures, objects, items, quest XP, zones, vendor and trainer lists) and its own rules for which quests you can take, all checked against Questie's with no differences. If Questie is installed it still works with it and uses it as a second source; if not, everything runs on the addon's own data. The addon is now **GPL-3.0** (it uses data and code from Questie). `/lazy data` shows what it knows, `/lazy data verify` compares it with Questie, and **Test without Questie** in the options tries it for you.
 - **Quest map.** The world map and the minimap show where your quests' mobs, items and objects are: a skull to kill, a purple diamond to collect (where it drops), a green triangle to use, with soft coloured areas behind them (one colour per quest). A yellow `!` marks quests you can pick up in the zone and a yellow `?` finished quests to hand in. Hover a pin for the quest and what is left. The lines between plan stops are off by default now.

@@ -275,6 +275,14 @@ function data.OwnPlayer() return ownPlayer end
 local ownXP = { GetQuestLogRewardXP = function(_, id) return OwnQuestXP(id) or 0 end }
 function data.OwnXPModule() return ownXP end
 
+-- how often a creature drops an item, from our own table (the same answer shape as the source: { percent, where from })
+function data.DropRate(itemId, npcId)
+    local d = DS.drops and DS.drops[itemId]
+    local r = d and d[npcId]
+    if r then return { r, "data" } end
+    return nil
+end
+
 -- The database object when the source is not there: the same Query* calls and pointer tables, answered from our data set.
 local ownDB
 function data.Database()
@@ -309,6 +317,7 @@ function data.Database()
             return false
         end,
         IsDoable = function(id) return data.WhyNotNow and data.WhyNotNow(id) == nil end,
+        GetItemDroprate = function(itemId, npcId) return data.DropRate(itemId, npcId) end,
         GetQuestTagInfo = function(id)
             local tags = DS.tags
             return tags and tags[id] or nil
@@ -328,6 +337,14 @@ function data.Facade(src)
     if src.QueryNPCSingle then f.QueryNPCSingle = Wrap(src.QueryNPCSingle, "npcs", OWN_NPC) end
     if src.QueryObjectSingle then f.QueryObjectSingle = Wrap(src.QueryObjectSingle, "objects") end
     if src.QueryItemSingle then f.QueryItemSingle = Wrap(src.QueryItemSingle, "items") end
+    if src.GetItemDroprate then
+        local fn = src.GetItemDroprate
+        f.GetItemDroprate = function(itemId, npcId)
+            local ok, r = pcall(fn, itemId, npcId)
+            if ok and r then return r end
+            return data.DropRate(itemId, npcId)
+        end
+    end
     facade, facadeFor = f, src
     return f
 end
@@ -418,6 +435,26 @@ function data.Verify(perKind)
     if data.VerifyAvailable then
         local okA, lines = pcall(data.VerifyAvailable)
         if okA and type(lines) == "table" then for _, l in ipairs(lines) do out[#out + 1] = l end end
+    end
+    -- drop chances: a sample of pairs against the source
+    if src.GetItemDroprate and DS.drops then
+        local pairsList = {}
+        for item, npcs in pairs(DS.drops) do for npc in pairs(npcs) do pairsList[#pairsList + 1] = { item, npc } end end
+        local n, bad, ex = 0, 0, {}
+        for _ = 1, math.min(400, #pairsList) do
+            local pr = pairsList[math.random(#pairsList)]
+            local okD, sv = pcall(src.GetItemDroprate, pr[1], pr[2])
+            local ov = data.DropRate(pr[1], pr[2])
+            n = n + 1
+            local s = okD and type(sv) == "table" and tonumber(sv[1]) or nil
+            local o = ov and tonumber(ov[1]) or nil
+            if not (s and o and math.abs(s - o) <= 0.011) then
+                bad = bad + 1
+                if #ex < 3 then ex[#ex + 1] = string.format("   item %d from creature %d: source %s, ours %s", pr[1], pr[2], tostring(s), tostring(o)) end
+            end
+        end
+        out[#out + 1] = string.format("drop chances: %d pairs compared, %d differ", n, bad)
+        for _, e in ipairs(ex) do out[#out + 1] = e end
     end
     -- service lists: the same ids in each list (the order differs from run to run, so lists are compared as sets)
     local okT, realT = false, nil

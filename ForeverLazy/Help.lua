@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.15.1", {
+        "DROP RATES WITHOUT QUESTIE!! The real chance that every creature drops every quest item, from Questie's own tables. The best place to farm an item is a REAL answer now, not a guess!",
+    } },
     { "0.15.0", {
         "Forever Lazy no longer needs Questie: it carries its own quest data and rules, checked against Questie's. Questie still works as a second source. The addon is now GPL-3.0.",
         "The quest map: where your quests' mobs, items and objects are, on the world map and minimap, with coloured areas, a yellow ! for quests to pick up and a yellow ? for hand-ins. The route lines are gone.",
