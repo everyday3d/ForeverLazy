@@ -279,6 +279,23 @@ end
 
 local MAX_SPAWNS = 500
 
+-- the named area (Goldshire, Northshire Valley ...) an area id stands for; nil when it is just the zone
+local areaNames = {}
+function addon.AreaName(areaId, uiMapId)
+    if not areaId then return nil end
+    local n = areaNames[areaId]
+    if n == nil then
+        n = false
+        local ok, name = pcall(function() return C_Map and C_Map.GetAreaInfo and C_Map.GetAreaInfo(areaId) end)
+        if ok and type(name) == "string" and name ~= "" then n = name end
+        areaNames[areaId] = n
+    end
+    if not n then return nil end
+    local zi = uiMapId and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(uiMapId)
+    if zi and zi.name == n then return nil end
+    return n
+end
+
 local function AddSpawns(list, spawns)
     if type(spawns) ~= "table" then return end
     for areaId, coords in pairs(spawns) do
@@ -290,7 +307,7 @@ local function AddSpawns(list, spawns)
                 if x and y and x >= 0 and y >= 0 and #list < MAX_SPAWNS then
                     local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(x / 100, y / 100, uiMapId)
                     if wx then
-                        list[#list + 1] = { instance = inst, x = wx, y = wy, uiMapId = uiMapId, zx = x / 100, zy = y / 100 }
+                        list[#list + 1] = { instance = inst, x = wx, y = wy, uiMapId = uiMapId, zx = x / 100, zy = y / 100, areaId = areaId, area = addon.AreaName(areaId, uiMapId) }
                     end
                 end
             end
@@ -911,6 +928,10 @@ local function UpdateWaypointArrow(show)
     if addon.WaypointDetail then
         local ok, d = pcall(addon.WaypointDetail, wp)
         if ok and d then detail = d end
+    end
+    -- the named area of this stop (Goldshire ...), when I know it, goes in front of what to do there
+    if wp.area and db.showAreas ~= false then
+        detail = "|cffffd100" .. wp.area .. "|r" .. (detail and (" - " .. detail) or "")
     end
     local dist = PointAt(f, wp.instance, wp.x, wp.y, wp.name, detail and ("|cffffffff" .. detail .. "|r\n") or nil)
     if dist and dist < db.arrival and wpArrived ~= wp then

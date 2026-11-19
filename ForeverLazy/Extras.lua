@@ -1544,7 +1544,7 @@ function addon:PlanRoute(allZones, quiet, auto)
         local label = table.concat(st.names, " + ")
         if #label > 80 then label = label:sub(1, 77) .. "..." end
         list[#list + 1] = { name = i .. ". " .. label, label = label, instance = st.s.instance, x = st.s.x, y = st.s.y,
-                            uiMapId = st.s.uiMapId, zx = st.s.zx, zy = st.s.zy, quests = st.quests }
+                            uiMapId = st.s.uiMapId, zx = st.s.zx, zy = st.s.zy, quests = st.quests, area = st.s.area }
     end
 
     -- Turn-ins first: when I am in an area (about 600 yards) with quests I can hand in right now, those go to the front of the
@@ -1837,6 +1837,22 @@ local function ReplanForZone()
     local _, _, inst = hbd:GetPlayerWorldPosition()
     -- a new continent (hearthstone, boat, tram, zeppelin, portal): the old stops are all out of reach, always rebuild
     local wps = db.waypoints
+    -- A spot I set by clicking the map is only a pointer for where I was: once I am in another zone it no longer applies, and
+    -- while it is the first stop the plan keeps its hands off ("keep my own waypoints"), so take it away first.
+    do
+        local zoneNow = hbd:GetPlayerZone()
+        local dropped
+        for i = #(wps or {}), 1, -1 do
+            local w = wps[i]
+            if w.questMapPin and ((zoneNow and w.uiMapId ~= zoneNow) or (inst and w.instance ~= inst)) then
+                table.remove(wps, i); dropped = true
+            end
+        end
+        if dropped then
+            addon:RefreshPins()
+            if addon.PlanLog then addon.PlanLog("plan", "the spot set by a map click was in another zone, so it was dropped") end
+        end
+    end
     local planInst = lastPlanInst or (wps and wps[1] and wps[1].label and wps[1].instance)    -- after a reload: the first stop says
     local newContinent = planInst and inst and inst ~= planInst
     if not newContinent and (db.planZoneOnly == false or lastPlanAll) then return end
@@ -2255,9 +2271,10 @@ end)
 
 pcall(planEvents.RegisterEvent, planEvents, "ZONE_CHANGED_NEW_AREA")
 planEvents:RegisterEvent("PLAYER_ENTERING_WORLD")      -- trams, boats and portals load a new area without the zone event
+pcall(planEvents.RegisterEvent, planEvents, "PLAYER_CONTROL_GAINED")   -- a flight ends: the zone event came mid-flight and was skipped, so look again now
 local planOnEvent = planEvents:GetScript("OnEvent")
 planEvents:SetScript("OnEvent", function(self, event, ...)
-    if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
+    if event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_CONTROL_GAINED" then
         if C_Timer and C_Timer.After then
             C_Timer.After(3, function() pcall(ReplanForZone) end)       -- let the position settle
         end
@@ -2265,6 +2282,26 @@ planEvents:SetScript("OnEvent", function(self, event, ...)
     end
     return planOnEvent(self, event, ...)
 end)
+
+-- Backup for the events above: every few seconds, when the zone I am standing in is not the one the plan was made for and I am
+-- not on a flight, plan again. (A flight crosses zone borders without the plan being able to follow, and nothing fires at the landing.)
+do
+    local zoneAcc, askedFor = 0, nil
+    local zoneWatch = CreateFrame("Frame")
+    zoneWatch:SetScript("OnUpdate", function(_, dt)
+        zoneAcc = zoneAcc + dt
+        if zoneAcc < 4 then return end
+        zoneAcc = 0
+        local db = DB()
+        if not db or db.planAuto == false or db.planPaused then return end
+        if UnitOnTaxi and UnitOnTaxi("player") then return end
+        if InCombatLockdown and InCombatLockdown() then return end
+        local zone = hbd:GetPlayerZone()
+        if not zone or zone == lastPlanZone or zone == askedFor then return end
+        askedFor = zone                   -- once for each zone: ReplanForZone decides whether a new plan is needed
+        pcall(ReplanForZone)
+    end)
+end
 
 --------------------------------------------------------------------------------
 -- The line under the plan arrow: what to do at this stop

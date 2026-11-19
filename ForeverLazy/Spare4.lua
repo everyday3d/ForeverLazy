@@ -1,5 +1,137 @@
--- Spare file, so later work only needs a /reload. Filled in later.
+-- Quest sounds, all from the WoW client (no sound file ships with the addon):
+--   the quest is ready to hand in: the voice, Alliance Peasant "Job's done!", Horde Peon "Work complete!"
+--   all the items or kills a quest step needs are done: a different sound, an effect
+--   /lazy sound on|off|try|next|next done     (also in the options, under Quest sounds)
 local ADDON, ns = ...
+local addon = ns.addon
+local Print = addon.Print
+
+local function DB() return addon.GetDB() end
+
+-- the sounds to choose from: name, sound kit id.
+--   a step done (all the items or kills a quest step needs): a sound effect
+--   a quest ready to hand in: the voice, "Job's done!"
+local STEP = {
+    { "Quest list chime", 878 },
+    { "Ready check", 8960 },
+    { "Ding", 888 },
+    { "Raid warning", 8959 },
+}
+local DONE = {
+    { "Peasant: Job's done!", 6200 },
+    { "Peon: Work complete!", 6199 },
+}
+
+local function Pick(list, key)
+    local db = DB()
+    local i = db and db[key]
+    if list[i or 0] then return list[i] end
+    return nil
+end
+local function StepVoice() return Pick(STEP, "questSoundStep") or STEP[1] end
+local function DoneSound()
+    local v = Pick(DONE, "questSoundDone")
+    if v then return v end
+    -- the default: the voice of my faction
+    local faction = UnitFactionGroup and UnitFactionGroup("player")
+    return faction == "Horde" and DONE[2] or DONE[1]
+end
+
+local lastStep, lastDone = 0, 0
+local function PlayStep(force)
+    if not force and GetTime() - lastStep < 1.5 then return end
+    lastStep = GetTime()
+    pcall(PlaySound, StepVoice()[2], "Master")
+end
+local function PlayDone(force)
+    if not force and GetTime() - lastDone < 1.5 then return end
+    lastDone = GetTime()
+    pcall(PlaySound, DoneSound()[2], "Master")
+end
+
+function addon.QuestSoundTryStep() PlayStep(true); Print("step done sound: " .. StepVoice()[1]) end
+function addon.QuestSoundTryDone() PlayDone(true); Print("ready to hand in sound: " .. DoneSound()[1]) end
+
+local function Next(list, key, current)
+    local db = DB()
+    local idx = 1
+    for i, v in ipairs(list) do if v == current then idx = i end end
+    db[key] = idx % #list + 1
+end
+function addon.QuestSoundNextStep() Next(STEP, "questSoundStep", StepVoice()); addon.QuestSoundTryStep() end
+function addon.QuestSoundNextDone() Next(DONE, "questSoundDone", DoneSound()); addon.QuestSoundTryDone() end
+--------------------------------------------------------------------------------
+-- Watch the quest log: an objective finished, or a quest ready to hand in
+--------------------------------------------------------------------------------
+local before = nil          -- questId -> { done = objectives finished, complete = bool }
+local function Snapshot()
+    local now = {}
+    if not (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo and C_QuestLog.GetQuestObjectives) then return now end
+    for i = 1, (C_QuestLog.GetNumQuestLogEntries() or 0) do
+        local ok, info = pcall(C_QuestLog.GetInfo, i)
+        if ok and type(info) == "table" and not info.isHeader and info.questID then
+            local done = 0
+            local okO, objs = pcall(C_QuestLog.GetQuestObjectives, info.questID)
+            if okO and type(objs) == "table" then
+                for _, o in ipairs(objs) do if o.finished then done = done + 1 end end
+            end
+            local okC, complete = pcall(C_QuestLog.IsComplete, info.questID)
+            now[info.questID] = { done = done, complete = okC and complete and true or false }
+        end
+    end
+    return now
+end
+
+local function Check()
+    local db = DB()
+    if not db or db.questSound == false then before = nil; return end
+    local now = Snapshot()
+    if before then
+        local stepDone, questDone = false, false
+        for qid, s in pairs(now) do
+            local b = before[qid]
+            -- only quests I already had: a quest just accepted, or one found at login, does not ring
+            if b then
+                if s.done > b.done then stepDone = true end
+                if s.complete and not b.complete then questDone = true end
+            end
+        end
+        if stepDone then PlayStep(false) end
+        if questDone then
+            -- the effect first, then "Job's done!" a moment later
+            if stepDone and C_Timer then C_Timer.After(1.2, function() PlayDone(false) end) else PlayDone(false) end
+        end
+    end
+    before = now
+end
+
+local pending
+local ev = CreateFrame("Frame")
+for _, e in ipairs({ "QUEST_LOG_UPDATE", "UNIT_QUEST_LOG_CHANGED" }) do pcall(ev.RegisterEvent, ev, e) end
+ev:SetScript("OnEvent", function()
+    if pending or not C_Timer then return end
+    pending = true
+    C_Timer.After(0.4, function() pending = false; pcall(Check) end)
+end)
+
+--------------------------------------------------------------------------------
+-- /lazy sound
+--------------------------------------------------------------------------------
+local prev = addon.HandleExtraCommand
+function addon:HandleExtraCommand(cmd, rest)
+    if (cmd or ""):lower() == "sound" then
+        local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+        local db = DB()
+        if a == "off" then db.questSound = false; before = nil
+        elseif a == "on" then db.questSound = nil
+        elseif a == "next" or a == "next step" then addon.QuestSoundNextStep(); return true
+        elseif a == "next done" then addon.QuestSoundNextDone(); return true
+        elseif a == "try" or a == "" then addon.QuestSoundTryStep(); C_Timer.After(1.4, addon.QuestSoundTryDone); return true end
+        Print("quest sounds: " .. (db.questSound == false and "OFF" or "on") .. " (step done: " .. StepVoice()[1] .. ", ready to hand in: " .. DoneSound()[1] .. ")")
+        return true
+    end
+    if prev then return prev(self, cmd, rest) end
+end
 
 -- reached the end of the file without an error (used by /lazy check)
 do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Spare4.lua"] = true end end

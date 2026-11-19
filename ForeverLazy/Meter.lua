@@ -123,6 +123,89 @@ local function ClassColour(class)
     return 200, 200, 200, "c8c8c8"
 end
 
+--------------------------------------------------------------------------------
+-- Hover a player: the moves they used and how much of the total each was
+--------------------------------------------------------------------------------
+local hovering = false      -- the mouse is on a name: do not redraw under it
+local lastDrawn
+local rowInfo = {}          -- link number -> { guid, creatureID, name, class, amount, total, st, mt }
+
+local function SpellLabel(id)
+    local name, icon
+    if C_Spell and C_Spell.GetSpellName then
+        local ok, n = pcall(C_Spell.GetSpellName, id); if ok then name = n end
+        local ok2, t = pcall(C_Spell.GetSpellTexture, id); if ok2 then icon = t end
+    elseif GetSpellInfo then
+        local ok, n, _, t = pcall(GetSpellInfo, id); if ok then name, icon = n, t end
+    end
+    name = name or ("Spell " .. tostring(id))
+    return (icon and ("|T" .. icon .. ":14:14:0:0|t ") or "") .. name
+end
+
+local function ShowRowTooltip(owner, link)
+    local n = tonumber(tostring(link):match("^flmeter:(%d+)"))
+    local r = n and rowInfo[n]
+    if not r then return end
+    GameTooltip:SetOwner(owner, "ANCHOR_CURSOR")
+    local _, _, _, hex = ClassColour(r.class)
+    GameTooltip:AddLine("|cff" .. hex .. tostring(r.name) .. "|r")
+    local pct = (r.total and r.total > 0) and (r.amount / r.total * 100) or 0
+    GameTooltip:AddDoubleLine(r.label or "Total", string.format("%s  (%.1f%% of the group)", Short(r.amount), pct), 1, 0.82, 0, 1, 1, 1)
+    if r.per and r.per > 0 then GameTooltip:AddDoubleLine("Per second", Short(r.per), 1, 0.82, 0, 1, 1, 1) end
+    if inCombat then
+        GameTooltip:AddLine("The moves are hidden while you fight", 0.6, 0.6, 0.6)
+    else
+        local DM = _G.C_DamageMeter
+        local ok, src = false, nil
+        if DM and DM.GetCombatSessionSourceFromType then
+            ok, src = pcall(DM.GetCombatSessionSourceFromType, r.st, r.mt, r.guid, r.creatureID)
+        end
+        local spells = ok and type(src) == "table" and src.combatSpells
+        if type(spells) == "table" and #spells > 0 then
+            local list = {}
+            local sum = 0
+            for _, sp in ipairs(spells) do
+                if IsSecret(sp.totalAmount) or IsSecret(sp.spellID) then list = nil; break end
+                list[#list + 1] = sp
+                sum = sum + (tonumber(sp.totalAmount) or 0)
+            end
+            if list then
+                table.sort(list, function(a, b) return (a.totalAmount or 0) > (b.totalAmount or 0) end)
+                GameTooltip:AddLine(" ")
+                GameTooltip:AddLine("Moves used", 0.7, 0.85, 1)
+                for i = 1, math.min(12, #list) do
+                    local sp = list[i]
+                    local amt = tonumber(sp.totalAmount) or 0
+                    local p = sum > 0 and (amt / sum * 100) or 0
+                    local extra = (tonumber(sp.amountPerSecond) or 0) > 0 and (" " .. Short(sp.amountPerSecond) .. "/s") or ""
+                    GameTooltip:AddDoubleLine(SpellLabel(sp.spellID), string.format("%s  %.1f%%%s", Short(amt), p, extra), 1, 1, 1, 0.8, 0.8, 0.8)
+                end
+                if #list > 12 then GameTooltip:AddLine(string.format("... and %d more", #list - 12), 0.5, 0.5, 0.5) end
+            end
+        else
+            GameTooltip:AddLine("No move list for this one", 0.6, 0.6, 0.6)
+        end
+    end
+    GameTooltip:Show()
+end
+
+local hooked = {}
+local function HookTooltips(f)
+    if not f or hooked[f] then return end
+    hooked[f] = true
+    if f.SetHyperlinksEnabled then pcall(f.SetHyperlinksEnabled, f, true) end
+    pcall(f.HookScript, f, "OnHyperlinkEnter", function(self, link)
+        if tostring(link):find("^flmeter:") then hovering = true; pcall(ShowRowTooltip, self, link) end
+    end)
+    pcall(f.HookScript, f, "OnHyperlinkLeave", function(self, link)
+        if tostring(link):find("^flmeter:") then hovering = false; GameTooltip:Hide() end
+    end)
+    -- a leave that never arrived (the mouse left the whole tab): hide the tooltip when the mouse is no longer over it
+    pcall(f.HookScript, f, "OnUpdate", function(self)
+        if hovering and not self:IsMouseOver() then hovering = false; GameTooltip:Hide() end
+    end)
+end
+
 -- returns the lines to show, or nil with a reason when the numbers are hidden (in combat)
 local function BuildLines()
     local s, err, metric = GetSession()
@@ -157,7 +240,17 @@ local function BuildLines()
         local pct = (total > 0) and math.floor(amount / total * 100 + 0.5) or 0
         local per = tonumber(src.amountPerSecond)
         local extra = (per and per > 0 and metric.enum ~= "Dps" and metric.enum ~= "Hps") and string.format(" |cff888888%s/s|r", Short(per)) or ""
-        lines[#lines + 1] = string.format("%s%2d. %s |cff%s%s|r  %s%s |cff888888%d%%|r", src.isLocalPlayer and "|cffffd100>|r" or " ", i, bar, hex, name, Short(amount), extra, pct)
+        -- the name is a link, so hovering it gives the tooltip (guid and creature id are only used when readable)
+        local guid = (not IsSecret(src.sourceGUID)) and src.sourceGUID or nil
+        local linkName = name
+        if guid or src.sourceCreatureID then
+            rowInfo[i] = { guid = guid, creatureID = (not IsSecret(src.sourceCreatureID)) and src.sourceCreatureID or nil, name = name,
+                class = src.classFilename, amount = amount, total = total, per = per, label = metric.label,
+                st = (db.meterSegment == "overall") and Enum.DamageMeterSessionType.Overall or Enum.DamageMeterSessionType.Current,
+                mt = Enum.DamageMeterType[metric.enum] }
+            linkName = string.format("|Hflmeter:%d|h%s|h", i, name)
+        end
+        lines[#lines + 1] = string.format("%s%2d. %s |cff%s%s|r  %s%s |cff888888%d%%|r", src.isLocalPlayer and "|cffffd100>|r" or " ", i, bar, hex, linkName, Short(amount), extra, pct)
     end
     if #rows == 0 then lines[#lines + 1] = "|cff888888nothing recorded yet|r" end
     return lines
@@ -166,6 +259,11 @@ end
 local function Draw(lines, note)
     local f = EnsureFrame()
     if not f then return end
+    HookTooltips(f)
+    -- same picture as before: leave it alone, a redraw would reset the hover and the tooltip
+    local key = (lines and table.concat(lines, "\n") or "") .. "|" .. tostring(note)
+    if key == lastDrawn then return end
+    lastDrawn = key
     if f.Clear then f:Clear() elseif f.ClearAllMessages then f:ClearAllMessages() end
     if lines then
         for _, l in ipairs(lines) do f:AddMessage(l, 1, 1, 1) end
@@ -179,6 +277,7 @@ end
 local function Refresh()
     local db = DB()
     if not db or db.meterOn ~= true then return end
+    if hovering then return end
     local lines, why = BuildLines()
     if lines then
         lastLines = lines
@@ -227,6 +326,7 @@ end)
 --------------------------------------------------------------------------------
 function addon.MeterSet(on)
     local db = DB()
+    lastDrawn = nil
     db.meterOn = on and true or false
     if on then
         local f = EnsureFrame()

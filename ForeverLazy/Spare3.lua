@@ -35,6 +35,38 @@ local MAX_WORLD, MAX_MINI, PER_OBJECTIVE = 320, 70, 45
 local CELL = 70                                          -- spots closer than 1/70 of a zone map share one pin
 
 --------------------------------------------------------------------------------
+-- Click a pin or a coloured area: the arrow points there
+--------------------------------------------------------------------------------
+local function PointArrowAt(f)
+    local c = f.cell
+    if not (c and c.uiMapId and addon.AddWaypointZone) then return end
+    local db = DB()
+    -- a spot set by an earlier click goes away, so clicks do not pile up
+    for i = #db.waypoints, 1, -1 do
+        if db.waypoints[i].questMapPin then table.remove(db.waypoints, i) end
+    end
+    local title = c.info and c.info[1] or "Quest spot"
+    -- the waypoint made here carries its area so the arrow can name it
+    local area = c.area
+    addon:AddWaypointZone(c.uiMapId, c.zx, c.zy, title)
+    if db.waypoints[1] then db.waypoints[1].questMapPin = true; db.waypoints[1].area = area end
+    if addon.RefreshOptions then addon.RefreshOptions() end
+end
+
+local function OnEnterPin(self)
+    if not self.info then return end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    for n, line in ipairs(self.info) do
+        if n == 1 then GameTooltip:AddLine(line, 1, 0.82, 0) else GameTooltip:AddLine(line, 1, 1, 1, true) end
+    end
+    local area = self.cell and self.cell.area
+    if area and not (DB() and DB().showAreas == false) then GameTooltip:AddLine(area, 0.7, 0.85, 1) end
+    GameTooltip:AddLine("Click: point the arrow here", 0.5, 1, 0.5)
+    GameTooltip:AddLine("Forever Lazy", 0.5, 0.5, 0.5)
+    GameTooltip:Show()
+end
+
+--------------------------------------------------------------------------------
 -- Pins (frames are reused)
 --------------------------------------------------------------------------------
 local worldFrames, miniFrames = {}, {}
@@ -46,16 +78,9 @@ local function Frame(pool, i, size)
     f.tex = f:CreateTexture(nil, "OVERLAY")
     f.tex:SetAllPoints()
     f:EnableMouse(true)
-    f:SetScript("OnEnter", function(self)
-        if not self.info then return end
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        for n, line in ipairs(self.info) do
-            if n == 1 then GameTooltip:AddLine(line, 1, 0.82, 0) else GameTooltip:AddLine(line, 1, 1, 1, true) end
-        end
-        GameTooltip:AddLine("Forever Lazy", 0.5, 0.5, 0.5)
-        GameTooltip:Show()
-    end)
+    f:SetScript("OnEnter", OnEnterPin)
     f:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    f:SetScript("OnMouseUp", function(self, button) if button == "LeftButton" then pcall(PointArrowAt, self) end end)
     f:Hide()
     pool[i] = f
     return f
@@ -70,7 +95,10 @@ local function AreaFrame(i)
     f.tex = f:CreateTexture(nil, "ARTWORK")
     f.tex:SetAllPoints()
     f.tex:SetTexture("Interface\\CharacterFrame\\TempPortraitAlphaMask")      -- a white disc
-    f:EnableMouse(false)
+    f:EnableMouse(true)
+    f:SetScript("OnEnter", OnEnterPin)
+    f:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    f:SetScript("OnMouseUp", function(self, button) if button == "LeftButton" then pcall(PointArrowAt, self) end end)
     f:Hide()
     areaFrames[i] = f
     return f
@@ -125,6 +153,30 @@ local function RefName(ref)
     return id and data.Field(ref.store, id, "name") or nil
 end
 
+-- the level range of the creatures behind an objective (the mobs to kill, or the mobs that drop the item)
+local function MobLevelText(ref)
+    local npcs = {}
+    if ref.store == "npcs" then npcs = ref.ids
+    elseif ref.store == "items" then
+        for _, id in ipairs(ref.ids) do
+            local d = data.Field("items", id, "npcDrops")
+            if type(d) == "table" then for _, n in pairs(d) do npcs[#npcs + 1] = n end end
+        end
+    else return nil end
+    local lo, hi
+    for i, id in ipairs(npcs) do
+        if i > 40 then break end
+        local a, b = data.Field("npcs", id, "minLevel"), data.Field("npcs", id, "maxLevel")
+        a, b = tonumber(a), tonumber(b or a)
+        if a and a > 0 then
+            lo = lo and math.min(lo, a) or a
+            hi = hi and math.max(hi, b or a) or (b or a)
+        end
+    end
+    if not lo then return nil end
+    return lo == hi and ("Mob level " .. lo) or ("Mob levels " .. lo .. "-" .. hi)
+end
+
 local spawnCache = {}
 local function Spawns(ref)
     local key = ref.store .. ":" .. table.concat(ref.ids, ",")
@@ -160,7 +212,7 @@ local function AddCell(cells, order, kind, s, title, lines)
     local key = kind .. ":" .. s.uiMapId .. ":" .. math.floor(s.zx * CELL) .. ":" .. math.floor(s.zy * CELL)
     local c = cells[key]
     if not c then
-        c = { kind = kind, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy, x = s.x, y = s.y, instance = s.instance, info = {}, titles = {}, title = title }
+        c = { kind = kind, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy, x = s.x, y = s.y, instance = s.instance, info = {}, titles = {}, title = title, area = s.area }
         cells[key] = c
         order[#order + 1] = c
     end
@@ -213,7 +265,13 @@ local function Build()
                             for _, s in ipairs(spawns) do
                                 if picked >= PER_OBJECTIVE then break end
                                 picked = picked + 1
-                                AddCell(cells, order, ref.kind, s, tostring(q.title), { o.text or "" })
+                                local ql = tonumber(data.Field("quests", q.questID, "questLevel")) or tonumber(q.level)
+                                local lines = {}
+                                if ql and ql > 0 then lines[#lines + 1] = "Quest level " .. ql end
+                                local ml = MobLevelText(ref)
+                                if ml then lines[#lines + 1] = ml end
+                                lines[#lines + 1] = o.text or ""
+                                AddCell(cells, order, ref.kind, s, tostring(q.title), lines)
                             end
                         end
                     end
@@ -293,6 +351,8 @@ local function Draw(force)
                 local r, g, b = Colour(c.title or "")
                 f.tex:SetVertexColor(r, g, b, 0.30)
                 f:SetSize(size, size)
+                f.info, f.cell = c.info, c
+                if f.SetHitRectInsets then local ins = size * 0.15; f:SetHitRectInsets(ins, ins, ins, ins) end
                 pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy)
             end
         end
@@ -302,13 +362,13 @@ local function Draw(force)
         local c = e.c
         if i <= MAX_WORLD then
             local f = Frame(worldFrames, i, c.kind == "give" and 16 or 13)
-            f.tex:SetTexture(TEX[c.kind]); f.info = c.info
+            f.tex:SetTexture(TEX[c.kind]); f.info = c.info; f.cell = c
             f:SetSize((c.kind == "give" or c.kind == "turnin") and 16 or 13, (c.kind == "give" or c.kind == "turnin") and 16 or 13)
             pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy)
         end
         if i <= MAX_MINI and e.d < 1e18 and e.d < 1500 ^ 2 then
             local f = Frame(miniFrames, i, 11)
-            f.tex:SetTexture(TEX[c.kind]); f.info = c.info
+            f.tex:SetTexture(TEX[c.kind]); f.info = c.info; f.cell = c
             pcall(hbdp.AddMinimapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy, false, false)
         end
     end
@@ -340,7 +400,10 @@ end)
 if WorldMapFrame and WorldMapFrame.HookScript then
     pcall(WorldMapFrame.HookScript, WorldMapFrame, "OnShow", function()
         local size = AreaSize()
-        for _, f in ipairs(areaFrames) do f:SetSize(size, size) end
+        for _, f in ipairs(areaFrames) do
+            f:SetSize(size, size)
+            if f.SetHitRectInsets then local ins = size * 0.15; f:SetHitRectInsets(ins, ins, ins, ins) end
+        end
     end)
 end
 

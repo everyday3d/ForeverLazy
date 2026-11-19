@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.2
+- **JOB'S DONE!!** Quest sounds, all from the game itself (no sound file ships with the addon): a sound effect when a quest step is done (all the items or kills of one objective), and the Job's done voice (Peasant for the Alliance, Peon for the Horde) when the quest is ready to hand in. Choose them in the options under Quest sounds, with Hear it and Change buttons, or `/lazy sound`.
+- **Quest giver tooltips.** Hover an NPC and the tooltip lists the quests they give (`!`) and the quests of yours you can hand in to them (`?`, green when ready).
+- **Click the quest map!** Click a pin or a coloured area and the arrow points there. Hover for the quest level, the mob levels and the named area (like Goldshire, not just the zone).
+- **Named areas** on the arrow's sub-line and in the plan window, when the data knows the area of a stop.
+- **Damage meter tooltips.** Hover a name in the Meter tab for the moves they used, with amounts and percents of their total. The meter no longer redraws under your mouse, so the tooltip appears at once and goes away when you leave.
+- **Fix:** fly to a new zone and the plan and arrow now update by themselves (also after a map click had set its own spot).
 ## 0.15.1
 - **DROP RATES WITHOUT QUESTIE!!** The addon now carries the real chance that every creature drops every quest item, taken from Questie's own drop tables and merged the way Questie merges them: manual corrections first, then the private-server numbers, then Wowhead's. 16,683 pairs, 1,252 items! So "where's the best place to farm this?" is a REAL answer now, not a flat guess. With Questie running it still asks Questie first. `/lazy data verify` has a new line that compares a sample of the chances.
 ## 0.15.0

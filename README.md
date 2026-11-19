@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.15.1-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.15.2-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -20,7 +20,17 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.15.1: DROP RATES!! OHHHH!
+## What's new in 0.15.2: JOB'S DONE!! OHHHH!
+
+- **JOB'S DONE!!** Finish a quest step and you hear a sound effect. Finish the whole quest and the Peasant (or the Peon!)
+  tells you the job's done. All from the game itself, pick your favourites in the options!
+- **CLICK THE MAP!!** Click a pin or a coloured blob and the arrow goes THERE. Hover it and it tells you the quest level, the
+  mob levels, and the AREA, like Goldshire!
+- **QUEST GIVERS TALK TOO!!** Hover an NPC and see the quests they GIVE and the ones you can HAND IN!
+- **METER TOOLTIPS!!** Hover a name in the damage meter and see every MOVE they used, with the numbers. Yeah!
+- **FIXED:** fly to a new zone and the arrow follows you. OHHHH!
+
+### Also in 0.15.1: DROP RATES!! OHHHH!
 
 - **The REAL drop chances, no Questie needed!!** How often does that boar drop that thing? Now it KNOWS. Every creature, every
   quest item, taken from Questie's own drop tables. So the best place to farm it is a real answer, not a guess!

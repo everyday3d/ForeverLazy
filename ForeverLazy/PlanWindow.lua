@@ -48,7 +48,8 @@ local function Update()
         if w then
             shown = shown + 1
             local d = (px and w.instance == pinst) and Dist({ x = px, y = py }, w) or nil
-            row.fs:SetText(string.format("%s%d. %s", Kind(w.label), i, Plain(w.label or w.name)))
+            row.fs:SetText(string.format("%s%d. %s", Kind(w.label), i, Plain(w.label or w.name))
+                .. ((w.area and addon.GetDB().showAreas ~= false) and ("  |cffffd100(" .. w.area .. ")|r") or ""))
             row.dist:SetText(d and FormatDist(d) or "|cff888888far|r")
             row.index = i
             row:Show()

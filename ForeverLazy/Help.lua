@@ -273,6 +273,14 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.15.2", {
+        "JOB'S DONE!! Quest sounds from the game itself: a sound effect when a quest step is done, and the Job's done voice when the quest is ready to hand in. Pick them in the options!",
+        "Hover a quest giver and the tooltip lists the quests they GIVE (! ) and the ones you can hand in to them (? ).",
+        "CLICK the quest map! Click a pin or a coloured area and the arrow points right there. Hover it for the QUEST LEVEL, the MOB LEVELS and the named area, like Goldshire!",
+        "The arrow and the plan name the AREA of each stop, not just the zone.",
+        "The damage meter: hover a name and see the MOVES they used, with amounts and percents. It no longer flickers or sticks.",
+        "FIXED: fly to a new zone and the arrow now updates by itself!",
+    } },
     { "0.15.1", {
         "DROP RATES WITHOUT QUESTIE!! The real chance that every creature drops every quest item, from Questie's own tables. The best place to farm an item is a REAL answer now, not a guess!",
     } },

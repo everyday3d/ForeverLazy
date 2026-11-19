@@ -171,6 +171,52 @@ AugmentNow = function(tooltip, kind, id)
             for _, l in ipairs(e.lines) do tooltip:AddLine("  " .. l.text, l.r or 1, l.g or 1, l.b or 1) end
         end
     end
+
+    -- a quest giver: what this person offers me, and what I can hand in to them
+    if kind == "npc" and addon.GetDB().npcQuestTooltips ~= false then
+        local mineById = {}
+        for _, q in ipairs(MyQuests()) do mineById[q.id] = q end
+        local function Level(qid)
+            local l = data.Field("quests", qid, "questLevel")
+            return (l and l > 0) and l or "?"
+        end
+        local function Shown(qid)
+            local nm = data.Field("quests", qid, "name")
+            return nm and not haystack:find(nm:lower(), 1, true)
+        end
+        local lines = {}
+        -- hand-ins first: quests in my log that this person finishes
+        for _, qid in ipairs(data.Field("npcs", id, "questEnds") or {}) do
+            local q = mineById[qid]
+            if q and Shown(qid) then
+                local okC, done = pcall(C_QuestLog.IsComplete, qid)
+                if okC and done then
+                    lines[#lines + 1] = { text = string.format("? [%s] %s  (ready to hand in)", Level(qid), tostring(q.title)), r = 0.45, g = 1, b = 0.45 }
+                else
+                    lines[#lines + 1] = { text = string.format("? [%s] %s  (not done yet)", Level(qid), tostring(q.title)), r = 0.6, g = 0.6, b = 0.6 }
+                end
+            end
+        end
+        -- then what I could pick up from them
+        local offers = {}
+        local avail = data.Available and data.Available() or {}
+        for _, qid in ipairs(data.Field("npcs", id, "questStarts") or {}) do
+            if avail[qid] and not mineById[qid] and Shown(qid) then offers[#offers + 1] = qid end
+        end
+        table.sort(offers, function(a, b)
+            local la, lb = tonumber(Level(a)) or 0, tonumber(Level(b)) or 0
+            if la ~= lb then return la < lb end
+            return a < b
+        end)
+        for _, qid in ipairs(offers) do
+            lines[#lines + 1] = { text = string.format("! [%s] %s", Level(qid), tostring(data.Field("quests", qid, "name"))), r = 1, g = 0.82, b = 0 }
+        end
+        if #lines > 0 then
+            tooltip:AddLine(" ")
+            for i = 1, math.min(#lines, 8) do tooltip:AddLine(lines[i].text, lines[i].r, lines[i].g, lines[i].b) end
+            if #lines > 8 then tooltip:AddLine(string.format("... and %d more", #lines - 8), 0.6, 0.6, 0.6) end
+        end
+    end
 end
 local function IdFromGuid(guid)
     if type(guid) ~= "string" then return nil end
@@ -290,6 +336,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         local db = addon.GetDB()
         if a == "debug off" then db.tooltipDebug = false elseif a == "debug on" then db.tooltipDebug = true end
+        if a == "giver off" or a == "givers off" then db.npcQuestTooltips = false elseif a == "giver on" or a == "givers on" then db.npcQuestTooltips = nil end
         if a == "on" then db.questTooltips = true
         elseif a == "off" then db.questTooltips = false
         elseif a == "auto" then db.questTooltips = nil end

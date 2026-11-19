@@ -232,6 +232,20 @@ local function BuildControls(parent)
     Button(content, "Export settings", 276, 130, function() if addon.ExportSettings then addon.ExportSettings() end end, false)
     Button(content, "Import settings", 416, 130, function() if addon.ImportSettings then addon.ImportSettings() end end, true)
 
+    Header(content, "Quest sounds")
+    Label(content, "All from the game, nothing to install. When a quest is ready to hand in you hear the voice (Alliance Peasant 'Job's done!', Horde Peon 'Work complete!'). When you have all the items or kills a quest step needs you hear a different sound, an effect.")
+    y = y - 22
+    Check(content, "Play sounds when a quest step is done and when a quest is ready to hand in", 16,
+        function() return DB().questSound ~= false end, function(v) DB().questSound = v and nil or false end)
+    Label(content, "|cffffd100A quest step is done|r (all its items or kills): a sound effect")
+    y = y - 22
+    Button(content, "Hear it", 16, 90, function() if addon.QuestSoundTryStep then addon.QuestSoundTryStep() end end, false)
+    Button(content, "Change the sound", 116, 150, function() if addon.QuestSoundNextStep then addon.QuestSoundNextStep() end end, true)
+    Label(content, "|cffffd100A quest is ready to hand in|r: the Job's done voice (Peasant for the Alliance, Peon for the Horde)")
+    y = y - 22
+    Button(content, "Hear it", 16, 90, function() if addon.QuestSoundTryDone then addon.QuestSoundTryDone() end end, false)
+    Button(content, "Change the voice", 116, 150, function() if addon.QuestSoundNextDone then addon.QuestSoundNextDone() end end, true)
+
     Header(content, "Quest map")
     Label(content, "Where your quests' mobs, items and objects are, on the world map and the minimap: skull = kill, purple diamond = collect, green triangle = use. Yellow ! = a quest to pick up in this zone, yellow ? = a finished quest to hand in. Hover a pin for the quest.")
     y = y - 22
