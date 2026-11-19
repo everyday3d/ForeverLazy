@@ -7,3 +7,5 @@ Changes: converted to a 256 x 256 game texture (TGA) with transparent padding; t
 This file is distributed under the same licence (CC BY-SA 2.0). The rest of the addon is under the GPL-3.0 licence (see LICENSE).
 
 media\icon.tga (the minimap button) is a cropped version of the same photo, under the same licence (CC BY-SA 2.0).
+
+docs/sam-kinison.png (in the repository, used on the README page) is the same photo, cropped and enlarged, under the same licence (CC BY-SA 2.0).

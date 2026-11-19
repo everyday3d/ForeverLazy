@@ -185,6 +185,11 @@ RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
 <h3 align="center">A dedication</h3>
 
 <p align="center">
+  <img src="docs/sam-kinison.png" alt="Sam Kinison" width="200"><br>
+  <sub>Photo: The World Famous Comedy Store, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC BY-SA 2.0</a>, via <a href="https://www.flickr.com/photos/thecomedystore/6310196016/">Flickr</a> and Wikimedia Commons. Cropped and enlarged.</sub>
+</p>
+
+<p align="center">
   <b>For Sam Kinison, one of the legends of my time.</b>
 </p>
 
