@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.15.2-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.15.3-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -20,7 +20,12 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.15.2: JOB'S DONE!! OHHHH!
+## What's new in 0.15.3: CLICK A QUEST!! OHHHH!
+
+- **CLICK IT AND IT OPENS!!** Click a quest in the tracker and it opens in your quest log. Ctrl-click to do it next!
+- **16/40!!** The tracker counts your quests out of 40, so you KNOW when your log is getting full!
+
+### Also in 0.15.2: JOB'S DONE!! OHHHH!
 
 - **JOB'S DONE!!** Finish a quest step and you hear a sound effect. Finish the whole quest and the Peasant (or the Peon!)
   tells you the job's done. All from the game itself, pick your favourites in the options!

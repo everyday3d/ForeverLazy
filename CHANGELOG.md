@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.15.3
+- **CLICK A QUEST, OPEN A QUEST!!** A click on a quest in the tracker opens it in your quest log. Ctrl-click does what a click used to do: do this quest next. Shift-click still links it and right-click still opens the menu.
+- **16/40!!** The tracker title counts your quests out of the 40 the quest log holds.
 ## 0.15.2
 - **JOB'S DONE!!** Quest sounds, all from the game itself (no sound file ships with the addon): a sound effect when a quest step is done (all the items or kills of one objective), and the Job's done voice (Peasant for the Alliance, Peon for the Horde) when the quest is ready to hand in. Choose them in the options under Quest sounds, with Hear it and Change buttons, or `/lazy sound`.
 - **Quest giver tooltips.** Hover an NPC and the tooltip lists the quests they give (`!`) and the quests of yours you can hand in to them (`?`, green when ready).

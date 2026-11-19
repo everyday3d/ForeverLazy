@@ -569,7 +569,7 @@ local function BuildControls(parent)
     Button(content, "What do I have?", 216, 130, function() addon:HandleExtraCommand("nodes", "") end, true)
 
     Header(content, "Quest tracker")
-    Label(content, "Forever Lazy's own tracker: your quests in plan order with XP, live objectives and who to turn in to. Click a quest to do it next, right-click for more. Questie's tracker is another addon: turn it off in Questie's options.")
+    Label(content, "Forever Lazy's own tracker: your quests in plan order with XP, live objectives and who to turn in to. Click a quest to open it in your quest log, ctrl-click to do it next, right-click for more. Questie's tracker is another addon: turn it off in Questie's options.")
     y = y - 50
     Check(content, "Use Forever Lazy's quest tracker", 16,
         function() return DB().trackerOn == true end, function(v) if addon.TrackerSet then addon.TrackerSet(v) else DB().trackerOn = v end end)

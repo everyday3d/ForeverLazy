@@ -273,6 +273,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.15.3", {
+        "CLICK A QUEST in the tracker and it OPENS in your quest log! Ctrl-click to do it next. Yeah!",
+        "The tracker title counts your quests out of 40, like 16/40. OHHHH!",
+    } },
     { "0.15.2", {
         "JOB'S DONE!! Quest sounds from the game itself: a sound effect when a quest step is done, and the Job's done voice when the quest is ready to hand in. Pick them in the options!",
         "Hover a quest giver and the tooltip lists the quests they GIVE (! ) and the ones you can hand in to them (? ).",

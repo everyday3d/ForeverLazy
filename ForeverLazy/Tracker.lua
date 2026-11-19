@@ -183,8 +183,17 @@ local function RowClick(self, button)
         if link and ChatEdit_InsertLink then ChatEdit_InsertLink(link) end
         return
     end
-    if addon.FocusQuest then addon:FocusQuest(q.id, q.title) end
-    dirty = true
+    -- ctrl-click: do this quest next; a plain click opens the quest in the quest log
+    if IsControlKeyDown and IsControlKeyDown() then
+        if addon.FocusQuest then addon:FocusQuest(q.id, q.title) end
+        dirty = true
+        return
+    end
+    Select(q.id)
+    if QuestMapFrame_OpenToQuestDetails then pcall(QuestMapFrame_OpenToQuestDetails, q.id)
+    elseif ToggleQuestLog then
+        if not (QuestLogFrame and QuestLogFrame:IsShown()) then pcall(ToggleQuestLog) end
+    end
 end
 
 --------------------------------------------------------------------------------
@@ -447,7 +456,8 @@ local function Layout()
     local byId = {}
     for _, e in ipairs(list) do byId[e.q.id] = e end
 
-    win.title:SetText(string.format("Quests |cffaaaaaa(%d)|r", #list))
+    local maxQuests = 40        -- the quest log holds 40 (the game's own limit call says 145 here, which is wrong for this client)
+    win.title:SetText(string.format("Quests |cffaaaaaa(%d/%d)|r", #list, maxQuests))
     win.empty:SetWidth(width)
     win.empty:SetShown(#list == 0 and not db.trackerCollapsed)
 
