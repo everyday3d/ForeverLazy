@@ -9,12 +9,14 @@
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
-<h2 align="center">Stop alt-tabbing to guides.<br>Press one button and go.</h2>
+<h2 align="center">STOP ALT-TABBING TO GUIDES!!<br>PRESS ONE BUTTON AND GO!!!</h2>
 
 <p align="center">
-Forever Lazy is a levelling companion for WoW Forever that does the thinking for you.<br>
-It knows your quests, your bags, your professions and the map, and it points an arrow at the next thing worth doing.
+Forever Lazy is a levelling companion for WoW Forever that does the THINKING for you!!<br>
+It knows your quests, your bags, your professions and the MAP, and it points an ARROW at the next thing worth doing. OHHHHH!
 </p>
+
+<p align="center"><i>Brought to you by Sam Skinison and Tank Hanks.</i></p>
 
 ---
 
@@ -32,52 +34,48 @@ It knows your quests, your bags, your professions and the map, and it points an 
   ranges, and a little button that tells you when there's a new version. OHHHHH!
 
 [Everything in every version](CHANGELOG.md)
-### Also in 0.14.0
 
-- **Your own quest tracker.** Quests in plan order with XP, live objectives and who to turn in to. It can replace WoW's,
-  scrolls, resizes, fits its text, and has a no-background option.
-- **Autopilot** (`/lazy autopilot on`): vendor and trainer stops when due, then the next zone and its plan, by itself.
-- **The arrow points at the nearest kill or collect spot** and moves on when you have cleared it.
-- **A step window and a plan you can trust.** The plan only moves on when a step is really done, a plan log shows every change
-  and why, a self-check fixes broken steps, and it asks when you are stuck.
-- **Smarter planning.** XP for the time, nearby quests counted, small quests left out, rewards picked for your class and spec.
-- **Dungeon help.** In a group, entering a dungeon shows exactly what your quests need there.
+### Also in 0.14.0: YOUR OWN TRACKER!!
+
+- **Your OWN quest tracker!** Quests in plan order with XP, live objectives and who to turn in to. It can REPLACE WoW's, it
+  scrolls, it resizes, it fits its text, and there's a no-background option. Yeah!
+- **Autopilot** (`/lazy autopilot on`): vendor and trainer stops when due, then the next zone and its plan. BY ITSELF!!
+- **The arrow points at the nearest kill or collect spot** and moves on when you've cleared it. Look at that thing GO!
+- **A step window and a plan you can TRUST.** It only moves on when a step is REALLY done, a plan log shows every change and
+  why, a self-check fixes broken steps, and it ASKS when you're stuck!
+- **Smarter planning!** XP for the time, nearby quests counted, the little ones left out, rewards picked for your class and spec.
+- **Dungeon help.** In a group, walk into a dungeon and it shows EXACTLY what your quests need there!
 
 [Everything in every version](CHANGELOG.md)
 
-### Also in 0.13.0
+### Also in 0.13.0: A WHOLE ZONE!!
 
-- **Level a whole zone.** `/lazy level` (or `/lazy level ashenvale` for another zone) plans every quest worth doing there and
-  opens a window of what to get and from whom, where to kill or collect, and what to hand in. Quests of an area stay open
-  and are handed in together.
-- **Ask a guard, get an arrow.** Ask a guard where the trainer, bank or inn is and the arrow takes you there, then goes away.
-- **Class quests** pop up once when you enter a zone that has something for one. `/lazy class quest` shows what to do for each.
-- **No dungeon quests in your plan**, and the plan **follows you across continents** after a hearthstone, boat or tram.
-- **Walk close to a hand-in and it comes next.** A quest you have not finished no longer sends you to hand it in early.
+- **Level a WHOLE ZONE!!** `/lazy level` (or `/lazy level ashenvale` for another zone) plans every quest worth doing there and
+  opens a window of what to get and from whom, where to kill or collect, and what to hand in!
+- **Ask a guard, get an arrow.** Ask where the trainer, bank or inn is and the arrow takes you there, then goes away. Polite!
+- **Class quests** pop up once when you walk into a zone that has something for one. `/lazy class quest` shows what to do.
+- **No dungeon quests in your plan**, and the plan **follows you across continents** after a hearthstone, boat or tram!
+- **Walk close to a hand-in and it comes NEXT.** And a quest you haven't finished no longer sends you to hand it in early!
 - **Smarter crafting.** The craft plan stops where your trainer has new recipes, one batch at a time.
-- **Big fixes:** skip works and sticks, the craft panel no longer covers the profession tabs, and a protected item that gets
-  sold anyway shows a big message on screen.
+- **Big fixes:** skip works AND sticks, the craft panel no longer covers the profession tabs, and a protected item that gets
+  sold anyway shows a BIG message on screen!
 
 [Everything in every version](CHANGELOG.md)
 
-### Also in 0.12.0
+### Also in 0.12.0: THIS WAS A BIG ONE!!
 
-This was a big one.
-
-- **Ore and herb nodes on your map.** Mine a vein or pick a flower and it is remembered: a round pin on the world map and
-  the minimap, showing the ore, with a tooltip for what it is and when you last found it. Pins fade while a node should
-  still be respawning. **Farm them with the arrow** (`/lazy nodes farm ore`) and it walks you from node to node with the route drawn.
-  `/lazy nodes silver` opens a window of the zones that have it, each with a Take me there button.
-- **Turn the plan off and keep your place.** `/lazy plan off` puts the stops aside and clears the lines, markers, heat and
-  quest item bar. `/lazy plan on` puts them back.
-- **Don't sell that.** `/lazy keep <item>` protects an item from vendors (your Cozy Sleeping Bag is protected from the start):
-  a clear warning on the tooltip, a list when you open a vendor, and a sale is bought straight back.
+- **Ore and herb nodes on your map!** Mine a vein or pick a flower and it's REMEMBERED: a round pin on the world map and the
+  minimap, showing the ore, with a tooltip for what it is and when you last found it. **Farm them with the arrow**
+  (`/lazy nodes farm ore`) and it walks you from node to node. `/lazy nodes silver` opens a window of the zones that have it!
+- **Turn the plan off and keep your place.** `/lazy plan off` puts the stops aside and clears the markers, heat and quest
+  item bar. `/lazy plan on` puts them back. Easy!
+- **DON'T SELL THAT!!** `/lazy keep <item>` protects an item from vendors (your Cozy Sleeping Bag is protected from the
+  start): a clear warning on the tooltip, a list when you open a vendor, and a sale is bought straight BACK!
 - **A damage meter in its own chat tab**, using the game's built-in meter, no other addon needed.
-- **The Hive learns fights and deaths**: how long each mob takes to kill, what it costs you, and where players keep dying
-  (with a warning as you walk in).
-- **Big fixes:** leftover trip stops no longer stay on the arrow after a reload or cancel; trips by tram, boat and flight
-  finish properly; the plan rebuilds when you move somewhere else in the zone; the craft panel no longer covers the
-  profession tabs; the automatic flight trip is off by default.
+- **The Hive learns fights and deaths**: how long each mob takes to kill, what it costs you, and where players keep dying,
+  with a warning as you walk in!
+- **Big fixes:** leftover trip stops no longer stay on the arrow, trips by tram, boat and flight finish properly, and the
+  plan rebuilds when you move somewhere else in the zone.
 
 [Everything in every version](CHANGELOG.md)
 
@@ -85,68 +83,68 @@ This was a big one.
 
 ## A level 20 on a Tuesday night
 
-You log in with a full quest log and no idea where to start. You click the minimap button.
+You log in with a full quest log and NO IDEA where to start. You click the minimap button. AND THEN?!
 
-- The arrow points at the **quest stop that earns the most XP for the walking**, with a note on what to do there.
-- Your bags fill up, so the next click sends you to the **nearest vendor**.
-- The next quest is two zones away, so it plans the **flight path, the boat and the hearthstone** for you.
-- Your skill is stuck at 56, so it lights up **the exact recipe to craft** in your profession window and tells you how many.
+- The arrow points at the **quest stop that earns the most XP for the walking**, with a note on what to do there!
+- Your bags fill up, so the next click sends you to the **nearest vendor**!
+- The next quest is two zones away, so it plans the **flight path, the boat and the hearthstone** for you!
+- Your skill is stuck at 56, so it lights up **the EXACT recipe to craft** in your profession window and tells you how many!
 
-No spreadsheets. No second monitor. No typing, unless you want to.
+No spreadsheets. No second monitor. No typing, unless you WANT to. OHHHHH!
 
 <p align="center">
   <img src="docs/recipe-highlight.jpg" alt="The recipe to craft next glows in the profession window with a craft 19 badge" width="620"><br>
-  <i>The recipe to craft next glows in your own profession window, with how many to make.</i>
+  <i>The recipe to craft next GLOWS in your own profession window, with how many to make.</i>
 </p>
 
 <p align="center">
   <img src="docs/world-map-route.jpg" alt="The planned route drawn on the world map, with a Go to box and a Lazy button" width="620"><br>
-  <i>Your route drawn on the world map, with a "Go to..." box and a Lazy button built in.</i>
+  <i>Your stops on the world map, with a "Go to..." box and a Lazy button built in. (The lines are optional now. They were ugly!)</i>
 </p>
 
-## New: it learns from how you play
+## It LEARNS from how you play!
 
 - **The Coach** looks at the quests here, the best mob to grind and the other zones, ranks them by **your measured XP per
-  hour**, and tells you the best thing to do right now. Each line says what it rests on, and a button sets it up.
-- **The Hive** (off until you switch it on) measures your real pace, drop rates, quest times and where quest objectives are
+  hour**, and tells you the best thing to do RIGHT NOW. Each line says what it rests on, and a button sets it up!
+- **The Hive** (OFF until you switch it on!) measures your real pace, drop rates, quest times and where quest objectives are
   really done. Turn it on to share those numbers with other players who have it on, so a new player starts with real data,
   rare spawns show up as pins on the map, and the planner stops trusting spawn data made for a different server.
-  It only ever sends ids and numbers, never your name. [How it works and what it sends](docs/HIVE.md).
-- **Far-off quests use flights by themselves**: the arrow points at the flight master and says where to fly.
+  It only ever sends ids and numbers. NEVER your name. [How it works and what it sends](docs/HIVE.md).
+- **Far-off quests use flights by themselves**: the arrow points at the flight master and says where to fly!
 - **The plan finishes an area before handing in**, unless a hand-in opens the next quest of a chain.
-- **A levelling guide** for your whole journey to 60, with text that scales for the couch and TV.
+- **A levelling guide** for your whole journey to 60, with text that scales for the couch and TV!
 
 ## What you get
 
 | | |
 |---|---|
-| **One-button Lazy Mode** | Click, and the arrow points at the best next thing: quest, vendor, trainer, or the next zone. |
+| **One-button Lazy Mode** | CLICK, and the arrow points at the best next thing: quest, vendor, trainer, or the next zone! |
 | **A route that respects your time** | Your quest log planned for XP per minute, with stops numbered on the world map. |
-| **Take me there** | Type a place and get a whole trip by flight, boat, tram and hearthstone. |
-| **A quest map** | Where your quests' mobs, items and objects are, on the map and minimap, with coloured areas, `!` for quests to pick up and `?` for hand-ins. |
-| **Tooltips that name the quest** | Hover a mob or an item and it says which quest it is for and how far along you are, for your group too (Questie users included). |
-| **No Questie needed** | Its own quest data and its own rules for which quests you can take, checked against Questie. Questie is optional. |
+| **Take me there** | Type a place and get a WHOLE trip by flight, boat, tram and hearthstone! |
+| **A quest map** | Where your quests' mobs, items and objects are, on the map and minimap, with coloured areas, `!` for quests to pick up and `?` for hand-ins! |
+| **Tooltips that name the quest** | Hover a mob or an item and it says which quest it's for and how far along you are, for your group too (Questie users included)! |
+| **No Questie needed** | Its own quest data and its own rules for which quests you can take, checked against Questie. Questie is OPTIONAL! |
 | **Ore and herb nodes** | Nodes you gather are pinned on the map and minimap, and the arrow can farm them node to node. |
-| **Plan off, place kept** | Switch the plan off and clear the lines and bars, then pick it up where you left it. |
+| **Plan off, place kept** | Switch the plan off, then pick it up where you left it. |
 | **Items to keep** | Protect your sleeping bag and the like from vendors: warning on the tooltip, sales bought back. |
-| **Crafting that tells you what to make** | The recipe to craft next glows in your recipe list with a count, using what is in your bags and bank, and says where to get the rest. |
-| **Buttons where you already look** | A menu on the minimap, a search box on the world map, buttons on the quest log. Nothing to memorise. |
+| **Crafting that tells you what to make** | The recipe to craft next glows in your recipe list with a count, using what's in your bags and bank, and says where to get the rest. |
+| **Buttons where you already look** | A menu on the minimap, a search box on the world map, buttons on the quest log. Nothing to memorise! |
 | **The Coach** | Compares the quests here, the best grind and other zones by your measured XP per hour and tells you the best thing to do now. |
 | **A levelling guide** | Your whole journey to 60 in one window, with your pace and the dungeons that fit. Its text scales for the couch and TV. |
-| **The Hive** | Learns from real play (your pace, drops, quest times, where objectives are done) and, if you turn it on, shares those numbers with other players. Off until you switch it on. |
+| **The Hive** | Learns from real play (your pace, drops, quest times, where objectives are done) and, if you turn it on, shares those numbers with other players. OFF until you switch it on. |
 | **A damage meter out of the way** | Its own chat tab, using the game's built-in meter, so no other addon is needed. |
-| **One arrow, your choice** | Right-click it to pick what it points at: what is next, your plan, a quest, your partner, a library book. |
+| **One arrow, your choice** | Right-click it to pick what it points at: what's next, your plan, a quest, your partner, a library book. |
 | **Duo mode** | Level with a friend who has the addon: shared plan, partner on your compass. |
 
-And more: class quests, dungeon levels, gathering and fishing routes, library books, item tooltips that count your bank and your other characters, hunter ammo and pet reminders, a Titan Panel button, a first-run tour.
+And MORE: class quests, dungeon levels, gathering and fishing routes, library books, item tooltips that count your bank and your other characters, hunter ammo and pet reminders, a Titan Panel button, a first-run tour. OHHHH!
 See everything in the [feature guide](docs/FEATURES.md).
 
-## It does not get in your way
+## It does NOT get in your way
 
-- **Every part switches off.** Want only the arrow? One click.
+- **Every part switches off.** Want only the arrow? ONE click.
 - **Presets** set it up in seconds: Minimal, Leveler, Duo or Full.
 - **Private.** By default it only talks to your own group or guild. The Hive, which shares numbers with other players, is off until you turn it on, and it only ever sends ids and numbers. See [what it sends](docs/PRIVACY.md).
-- **Free and open source**, GPL-3.0 licensed.
+- **Free and open source**, GPL-3.0 licensed. Take a LOOK at it!
 
 <p align="center">
   <img src="docs/options-list.png" alt="Forever Lazy's options pages: Presets, Modules, Lazy mode, Journey, Arrows and more" width="240"><br>
@@ -157,16 +155,16 @@ See everything in the [feature guide](docs/FEATURES.md).
 
 1. Download the latest zip from [**Releases**](../../releases/latest).
 2. Drop the **`ForeverLazy`** folder into `World of Warcraft\_forever_\Interface\AddOns\`.
-3. Start the game. A welcome window walks you through it, and `/lazy` opens the options any time.
+3. Start the game. A welcome window walks you through it, and `/lazy` opens the options any time!
 
-> **Get [Questie](https://www.curseforge.com/wow/addons/questie) too.** Forever Lazy uses its quest data to plan routes,
-> find class quests and vendors, and work out where to get crafting materials.
+> **You don't need [Questie](https://www.curseforge.com/wow/addons/questie) anymore!** Forever Lazy carries its own quest
+> data. If you DO have Questie, it works with it, and in a group it talks to other Questie users.
 
 ## Early days, and I want your feedback
 
-This is a young addon built by one player who levels with it. It works, and it is getting better fast, but some
-corners have had little testing. If something looks wrong, type `/lazy check` and paste the result into an
-[Issue](../../issues). Ideas and questions are welcome in [Discussions](../../discussions).
+This is a young addon built by one player who levels with it. It works, and it's getting better FAST, but some corners have
+had little testing. If something looks wrong, type `/lazy check` and paste the result into an [Issue](../../issues).
+Ideas and questions are welcome in [Discussions](../../discussions). TELL ME!
 
 ## Learn more
 
@@ -174,9 +172,10 @@ corners have had little testing. If something looks wrong, type `/lazy check` an
 
 ## Credits and licence
 
-Built on HereBeDragons, AceComm, AceSerializer, CallbackHandler, LibDeflate and LibStub. Data from **Questie** and the
-[wowforever.be](https://wowforever.be/guides/flight-paths/) flight path guide. The welcome photo of Sam Kinison is by
-The World Famous Comedy Store, via Wikimedia Commons, [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/)
-(see `ForeverLazy/media/CREDITS.txt`). Not affiliated with RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
+Built on HereBeDragons, AceComm, AceSerializer, CallbackHandler, LibDeflate and LibStub. Data and group messages from
+**Questie** (GPL-3.0), and the [wowforever.be](https://wowforever.be/guides/flight-paths/) flight path guide. The welcome
+photo of Sam Kinison is by The World Famous Comedy Store, via Wikimedia Commons,
+[CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/) (see `ForeverLazy/media/CREDITS.txt`). Not affiliated with
+RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
 
 [GPL-3.0 licence](LICENSE)
