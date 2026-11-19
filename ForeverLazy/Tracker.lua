@@ -146,6 +146,28 @@ local function SpecialItem(id)
     if not (ok and link) then return nil end
     local itemStr = link:match("item:%d+")
     if not itemStr then return nil end
+    -- an item that only started the quest (it is in the quest's "started by" and is not one of its objectives) has done its job
+    local itemId = tonumber(itemStr:match("%d+"))
+    local data = ns and ns.data
+    if itemId and data and data.Field then
+        local okS, by = pcall(data.Field, "quests", id, "startedBy")
+        if okS and type(by) == "table" and type(by[3]) == "table" then
+            local starter = false
+            for _, v in pairs(by[3]) do if v == itemId then starter = true; break end end
+            if starter then
+                local needed = false
+                local okO, o = pcall(data.Field, "quests", id, "objectives")
+                if okO and type(o) == "table" then
+                    for _, e in ipairs(o[3] or {}) do if e[1] == itemId then needed = true; break end end
+                end
+                local okR, req = pcall(data.Field, "quests", id, "requiredSourceItems")
+                if okR and type(req) == "table" then
+                    for _, v in pairs(req) do if v == itemId then needed = true; break end end
+                end
+                if not needed then return nil end
+            end
+        end
+    end
     return link, itemStr, (GetItemIcon and GetItemIcon(itemStr)) or select(10, GetItemInfo(link))
 end
 

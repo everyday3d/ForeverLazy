@@ -67,10 +67,33 @@ local function MakeButton(i)
     return b
 end
 
+-- an item that only STARTED a quest (it is in the quest's "started by" and is not one of its objectives or needed items)
+-- has done its job once the quest is in my log
+function addon.IsStarterOnlyItem(questId, itemId)
+    local data = ns and ns.data
+    if not (questId and itemId and data and data.Field) then return false end
+    local okS, by = pcall(data.Field, "quests", questId, "startedBy")
+    if not (okS and type(by) == "table" and type(by[3]) == "table") then return false end
+    local starter = false
+    for _, v in pairs(by[3]) do if v == itemId then starter = true; break end end
+    if not starter then return false end
+    local okO, o = pcall(data.Field, "quests", questId, "objectives")
+    if okO and type(o) == "table" then
+        for _, e in ipairs(o[3] or {}) do if e[1] == itemId then return false end end
+    end
+    local okR, req = pcall(data.Field, "quests", questId, "requiredSourceItems")
+    if okR and type(req) == "table" then
+        for _, v in pairs(req) do if v == itemId then return false end end
+    end
+    return true
+end
+
 local function QuestItems()
     local items, seen = {}, {}
+    local currentQuest
     local function add(link)
         local itemStr = link and link:match("item:%d+")
+        if itemStr and currentQuest and addon.IsStarterOnlyItem(currentQuest, tonumber(itemStr:match("%d+"))) then return end
         if itemStr and not seen[itemStr] then
             seen[itemStr] = true
             items[#items + 1] = { link = link, itemStr = itemStr, icon = select(10, GetItemInfo(link)) or GetItemIcon(itemStr) }
@@ -80,7 +103,13 @@ local function QuestItems()
     for i = 1, n do
         if GetQuestLogSpecialItemInfo then
             local ok, link, _, _, showWhenComplete = pcall(GetQuestLogSpecialItemInfo, i)
+            currentQuest = nil
+            if GetQuestLogTitle then
+                local okT, _, _, _, isHeader, _, _, _, qid = pcall(GetQuestLogTitle, i)
+                if okT and not isHeader and qid and qid ~= 0 then currentQuest = qid end
+            end
             if ok and link then add(link) end
+            currentQuest = nil
         end
     end
     -- fallback: the item a quest gives me to use (Questie knows it)
@@ -91,7 +120,9 @@ local function QuestItems()
                 local itemId = QDB.QueryQuestSingle(q.id, "sourceItemId")
                 if itemId and itemId > 0 and GetItemCount(itemId) > 0 then
                     local _, link = GetItemInfo(itemId)
+                    currentQuest = q.id
                     add(link or ("item:" .. itemId))
+                    currentQuest = nil
                 end
             end
         end

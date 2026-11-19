@@ -1,5 +1,7 @@
 # Changelog
 
+## 0.15.4
+- **STARTER ITEMS GO AWAY!!** An item that only started a quest no longer stays on the quest item button (or the tracker row) once the quest is in your log. Items the quest still needs keep their button.
 ## 0.15.3
 - **CLICK A QUEST, OPEN A QUEST!!** A click on a quest in the tracker opens it in your quest log. Ctrl-click does what a click used to do: do this quest next. Shift-click still links it and right-click still opens the menu.
 - **16/40!!** The tracker title counts your quests out of the 40 the quest log holds.

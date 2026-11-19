@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.15.4", {
+        "QUEST STARTER ITEMS GO AWAY!! An item that only STARTED a quest no longer sits on your quest item button once the quest is in your log. OHHHH!",
+    } },
     { "0.15.3", {
         "CLICK A QUEST in the tracker and it OPENS in your quest log! Ctrl-click to do it next. Yeah!",
         "The tracker title counts your quests out of 40, like 16/40. OHHHH!",

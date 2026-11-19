@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.15.3-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.15.4-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -20,7 +20,12 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.15.3: CLICK A QUEST!! OHHHH!
+## What's new in 0.15.4: STARTER ITEMS GO AWAY!! OHHHH!
+
+- **NO MORE LEFTOVER BUTTONS!!** An item that only STARTED a quest used to sit on your quest item button forever. Not anymore!
+  Once the quest is in your log, it's GONE. Items you still NEED keep their button. Yeah!
+
+### Also in 0.15.3: CLICK A QUEST!! OHHHH!
 
 - **CLICK IT AND IT OPENS!!** Click a quest in the tracker and it opens in your quest log. Ctrl-click to do it next!
 - **16/40!!** The tracker counts your quests out of 40, so you KNOW when your log is getting full!
