@@ -179,3 +179,10 @@ photo of Sam Kinison is by The World Famous Comedy Store, via Wikimedia Commons,
 RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
 
 [GPL-3.0 licence](LICENSE)
+
+---
+
+<p align="center">
+  <b>For Sam Kinison, one of the legends of my time.</b><br>
+  <i>Nobody screamed it like you did. OHHHHHHH!</i>
+</p>
