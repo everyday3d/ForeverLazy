@@ -182,7 +182,21 @@ RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
 
 ---
 
+<h3 align="center">A dedication</h3>
+
 <p align="center">
-  <b>For Sam Kinison, one of the legends of my time.</b><br>
-  <i>Nobody screamed it like you did. OHHHHHHH!</i>
+  <b>For Sam Kinison, one of the legends of my time.</b>
+</p>
+
+<p align="center">
+  Some people tell jokes. YOU TORE THE ROOF OFF!!<br>
+  You walked on stage like the place owed you money and you didn't ask permission for ANYTHING.<br>
+  You made a whole generation laugh until it hurt, and then you screamed, and we laughed even HARDER.<br>
+  Nobody had a voice like that. Nobody has since. Nobody WILL.
+</p>
+
+<p align="center">
+  This little addon has your face in its welcome window and your name on its credits, because every time I level a character
+  and the arrow takes me somewhere I didn't think to go, I want to scream it. So I do.<br>
+  <b>THANK YOU, SAM. OHHHHHHHHH!</b>
 </p>
