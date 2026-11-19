@@ -213,6 +213,7 @@ RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
   <i>"No Questie?! NO PROBLEM!! It's got its OWN data, baby! Checked against Questie! IT MATCHED!!"</i><br>
   <i>"A whole zone planned in ONE click?! I can't even plan my WEEKEND!!"</i>
 </p>
+
 <p align="center">
   This little addon has your face in its welcome window and your name on its credits, because every time I level a character
   and the arrow takes me somewhere I didn't think to go, I want to scream it. So I do.<br>
