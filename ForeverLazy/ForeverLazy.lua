@@ -915,6 +915,7 @@ local function UpdateWaypointArrow(show)
         if db.arrivalSound then PlayAlert((_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878) end
         -- a stop for a quest I have not finished (kills, items) stays until the objectives are done; getting there is not enough
         local open = addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(wp)
+        if addon.PlanLog and wp.quests then addon.PlanLog("arrival", (open and "arrived but kept the stop (its quest step is not done): " or "arrived, stop is done: ") .. tostring(wp.name or wp.label)) end
         if db.waypointAutoClear and not open then
             C_Timer.After(1.5, function()
                 if db.waypoints[1] == wp and not (addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(wp)) then

@@ -273,6 +273,15 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.14.0", {
+        "Forever Lazy's own quest tracker (/lazy tracker): your quests in plan order with XP, live objectives and who to turn in to. Click to do one next, right-click for more. It can replace WoW's, has a no-background option, scrolls, resizes and fits its text.",
+        "Autopilot (/lazy autopilot on): vendor and trainer stops between quests, then the next zone and a plan for it, by itself.",
+        "The arrow points at the nearest spot where the kills or items are, and moves on when you have cleared it.",
+        "A step window (/lazy steps) lists the plan as steps and ticks them off. The plan only moves on when a step is really done.",
+        "The planner weighs XP for the time, counts nearby quests and leaves small ones out. Quest rewards are picked for your class and spec.",
+        "Making sure the plan is right: /lazy plan log shows every change and why, /lazy plan check fixes broken steps, and it asks if you are stuck.",
+        "In a group, entering a dungeon your quests need something in shows what you need there. /lazy dungeons here shows it any time.",
+    } },
     { "0.13.0", {
         "Level a zone: /lazy level (or /lazy level ashenvale). Plans every quest worth doing in the zone and opens a window of what to get, where to kill and what to hand in.",
         "Ask a guard where something is and the arrow takes you there, then goes away.",

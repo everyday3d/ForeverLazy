@@ -87,6 +87,28 @@ The Hive learns from real play, because the original game's data does not always
 - **Dungeon quests are never in a plan.** The plan rebuilds when you change continent, and a hand-in you walk close to comes
   next.
 
+## The quest tracker
+
+- **`/lazy tracker`** shows your quests in plan order with level colour, XP, live objectives and who to turn in to. Click one to do
+  it next, right-click for skip, share, show in the log or abandon. A quest item button sits on the row.
+- It can replace WoW's tracker (Questie's is turned off in Questie's options). It scrolls, resizes from the corner and
+  edges, fits its text, has a compact mode and a no-background option, and shows dungeon quests only inside a dungeon.
+
+## Autopilot
+
+- **`/lazy autopilot on`**: the vendor or trainer between quest stops when due, then, when a zone is done, the next zone on
+  your journey and a plan for it. The arrow also points at the nearest spot for kills and items.
+
+## Making sure the plan is right
+
+- **The plan log** (`/lazy plan log`): every rebuild, removal, hand-in moved up and arrival, with the reason.
+- **A self-check** that runs by itself and with `/lazy plan check`: dungeon quests, skipped quests, early hand-ins, quests
+  already accepted or handed in and duplicate steps are taken out, and each fix is logged.
+- **An audit** notes any quest in your log that the plan left out, and why (skipped, dungeon, grey, a group quest, or small for the time).
+- **Stuck detection**: a few minutes at a stop with no progress and it asks if you want to skip the quest.
+- **The plan against reality**: it works out the XP per hour the plan should give, and tells you if you earn much less after 15 minutes.
+- **Steps only count when done**: accepted, objectives complete, or handed in. Arriving is not enough.
+
 ## Ore and herb nodes
 
 - **Every node you gather is remembered** and marked on the world map and the minimap as a round pin showing the ore

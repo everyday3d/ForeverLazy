@@ -204,13 +204,95 @@ end
 local marks = {}
 local function ClearMarks() for _, m in pairs(marks) do m:Hide() end end
 
+-- What I need from a piece of gear depends on my class and spec: a role, found from the talent points I have spent (or set
+-- by hand in Options). Every stat on an item is weighed for that role, and a reward is an upgrade when it beats what I wear.
+local ROLE_LABEL = { str_melee = "strength melee", agi_melee = "agility melee", hunter = "hunter", caster = "caster", healer = "healer", tank = "tank" }
+local CLASS_DEFAULT = { WARRIOR = "str_melee", PALADIN = "str_melee", HUNTER = "hunter", ROGUE = "agi_melee", PRIEST = "caster",
+    SHAMAN = "agi_melee", MAGE = "caster", WARLOCK = "caster", DRUID = "agi_melee" }
+-- by talent tree (1, 2, 3), where there is one spec to pick from
+local SPEC_ROLE = {
+    WARRIOR = { "str_melee", "str_melee", "tank" }, PALADIN = { "healer", "tank", "str_melee" },
+    PRIEST = { "healer", "healer", "caster" }, SHAMAN = { "caster", "agi_melee", "healer" },
+    DRUID = { "caster", "agi_melee", "healer" },
+}
+local WEIGHTS = {
+    str_melee = { STR = 1.0, AGI = 0.5, STA = 0.4, AP = 0.5, CRIT = 0.6, HIT = 0.7, DPS = 6, ARMOR = 0.02 },
+    agi_melee = { AGI = 1.0, STR = 0.6, STA = 0.4, AP = 0.5, CRIT = 0.7, HIT = 0.7, DPS = 6, ARMOR = 0.015 },
+    hunter    = { AGI = 1.0, INT = 0.3, STA = 0.4, AP = 0.5, RAP = 0.5, CRIT = 0.7, HIT = 0.6, DPS = 6, STR = 0.1, ARMOR = 0.01 },
+    caster    = { INT = 1.0, SP = 1.0, SPI = 0.3, STA = 0.4, CRIT = 0.6, HIT = 0.7, MANA = 0.5, ARMOR = 0.005 },
+    healer    = { INT = 1.0, SPI = 0.6, HEAL = 1.0, SP = 0.7, STA = 0.4, MANA = 0.9, CRIT = 0.4, ARMOR = 0.005 },
+    tank      = { STA = 1.0, DEF = 1.0, DODGE = 0.8, PARRY = 0.8, BLOCK = 0.6, BLOCKVAL = 0.4, STR = 0.4, AGI = 0.4, ARMOR = 0.04, HIT = 0.2 },
+}
+local STAT_KEYS = {
+    { "ITEM_MOD_STRENGTH_SHORT", "STR" }, { "ITEM_MOD_AGILITY_SHORT", "AGI" }, { "ITEM_MOD_STAMINA_SHORT", "STA" },
+    { "ITEM_MOD_INTELLECT_SHORT", "INT" }, { "ITEM_MOD_SPIRIT_SHORT", "SPI" }, { "ITEM_MOD_ATTACK_POWER_SHORT", "AP" },
+    { "ITEM_MOD_RANGED_ATTACK_POWER_SHORT", "RAP" }, { "ITEM_MOD_SPELL_POWER_SHORT", "SP" },
+    { "ITEM_MOD_SPELL_DAMAGE_DONE_SHORT", "SP" }, { "ITEM_MOD_HEALING_DONE_SHORT", "HEAL" },
+    { "ITEM_MOD_CRIT_RATING_SHORT", "CRIT" }, { "ITEM_MOD_HIT_RATING_SHORT", "HIT" },
+    { "ITEM_MOD_DEFENSE_SKILL_RATING_SHORT", "DEF" }, { "ITEM_MOD_DODGE_RATING_SHORT", "DODGE" },
+    { "ITEM_MOD_PARRY_RATING_SHORT", "PARRY" }, { "ITEM_MOD_BLOCK_RATING_SHORT", "BLOCK" },
+    { "ITEM_MOD_BLOCK_VALUE_SHORT", "BLOCKVAL" }, { "ITEM_MOD_MANA_REGENERATION_SHORT", "MANA" },
+    { "ITEM_MOD_DAMAGE_PER_SECOND_SHORT", "DPS" }, { "RESISTANCE0_NAME", "ARMOR" },
+}
+
+local function MyRole()
+    local db = DB()
+    local pick = db and db.rewardRole
+    if pick and pick ~= "auto" and WEIGHTS[pick] then return pick, true end
+    local class = select(2, UnitClass("player"))
+    local roles = SPEC_ROLE[class]
+    if roles and GetNumTalentTabs and GetTalentTabInfo then
+        local best, bestPts = nil, 0
+        for i = 1, (GetNumTalentTabs() or 0) do
+            local ok, _, _, pts = pcall(GetTalentTabInfo, i)
+            pts = ok and tonumber(pts) or 0
+            if pts > bestPts then best, bestPts = i, pts end
+        end
+        if best and roles[best] then return roles[best], false end
+    end
+    return CLASS_DEFAULT[class] or "str_melee", false
+end
+
+local function StatScore(link, role)
+    if not (link and GetItemStats) then return nil end
+    local stats = GetItemStats(link)
+    if type(stats) ~= "table" then return nil end
+    local w = WEIGHTS[role]
+    local score = 0
+    for _, pair in ipairs(STAT_KEYS) do
+        local v = stats[pair[1]]
+        if v and w[pair[2]] then score = score + v * w[pair[2]] end
+    end
+    return score
+end
+
+-- how much better is this reward than what I wear in its slot, for my role? (nil when it is not gear I can use)
+local function RewardGain(link, slots, equipLoc, ilvl)
+    local role, forced = MyRole()
+    if role == "tank" and equipLoc == "INVTYPE_2HWEAPON" then return nil end      -- a tank wants a one-hander and shield
+    local mine = StatScore(link, role)
+    if not mine then
+        local gain = (ilvl or 0) - EquippedLevel(slots)                              -- no stat data on this client
+        return gain, gain > 0 and string.format("likely upgrade (item level +%d)", gain) or nil
+    end
+    local worn
+    for _, slot in ipairs(slots) do
+        local l = GetInventoryItemLink("player", slot)
+        local s = l and StatScore(l, role) or 0
+        if not worn or s < worn then worn = s end
+    end
+    local gain = mine - (worn or 0)
+    return gain, gain > 0 and string.format("best for your %s%s (+%.0f stat points over what you wear)", ROLE_LABEL[role] or role,
+        forced and ", as you set it" or "", gain) or nil
+end
+
 local function EvaluateRewards(retry)
     local db = DB()
     if not db or db.rewardPick == false or not addon.ModuleOn("quests") then return end
     local n = GetNumQuestChoices and GetNumQuestChoices() or 0
     if n < 2 then return end
     local me = UnitLevel("player") or 1
-    local best, bestGain, bestSell, bestSellIdx
+    local best, bestGain, bestSell, bestSellIdx, bestNote
     local missing
     for i = 1, n do
         local link = GetQuestItemLink("choice", i)
@@ -224,8 +306,8 @@ local function EvaluateRewards(retry)
                     if u == false then usable = false end
                 end
                 if usable and (minLevel or 0) <= me then
-                    local gain = (ilvl or 0) - EquippedLevel(slots)
-                    if gain > 0 and (not bestGain or gain > bestGain) then best, bestGain = i, gain end
+                    local gain, note = RewardGain(link, slots, equipLoc, ilvl)
+                    if gain and gain > 0 and (not bestGain or gain > bestGain) then best, bestGain, bestNote = i, gain, note end
                 end
                 if not bestSell or (sell or 0) > bestSell then bestSell, bestSellIdx = sell or 0, i end
             end
@@ -237,7 +319,7 @@ local function EvaluateRewards(retry)
     end
     local pick, why
     if best then
-        pick, why = best, string.format("likely upgrade (item level +%d)", bestGain)
+        pick, why = best, bestNote or string.format("likely upgrade (+%.0f)", bestGain)
     elseif bestSellIdx then
         pick, why = bestSellIdx, "highest vendor price " .. (GetCoinTextureString and GetCoinTextureString(bestSell) or tostring(bestSell))
     end

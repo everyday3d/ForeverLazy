@@ -278,6 +278,12 @@ local function ClassSet()
     return set
 end
 
+-- is this one of my class quests?
+function addon.IsClassQuestId(id)
+    if not list then return false end
+    return ClassSet()[id] and true or false
+end
+
 -- the id of a class quest by its title (for plan stops that only carry a name)
 local titleToId
 function addon.ClassQuestIdByTitle(title)

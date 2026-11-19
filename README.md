@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.13.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.14.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-ff9ad5?style=for-the-badge">
 </p>
 
@@ -18,7 +18,20 @@ It knows your quests, your bags, your professions and the map, and it points an 
 
 ---
 
-## What's new in 0.13.0
+## What's new in 0.14.0
+
+- **Your own quest tracker.** Quests in plan order with XP, live objectives and who to turn in to. It can replace WoW's,
+  scrolls, resizes, fits its text, and has a no-background option.
+- **Autopilot** (`/lazy autopilot on`): vendor and trainer stops when due, then the next zone and its plan, by itself.
+- **The arrow points at the nearest kill or collect spot** and moves on when you have cleared it.
+- **A step window and a plan you can trust.** The plan only moves on when a step is really done, a plan log shows every change
+  and why, a self-check fixes broken steps, and it asks when you are stuck.
+- **Smarter planning.** XP for the time, nearby quests counted, small quests left out, rewards picked for your class and spec.
+- **Dungeon help.** In a group, entering a dungeon shows exactly what your quests need there.
+
+[Everything in every version](CHANGELOG.md)
+
+### Also in 0.13.0
 
 - **Level a whole zone.** `/lazy level` (or `/lazy level ashenvale` for another zone) plans every quest worth doing there and
   opens a window of what to get and from whom, where to kill or collect, and what to hand in. Quests of an area stay open

@@ -630,8 +630,52 @@ local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     if cmd == "arrow" or (cmd == "books" and (rest or ""):lower() == "arrow") then
         local db = DB()
-        db.waypointArrowOff = not db.waypointArrowOff
-        Print("waypoint arrow " .. (db.waypointArrowOff and "hidden (waypoints are kept)" or "shown"))
+        local f = _G.ForeverLazy_WaypointArrow
+        if (rest or ""):lower():match("^%s*reset") then
+            -- put the arrow back in the middle of the screen
+            db.pos = db.pos or {}
+            db.pos.waypoint = { point = "CENTER", x = 0, y = 140 }
+            db.waypointArrowOff = false
+            if f then f:ClearAllPoints(); f:SetPoint("CENTER", UIParent, "CENTER", 0, 140); f:SetScale(db.scale or 1) end
+            Print("the arrow is back in the middle of the screen")
+            return true
+        end
+        local sub = (rest or ""):lower()
+        if sub:match("^%s*why") or sub:match("^%s*check") or sub:match("^%s*status") then
+            -- say what stops the arrow from showing
+        else
+            db.waypointArrowOff = not db.waypointArrowOff
+            Print("waypoint arrow " .. (db.waypointArrowOff and "hidden (waypoints are kept)" or "shown"))
+            if db.waypointArrowOff then return true end
+        end
+        -- is there anything to see? say what stops it
+        local reasons = {}
+        if db.mode == "off" then reasons[#reasons + 1] = "arrows are switched off (mode off): /lazy toggle both turns them on" end
+        if db.waypointArrowOff then reasons[#reasons + 1] = "the waypoint arrow is hidden: /lazy arrow shows it" end
+        if api.ShouldHide and api.ShouldHide() then reasons[#reasons + 1] = "arrows hide here (inside a dungeon, as a ghost, or one of the hide options in Options)" end
+        local target = addon.ArrowTarget and addon.ArrowTarget()
+        if not target then
+            reasons[#reasons + 1] = "there is nothing to point at: no plan stop and no waypoint (/lazy plan, /lazy level or /lazy now makes one" ..
+                (db.planPaused and "; your plan is switched off: /lazy plan on" or "") .. ")"
+        else
+            local px, py, pinst = hbd:GetPlayerWorldPosition()
+            if px and target.instance and target.instance ~= pinst then
+                reasons[#reasons + 1] = "the next stop (" .. tostring(target.name or "?") .. ") is on another continent, so the arrow cannot point at it"
+            end
+        end
+        if f then
+            local cx, cy = f:GetCenter()
+            local sw, sh = UIParent:GetWidth(), UIParent:GetHeight()
+            if not cx or cx < 0 or cy < 0 or cx > sw or cy > sh then
+                reasons[#reasons + 1] = "the arrow is off the screen: /lazy arrow reset puts it back in the middle"
+            end
+            if (db.alpha or 1) < 0.15 then reasons[#reasons + 1] = "the arrow is almost see-through (opacity " .. string.format("%.2f", db.alpha) .. ") in Options" end
+        end
+        if #reasons == 0 then
+            Print("nothing is hiding the arrow. Pointing at: " .. tostring(target and (target.name or target.label) or "?"))
+        else
+            for _, r in ipairs(reasons) do Print("arrow: " .. r) end
+        end
         return true
     end
     if cmd == "books" or cmd == "book" then

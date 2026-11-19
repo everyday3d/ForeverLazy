@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0
+- **Forever Lazy's own quest tracker** (`/lazy tracker`, or Options): your quests in plan order, the one you are on first, each with its level colour, XP, live objectives and who to turn in to. Click a quest to do it next, shift-click to link it, right-click to skip, share, show in the log or abandon. Quest item buttons sit on the quest rows. It can replace WoW's tracker, has a no-background option and a compact mode, scrolls, resizes from the corner and edges, fits its text, and shows dungeon quests only inside a dungeon (and only dungeon quests there, class quests included).
+- **Autopilot** (`/lazy autopilot on`, off by default): the next step after a quest stop is the vendor when bags are full or gear is damaged, or the trainer when something new is waiting; when a zone has nothing left worth doing it moves on to the next zone on your journey and plans it when you arrive. It never interrupts a quest you are in the middle of.
+- **The arrow points at the nearest kill or collect spot** and moves on when you have stood there a while with nothing counting up.
+- **Making sure the plan is right**: a plan log (`/lazy plan log`, every change to the plan and why), a self-check (`/lazy plan check`, and it runs by itself) that takes out dungeon quests, skipped quests, hand-ins that came up early, quests already accepted or handed in, and duplicates, an audit that notes quests in your log the plan left out and why, a "stuck here?" prompt when nothing moves at a stop for a few minutes, and a note when the plan earns much less XP per hour than it promised. The rules have offline tests (`lua tests/run.lua`).
+- **The plan only moves on when a step is really done**: accepted, objectives complete, or handed in. Arriving at a stop is not enough.
+- **A step window** (`/lazy steps`): the plan as steps (accept, do, turn in) that tick off by themselves.
+- **The planner weighs XP for the time** (walking included), counts nearby quests you have not taken, and leaves small quests out.
+- **Quest rewards are picked for your class and spec.**
+- **In a group, entering a dungeon your quests need something in** shows a pop-up with the exact items (and who drops them) and kills; `/lazy dungeons here` shows it any time.
+
 ## 0.13.0
 - **Level a whole zone** (`/lazy level`, or `/lazy level ashenvale` to be taken there first): one plan from your quests plus every quest worth taking in the zone, and a window that says what to get and from whom, where to kill or collect, and what to hand in. It keeps quests of an area open and hands them in together, unless a hand-in opens the next quest of a chain.
 - **Ask a guard, get an arrow**: when a guard points you to a trainer, the bank or the inn, the arrow guides you there, plan on or off, and goes away when you arrive.

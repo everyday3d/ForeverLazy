@@ -414,8 +414,118 @@ local function PartnerTarget()
     return nil
 end
 
-function addon.ArrowTarget()
+-- For a stop that is kills or items: the arrow points at the nearest spot where those things are (Questie's spawns, or the places
+-- other players really did it), not at the middle of the stop. It stays at a spot while I am making progress there, and moves to
+-- the next one when I have stood there a while with nothing counting up.
+local spotState = { wp = nil, cur = nil, visited = {}, sig = nil, lastProgress = 0, cands = nil, candsAt = 0, target = nil }
+
+local function OpenObjectiveIds(wp)
+    local ids = {}
+    for _, q in ipairs(wp.quests or {}) do
+        local lbl = q.label or ""
+        if q.id and not (lbl:find("^Turn in:") or lbl:find("^Pick up:") or lbl:find("^Class quest:"))
+            and C_QuestLog and C_QuestLog.GetLogIndexForQuestID and C_QuestLog.IsComplete then
+            local okI, idx = pcall(C_QuestLog.GetLogIndexForQuestID, q.id)
+            if okI and idx and idx > 0 then
+                local okC, done = pcall(C_QuestLog.IsComplete, q.id)
+                if okC and not done then ids[#ids + 1] = q.id end
+            end
+        end
+    end
+    return ids
+end
+
+local function ObjectiveProgress(ids)
+    local n = 0
+    for _, id in ipairs(ids) do
+        if C_QuestLog and C_QuestLog.GetQuestObjectives then
+            local ok, objs = pcall(C_QuestLog.GetQuestObjectives, id)
+            if ok and type(objs) == "table" then
+                for _, o in ipairs(objs) do n = n + (tonumber(o.numFulfilled) or 0) end
+            end
+        end
+    end
+    return n
+end
+
+local function ObjectiveSpot(wp)
     local db = DB()
+    if db.arrowSpots == false or not addon.QuestLogSpawns then return nil end
+    local ids = OpenObjectiveIds(wp)
+    if #ids == 0 then spotState.wp = nil; spotState.cur = nil; return nil end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return nil end
+    local now = GetTime()
+    -- the spots of these quests (rebuilt now and then; the quest log work is not free)
+    if spotState.wp ~= wp or not spotState.cands or now - spotState.candsAt > 6 then
+        local want = {}
+        for _, id in ipairs(ids) do want[id] = true end
+        local cands, grid = {}, {}
+        for _, g in ipairs(addon.QuestLogSpawns()) do
+            if g.id and want[g.id] and not g.complete then
+                for _, s in ipairs(g.spawns) do
+                    if s.instance == pinst and s.x then
+                        local key = math.floor(s.x / 25) .. ":" .. math.floor(s.y / 25)
+                        if not grid[key] then
+                            grid[key] = true
+                            cands[#cands + 1] = { x = s.x, y = s.y, instance = s.instance, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy, key = key }
+                        end
+                    end
+                end
+            end
+        end
+        if spotState.wp ~= wp then spotState.cur = nil; spotState.visited = {}; spotState.sig = nil end
+        spotState.wp, spotState.cands, spotState.candsAt = wp, cands, now
+    end
+    local cands = spotState.cands
+    if #cands == 0 then return nil end
+    -- progress at this stop: while it counts up, stay
+    local sig = ObjectiveProgress(ids)
+    if sig ~= spotState.sig then spotState.sig = sig; spotState.lastProgress = now end
+    local function dist(s) return math.sqrt((s.x - px) ^ 2 + (s.y - py) ^ 2) end
+    local cur = spotState.cur
+    if cur then
+        local d = dist(cur)
+        if d <= 45 then
+            cur.arrivedAt = cur.arrivedAt or now
+            if now - math.max(cur.arrivedAt, spotState.lastProgress) > 25 then     -- stood here, nothing counting up: next spot
+                spotState.visited[cur.key] = now
+                cur = nil
+            end
+        else
+            cur.arrivedAt = nil
+        end
+    end
+    local function nearestFresh()
+        local best, bd
+        for _, c in ipairs(cands) do
+            local seen = spotState.visited[c.key]
+            if not (seen and now - seen < 180) then
+                local d = dist(c)
+                if not bd or d < bd then best, bd = c, d end
+            end
+        end
+        return best, bd
+    end
+    if not cur then
+        local c = nearestFresh()
+        if not c then spotState.visited = {}; c = nearestFresh() end         -- seen them all: start over
+        cur = c
+    elseif dist(cur) > 150 then
+        local c, bd = nearestFresh()
+        if c and c ~= cur and bd < dist(cur) * 0.5 then cur = c end            -- a much nearer one: use that
+    end
+    spotState.cur = cur
+    if not cur then return nil end
+    -- one table that is kept and updated, so "arrived" is only noticed once per stop
+    local tg = spotState.target
+    if not tg then tg = {}; spotState.target = tg end
+    tg.instance, tg.x, tg.y, tg.uiMapId, tg.zx, tg.zy = cur.instance, cur.x, cur.y, cur.uiMapId, cur.zx, cur.zy
+    tg.name, tg.label, tg.quests, tg.spot = wp.name, wp.label, wp.quests, true
+    return tg
+end
+
+local function BaseArrowTarget()    local db = DB()
     if not db then return nil end
     local src = db.arrowSource or "auto"
     if src == "plan" then
@@ -439,6 +549,16 @@ function addon.ArrowTarget()
         if pt then return pt end
     end
     return (db.waypoints and db.waypoints[1]) or addon.SimpleTarget()
+end
+
+function addon.ArrowTarget()
+    local wp = BaseArrowTarget()
+    local db = DB()
+    if wp and wp.quests and db and db.waypoints and wp == db.waypoints[1] then
+        local ok, s = pcall(ObjectiveSpot, wp)
+        if ok and s then return s end
+    end
+    return wp
 end
 -- duo mode: my partner is on the compass as an F, even when the compass bar and the arrows are off
 local function DuoPartnerSource()
@@ -1045,6 +1165,26 @@ function addon:PlanRoute(allZones, quiet, auto)
         return xp
     end
 
+    -- Time: a quest is worth its XP for the time it takes, walking included (like a levelling guide, XP per minute).
+    -- Walking is about 7 yards a second. A quest takes what I measured for it, else my average, else 7 minutes.
+    local RUN = 7
+    local avgQuestSecs = (addon.HiveAvgQuestSecs and addon.HiveAvgQuestSecs()) or 420
+    local function QuestSecs(g)
+        if not g or g.complete then return 30 end                         -- only a hand-in left
+        local secs
+        if g.id and addon.HiveQuestRate and g.xp and g.xp > 0 then
+            local rate = addon.HiveQuestRate(g.id)                         -- XP per minute, measured
+            if rate and rate > 0 then secs = g.xp / rate * 60 end
+        end
+        secs = secs or avgQuestSecs
+        return math.min(1800, math.max(60, secs))
+    end
+    local function ItemSecs(item)
+        if item.t then return item.t end
+        if item.turn then item.t = 30 else item.t = QuestSecs(item.g) + 20 end
+        return item.t
+    end
+
     local skipGrey = db.planSkipGrey ~= false
     local zoneId = hbd:GetPlayerZone()
     lastPlanZone, lastPlanAll = zoneId, allZones and not auto
@@ -1133,7 +1273,62 @@ function addon:PlanRoute(allZones, quiet, auto)
             end
         end
     end
-    if #pool == 0 then
+    -- quests I do not have yet but that are right here: the plan counts them too (the pick-up is a stop, and the objectives
+    -- join the plan when I take the quest)
+    if not allZones and zoneId and db.planNearby ~= false then
+        local have = {}
+        for _, it in ipairs(pool) do if it.g.id then have[it.g.id] = true end end
+        for _, g in ipairs(CollectGivers(zoneId, pinst, here0, true)) do
+            if not have[g.id] and not (db.planSkip and db.planSkip[g.id]) and (g.near or 1e9) <= 600 then
+                pool[#pool + 1] = { g = g, spawns = Thin(g.spawns), w = Weight(g) }
+                totalXP = totalXP + (g.xp or 0)
+                have[g.id] = true
+            end
+        end
+    end
+    -- Is a quest worth the time? Small quests are not: their XP for the time they take (walking included) has to beat a floor,
+    -- and a quest has to be a real share of the level. The floor is the pace I measured (when there is one) and half of what the
+    -- typical quest in this plan gives. A hand-in, a finished quest and a quest that opens the next of a chain always stay.
+    local notWorth = 0
+    if db.planWorth ~= false then
+        local QDBw = api.GetQuestie()
+        local rates, cands = {}, {}
+        for _, it in ipairs(pool) do
+            local g = it.g
+            if not it.turn and not g.complete and g.id and g.xp and g.xp > 0 then
+                local r = g.xp / (QuestSecs(g) + 60) * 3600
+                rates[#rates + 1] = r
+                cands[#cands + 1] = { it = it, rate = r }
+            end
+        end
+        if #cands >= 3 then
+            table.sort(rates)
+            local median = rates[math.ceil(#rates / 2)]
+            local measured = addon.HivePace and (addon.HivePace(GetRealZoneText and GetRealZoneText() or nil) or addon.HivePace())
+            local floorRate = math.max((measured and measured * 0.4) or 0, median * 0.5)
+            local levelXP = (UnitXPMax and UnitXPMax("player")) or 0
+            local minShare = levelXP > 0 and levelXP * 0.015 or 0          -- under 1.5% of a level: not worth stopping for
+            local drop, keepCount = {}, 0
+            for _, c in ipairs(cands) do
+                local g = c.it.g
+                local nxt = QDBw and QDBw.QueryQuestSingle(g.id, "nextQuestInChain")
+                local chain = nxt and nxt > 0
+                if not chain and (c.rate < floorRate or g.xp < minShare) then drop[g.id] = true else keepCount = keepCount + 1 end
+            end
+            if keepCount > 0 and next(drop) then
+                local kept = {}
+                for _, it in ipairs(pool) do
+                    local id = it.g.id
+                    if id and drop[id] then
+                        if not it.turn then notWorth = notWorth + 1 end
+                    else
+                        kept[#kept + 1] = it
+                    end
+                end
+                pool = kept
+            end
+        end
+    end    if #pool == 0 then
         if otherZone > 0 and not allZones then
             -- nothing to do here: plan the worthwhile quests wherever they are instead
             Print(string.format("none of your quests are in this zone, planning the %d elsewhere instead", otherZone))
@@ -1167,11 +1362,12 @@ function addon:PlanRoute(allZones, quiet, auto)
         for i, item in ipairs(pool) do
             if not item.locked then
                 for _, s in ipairs(item.spawns) do
-                    local w = item.w
+                    local w, tt = item.w, ItemSecs(item)
                     for k, other in ipairs(pool) do
-                        if k ~= i and not other.locked and closest(other, s) then w = w + other.w end
+                        if k ~= i and not other.locked and closest(other, s) then w = w + other.w; tt = tt + ItemSecs(other) end
                     end
-                    local score = w / (Dist(s, cur) + 100)
+                    -- XP for the time: walking there plus the time the quests take here
+                    local score = w / (Dist(s, cur) / RUN + tt + 20)
                     if not bscore or score > bscore then bi, bs, bscore = i, s, score end
                 end
             end
@@ -1189,7 +1385,7 @@ function addon:PlanRoute(allZones, quiet, auto)
                 end
             end
             for _, d in ipairs(done) do
-                seq[#seq + 1] = { label = d.item.g.label, s = d.s, w = d.item.w, qid = d.item.qid, turn = d.item.turn,
+                seq[#seq + 1] = { label = d.item.g.label, s = d.s, w = d.item.w, t = ItemSecs(d.item), qid = d.item.qid, turn = d.item.turn,
                                   id = d.item.g.id, src = d.s.src, grp = d.item.g.group, tier = d.item.g.tier }
                 if d.item.turnItem then d.item.turnItem.locked = false end
             end
@@ -1213,7 +1409,7 @@ function addon:PlanRoute(allZones, quiet, auto)
     local function cost(order)
         local cum, total, prev = 0, 0, start
         for _, e in ipairs(order) do
-            cum = cum + Dist(prev, e.s)
+            cum = cum + Dist(prev, e.s) / RUN + (e.t or 0)       -- seconds until this quest's XP is in
             total = total + e.w * cum
             prev = e.s
         end
@@ -1347,6 +1543,9 @@ function addon:PlanRoute(allZones, quiet, auto)
         Print("none of your quests are in this zone: pick up the quests at the nearest quest givers (!), then the plan fills in with their objectives")
     end
     if greyCount > 0 then Print(string.format("%d quest%s skipped (grey, or too high a level)", greyCount, greyCount == 1 and "" or "s")) end
+    if notWorth > 0 then
+        Print(string.format("%d small quest%s left out: not worth the time for the XP (Options > planner turns this off)", notWorth, notWorth == 1 and "" or "s"))
+    end
     if otherZone > 0 then
         Print(string.format("%d quest%s in other zones left out. /lazy plan all includes them", otherZone, otherZone == 1 and "" or "s"))
     end
@@ -1472,6 +1671,7 @@ local function AddQuestToPlan(questId)
     local wps = db.waypoints
     if #wps == 0 and planActive then
         -- the last stop was the quest giver: now the new quest's objectives become the plan
+        addon.planWhy = "the plan was empty and a quest was accepted"
         addon:PlanRoute(false, true)
         local now = db.waypoints
         if now[1] and now[1].label then Print("plan updated with your new quest: " .. now[1].name) end
@@ -1522,6 +1722,7 @@ local function AddQuestToPlan(questId)
             if not w.label:find(g.label, 1, true) then w.label = w.label .. " + " .. g.label end
             RenumberPlan(wps)
             addon:RefreshPins()
+            if addon.PlanLog then addon.PlanLog("plan", "added " .. tostring(g.label) .. " to stop " .. i .. " (a quest was accepted next to it)") end
             Print(string.format("added %s to plan stop %d", g.label, i))
             return
         end
@@ -1534,6 +1735,7 @@ local function AddQuestToPlan(questId)
     ApplyFocus(wps)
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
+    if addon.PlanLog then addon.PlanLog("plan", "added " .. tostring(g.label) .. " as stop " .. (bestPos + 1) .. " (a quest was accepted)") end
     Print(string.format("added %s to your plan as stop %d%s", g.label, bestPos + 1,
         bestPos == 0 and " (next up)" or ""))
 end
@@ -1543,6 +1745,7 @@ pcall(planEvents.RegisterEvent, planEvents, "QUEST_ACCEPTED")
 planEvents:SetScript("OnEvent", function(_, _, a, b)
     local id = tonumber(b) or tonumber(a)     -- classic: (logIndex, questId), newer: (questId)
     if not id then return end
+    pcall(addon.PickupDone, id)                   -- the accept step is done
     if C_Timer and C_Timer.After then
         C_Timer.After(2, function() pcall(AddQuestToPlan, id) end)   -- give the quest log a moment
     end
@@ -1555,7 +1758,7 @@ function addon:RemoveWaypoint(i)
     local db = DB()
     if planActive and db.planAuto ~= false and #db.waypoints == 0 and C_Timer and C_Timer.After then
         C_Timer.After(25, function()
-            if planActive and #DB().waypoints == 0 then pcall(addon.PlanRoute, addon, false, true) end
+            if planActive and #DB().waypoints == 0 then addon.planWhy = "the plan ran out of stops"; pcall(addon.PlanRoute, addon, false, true) end
         end)
     end
 end
@@ -1575,6 +1778,7 @@ local function ReplanForZone()
     if UnitIsGhost and UnitIsGhost("player") then return end
     local zone = hbd:GetPlayerZone()
     if not zone or (zone == lastPlanZone and not newContinent) then return end
+    addon.planWhy = "you entered a new zone or continent"
     addon:PlanRoute(false, true)
     local now = db.waypoints
     if newContinent and inst then
@@ -1627,6 +1831,7 @@ driftFrame:SetScript("OnUpdate", function(_, dt)
     end
     if nearest and nearest < d1 * 0.5 and d1 - nearest > 600 then
         lastDrift = GetTime()
+        addon.planWhy = "you moved far from the plan, so it was rebuilt from where you are"
         pcall(addon.PlanRoute, addon, lastPlanAll and true or false, true)
         local after = db.waypoints
         if after and after[1] and after[1].label then
@@ -1672,6 +1877,7 @@ local function QuestChanged()
     end
     local wps = db.waypoints
     if not changed or db.planAuto == false or not (wps and wps[1] and wps[1].label) then return end
+    addon.planWhy = "quest progress: a quest was finished, handed in or an objective done"
     addon:PlanRoute(lastPlanAll and true or false, true)
     local after = db.waypoints
     if after and after[1] and after[1].label then
@@ -1679,7 +1885,9 @@ local function QuestChanged()
     end
 end
 
--- Does this plan stop still have a quest whose objectives (kills, items) I have not finished?
+-- Is anything at this plan stop still to be done? A stop only counts as done when its quests really are:
+--   an accept stop when the quest is in my log, objectives when the quest is complete, a hand-in when it is gone from my log.
+-- Getting there is never enough. (Stops with no quest, such as a vendor, are done on arrival.)
 local function QuestOpen(id)
     if not (id and C_QuestLog and C_QuestLog.GetLogIndexForQuestID and C_QuestLog.IsComplete) then return false end
     local okI, idx = pcall(C_QuestLog.GetLogIndexForQuestID, id)
@@ -1687,16 +1895,61 @@ local function QuestOpen(id)
     local okC, done = pcall(C_QuestLog.IsComplete, id)
     return okC and not done
 end
+local function InMyLog(id)
+    if not (id and C_QuestLog and C_QuestLog.GetLogIndexForQuestID) then return nil end
+    local okI, idx = pcall(C_QuestLog.GetLogIndexForQuestID, id)
+    if not okI then return nil end
+    return idx and idx > 0 and true or false
+end
 function addon.StopHasOpenObjectives(wp)
     for _, q in ipairs(wp and wp.quests or {}) do
         local lbl = q.label or ""
-        if not (lbl:find("^Turn in:") or lbl:find("^Pick up:") or lbl:find("^Class quest:")) and QuestOpen(q.id) then
-            return true
+        local inLog = InMyLog(q.id)
+        if inLog ~= nil then
+            if lbl:find("^Turn in:") then
+                if inLog then return true end                         -- not handed in yet
+            elseif lbl:find("^Pick up:") or lbl:find("^Class quest:") then
+                if not inLog then return true end                      -- not accepted yet
+            elseif QuestOpen(q.id) then
+                return true                                            -- objectives not finished
+            end
         end
     end
     return false
 end
 
+-- I accepted a quest: its accept step is done, take it out of the plan (the plan then gets the quest's objectives)
+function addon.PickupDone(id)
+    local wps = DB().waypoints
+    if not wps or not id then return end
+    local changed = false
+    for i = #wps, 1, -1 do
+        local w = wps[i]
+        if w.quests and #w.quests > 0 then
+            local keep = {}
+            for _, q in ipairs(w.quests) do
+                local lbl = q.label or ""
+                if not (q.id == id and (lbl:find("^Pick up:") or lbl:find("^Class quest:"))) then keep[#keep + 1] = q end
+            end
+            if #keep < #w.quests then
+                changed = true
+                if #keep == 0 then
+                    table.remove(wps, i)
+                else
+                    w.quests = keep
+                    local labels = {}
+                    for _, q in ipairs(keep) do labels[#labels + 1] = q.label end
+                    w.label = table.concat(labels, " + ")
+                end
+            end
+        end
+    end
+    if changed then
+        for k, w in ipairs(wps) do if w.label then w.name = k .. ". " .. w.label end end
+        addon:RefreshPins()
+        if addon.RefreshOptions then addon.RefreshOptions() end
+    end
+end
 -- Dungeon quests do not belong in a plan: take them out of every stop (alone or joined with other quests), unless the quest
 -- is finished and only waits for its hand-in. verbose = say what was found (/lazy dungeons purge).
 function addon.PurgeDungeonStops(verbose)
@@ -1774,6 +2027,7 @@ fixTick:SetScript("OnUpdate", function(_, dt)
     for _, q in ipairs(w.quests or {}) do
         if QuestOpen(q.id) and GetTime() - lastFix > 30 then
             lastFix = GetTime()
+            addon.planWhy = "a hand-in for an unfinished quest came up first"
             pcall(addon.PlanRoute, addon, lastPlanAll and true or false, true)
             return
         end
@@ -1819,6 +2073,7 @@ nearTick:SetScript("OnUpdate", function(_, dt)
                     RenumberPlan(wps)
                     addon:RefreshPins()
                     if addon.RefreshOptions then addon.RefreshOptions() end
+                    if addon.PlanLog then addon.PlanLog("plan", "you are close to a hand-in, so it was moved to the front: " .. tostring(w.label)) end
                     Print("you are close to a hand-in: " .. tostring(w.label):gsub("^Turn in: ", "Turn in "))
                     return
                 end
@@ -2096,6 +2351,243 @@ function addon.ZonePlanWindow()
 end
 
 --------------------------------------------------------------------------------
+-- The step window: the plan as numbered steps, one thing at a time (like a levelling guide)
+--   !  accept a quest, from whom, where        -  do its objectives (kill, collect, go)        ?  turn it in
+-- It ticks a step off by itself when it is done and shows the next few. The arrow already follows the first stop.
+--------------------------------------------------------------------------------
+local stepWin, stepRows = nil, {}
+local stepHistory, stepSeen = {}, {}          -- steps just done (shown ticked for a while), and the ones seen last time
+local CHECK = "|TInterface\\Buttons\\UI-CheckBox-Check:14|t"
+
+local function InLog(id)
+    if not (id and C_QuestLog and C_QuestLog.GetLogIndexForQuestID) then return false end
+    local ok, idx = pcall(C_QuestLog.GetLogIndexForQuestID, id)
+    return ok and idx and idx > 0 and true or false
+end
+
+function addon.StepList(max)
+    local db = DB()
+    local steps = {}
+    for si, w in ipairs(db.waypoints or {}) do
+        if #steps >= (max or 12) then break end
+        if w.lazy and not w.label then
+            -- a service step Lazy mode or the autopilot added: sell and repair, visit the trainer, move on
+            local nm = tostring(w.name or "Go"):gsub("^Lazy mode: ", "")
+            steps[#steps + 1] = { kind = "go", key = "lazy:" .. si .. ":" .. nm, stop = si, text = "Go to " .. nm .. (w.detail and (" - " .. w.detail) or ""), done = false }
+        end
+        if w.label and not w.go and not w.gather and not w.guard then
+            local where = w.zx and w.zy and string.format("%.0f, %.0f", w.zx * 100, w.zy * 100) or nil
+            local acc, dos, trn = {}, {}, {}
+            for _, q in ipairs(w.quests or {}) do
+                local lbl = q.label or ""
+                local title = PlainTitle(lbl)
+                if lbl:find("^Turn in:") then
+                    local npc = GiverName(q.id, "finishedBy")
+                    trn[#trn + 1] = { kind = "turn", key = tostring(q.id) .. ":turn", stop = si, where = where,
+                        text = "Turn in " .. title .. (npc and (" to " .. npc) or ""), done = not InLog(q.id), qid = q.id, label = q.label }
+                elseif lbl:find("^Pick up:") or lbl:find("^Class quest:") then
+                    local npc = GiverName(q.id, "startedBy")
+                    acc[#acc + 1] = { kind = "accept", key = tostring(q.id) .. ":accept", stop = si, where = where,
+                        text = "Accept " .. title .. (npc and (" from " .. npc) or ""), done = InLog(q.id), qid = q.id, label = q.label }
+                else
+                    local lines = ObjectiveLines(q.id, q.src)
+                    local text = (#lines > 0) and (title .. ": " .. table.concat(lines, ", ", 1, math.min(#lines, 2))) or ("Do " .. title)
+                    local finished = C_QuestLog and C_QuestLog.IsComplete and select(2, pcall(C_QuestLog.IsComplete, q.id)) or false
+                    dos[#dos + 1] = { kind = "do", key = tostring(q.id) .. ":do", stop = si, where = where, text = text,
+                        done = finished and true or false, qid = q.id, label = q.label }
+                end
+            end
+            for _, t in ipairs(acc) do steps[#steps + 1] = t end
+            for _, t in ipairs(dos) do steps[#steps + 1] = t end
+            for _, t in ipairs(trn) do steps[#steps + 1] = t end
+            if #w.quests == 0 then
+                steps[#steps + 1] = { kind = "go", key = "go:" .. si .. ":" .. tostring(w.label), stop = si, where = where,
+                    text = "Go to " .. PlainTitle(w.label), done = false }
+            end
+        end
+    end
+    return steps
+end
+
+local KIND_MARK = { accept = "|cffffd100!|r", ["do"] = "|cffffffff-|r", turn = "|cffffd100?|r", go = "|cff80c0ff>|r" }
+
+local function StepScale()
+    local db = DB()
+    return math.min(2.6, math.max(0.7, tonumber(db.stepsScale) or tonumber(db.guideScale) or 1))
+end
+
+local function StepRefresh()
+    local db = DB()
+    if not stepWin then return end
+    local steps = (db and not db.planPaused) and addon.StepList(14) or {}
+    -- steps seen before that are gone now were done: keep a few ticked for a while
+    local now, current = GetTime(), {}
+    for _, s in ipairs(steps) do current[s.key] = true end
+    for key, s in pairs(stepSeen) do
+        if not current[key] and not s.gone then
+            s.gone = now
+            stepHistory[#stepHistory + 1] = s
+        end
+    end
+    stepSeen = {}
+    for _, s in ipairs(steps) do stepSeen[s.key] = s end
+    for i = #stepHistory, 1, -1 do
+        if now - stepHistory[i].gone > 20 or i < #stepHistory - 2 then table.remove(stepHistory, i) end
+    end
+
+    stepWin:SetScale(StepScale())
+    local fixedHeight = db.pos and db.pos.stepsSize and db.pos.stepsSize.h        -- I sized it: as many steps as fit
+    local width = math.max(160, stepWin:GetWidth() - 28)
+    local rows, n = {}, 0
+    for _, s in ipairs(stepHistory) do rows[#rows + 1] = { s = s, done = true } end
+    local firstOpen = true
+    for _, s in ipairs(steps) do
+        if not fixedHeight and #rows >= 8 then break end
+        rows[#rows + 1] = { s = s, done = s.done, current = (not s.done) and firstOpen }
+        if not s.done then firstOpen = false end
+    end
+    local y, shown = 0, 0
+    local room = fixedHeight and (fixedHeight - 40) or nil
+    for i, r in ipairs(rows) do
+        local row = stepRows[i]
+        if not row then
+            row = stepWin.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+            row:SetJustifyH("LEFT")
+            stepRows[i] = row
+        end
+        row:ClearAllPoints(); row:SetPoint("TOPLEFT", stepWin.content, "TOPLEFT", 4, -y)
+        row:SetWidth(width)
+        local s = r.s
+        local text = string.format("%s %s%s", r.done and CHECK or KIND_MARK[s.kind] or "-", s.text, s.where and ("  |cff999999(" .. s.where .. ")|r") or "")
+        if r.done then text = "|cff55ff55" .. text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "") .. "|r"
+        elseif r.current then text = "|cffffd100" .. text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", "") .. "|r" end
+        row:SetText(text)
+        local h = row:GetStringHeight() + 6
+        if room and shown > 0 and y + h > room then break end      -- no more room: the rest shows when there is
+        row:Show()
+        y = y + h
+        shown = i
+    end
+    for i = shown + 1, #stepRows do stepRows[i]:Hide() end
+    local zone = GetRealZoneText and GetRealZoneText() or ""
+    stepWin.title:SetText(#rows > 0 and ("Steps  |cffaaaaaa" .. zone .. "|r") or "Steps")
+    stepWin.empty:SetWidth(width)
+    stepWin.empty:SetShown(#rows == 0)
+    stepWin.content:SetSize(width, math.max(y, 20))
+    if not fixedHeight and not stepWin.sizing then stepWin:SetHeight(math.max(70, 40 + y)) end
+end
+
+local function BuildStepWindow()
+    local f = CreateFrame("Frame", "ForeverLazy_Steps", UIParent)
+    local size = DB() and DB().pos and DB().pos.stepsSize
+    f:SetSize(size and size.w or 300, size and size.h or 140)
+    local saved = DB() and DB().pos and DB().pos.steps
+    if saved then f:SetPoint(saved.point or "TOPRIGHT", UIParent, saved.rel or "TOPRIGHT", saved.x or 0, saved.y or 0)
+    else f:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -30, -250) end
+    f:SetFrameStrata("MEDIUM")
+    f:SetClampedToScreen(true)
+    f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+    f:SetResizable(true)
+    pcall(f.SetResizeBounds, f, 190, 90, 900, 900)          -- newer clients
+    pcall(f.SetMinResize, f, 190, 90)                       -- older ones
+    f:SetScript("OnDragStart", f.StartMoving)
+    f:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        local point, _, rel, x, y = self:GetPoint()
+        local db = DB()
+        if db then db.pos = db.pos or {}; db.pos.steps = { point = point, rel = rel, x = x, y = y } end
+    end)
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(); bg:SetColorTexture(0.04, 0.04, 0.07, 0.85)
+    f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    f.title:SetPoint("TOPLEFT", 8, -8)
+    local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+    close:SetSize(20, 20); close:SetPoint("TOPRIGHT", 0, 0)
+    close:SetScript("OnClick", function() DB().stepsHidden = true; f:Hide() end)
+    -- text size, like the guide window: A- smaller, A+ bigger
+    local function SizeButton(text, anchor, delta)
+        local b = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        b:SetSize(24, 18); b:SetText(text); b:SetPoint("RIGHT", anchor, "LEFT", -2, 0)
+        b:SetScript("OnClick", function()
+            local db = DB()
+            db.stepsScale = math.min(2.6, math.max(0.7, StepScale() + delta))
+            StepRefresh()
+        end)
+        return b
+    end
+    local bigger = SizeButton("A+", close, 0.15)
+    SizeButton("A-", bigger, -0.15)
+    f.content = CreateFrame("Frame", nil, f)
+    f.content:SetPoint("TOPLEFT", 8, -28); f.content:SetSize(272, 20)
+    f.empty = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    f.empty:SetPoint("TOPLEFT", 8, -30); f.empty:SetWidth(272); f.empty:SetJustifyH("LEFT")
+    f.empty:SetText("No plan yet. /lazy plan or /lazy level makes one.")
+    -- drag the corner to resize; the size is remembered. Shift + right-click on the title goes back to automatic height.
+    local grip = CreateFrame("Button", nil, f)
+    grip:SetSize(16, 16); grip:SetPoint("BOTTOMRIGHT", -2, 2)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetScript("OnMouseDown", function() f.sizing = true; f:StartSizing("BOTTOMRIGHT") end)
+    grip:SetScript("OnMouseUp", function()
+        f:StopMovingOrSizing()
+        f.sizing = false
+        local db = DB()
+        if db then db.pos = db.pos or {}; db.pos.stepsSize = { w = f:GetWidth(), h = f:GetHeight() } end
+        StepRefresh()
+    end)
+    f:SetScript("OnSizeChanged", function(self) if self.sizing then StepRefresh() end end)
+    local reset = CreateFrame("Button", nil, f)
+    reset:SetPoint("TOPLEFT", 0, 0); reset:SetPoint("TOPRIGHT", -70, 0); reset:SetHeight(24)
+    reset:RegisterForClicks("RightButtonUp")
+    reset:RegisterForDrag("LeftButton")                      -- the title strip still drags the whole window
+    reset:SetScript("OnDragStart", function() f:StartMoving() end)
+    reset:SetScript("OnDragStop", function() local h = f:GetScript("OnDragStop"); if h then h(f) end end)
+    reset:SetScript("OnClick", function()
+        if IsShiftKeyDown() then
+            local db = DB()
+            if db and db.pos then db.pos.stepsSize = nil end
+            f:SetSize(300, 140)
+            StepRefresh()
+        end
+    end)
+    f:Hide()
+    return f
+end
+function addon.ToggleSteps(force)
+    local db = DB()
+    if not stepWin then stepWin = BuildStepWindow() end
+    local show
+    if force ~= nil then show = force else show = not stepWin:IsShown() end
+    db.stepsHidden = not show
+    if show then stepWin:Show(); StepRefresh() else stepWin:Hide() end
+end
+
+-- show it by itself while a plan is running (unless I closed it), keep it up to date
+local stepAcc = 0
+local stepTick = CreateFrame("Frame")
+stepTick:SetScript("OnUpdate", function(_, dt)
+    stepAcc = stepAcc + dt
+    if stepAcc < 0.7 then return end
+    stepAcc = 0
+    local db = DB()
+    if not db then return end
+    local wantAuto = db.stepsAuto ~= false and not db.stepsHidden and not db.planPaused and addon.ModuleOn("plan")
+    local has = false
+    for _, w in ipairs(db.waypoints or {}) do if w.label and not w.go and not w.gather and not w.guard then has = true; break end end
+    if not stepWin then
+        if not (wantAuto and has) then return end
+        stepWin = BuildStepWindow()
+    end
+    if (wantAuto and has) or (db.stepsHidden == false and stepWin:IsShown()) then
+        if not stepWin:IsShown() then stepWin:Show() end
+        pcall(StepRefresh)
+    elseif stepWin:IsShown() and (not has or db.planPaused) then
+        stepWin:Hide()
+    end
+end)
+
+--------------------------------------------------------------------------------
 -- Right-click the plan arrow to skip a quest (or just this stop)
 --------------------------------------------------------------------------------
 local function SkippedCount()
@@ -2106,6 +2598,7 @@ end
 
 local function ReplanAfterSkip()
     local db = DB()
+    addon.planWhy = "the quest you skipped (or brought back) changed the plan"
     addon:PlanRoute(lastPlanAll and true or false, true)
     local wps = db.waypoints
     if wps and wps[1] and wps[1].label then
@@ -2452,6 +2945,14 @@ function addon:HandleExtraCommand(cmd, rest)
             end
             Print(n == 0 and "no quests skipped. Right-click the plan arrow to skip one" or "/lazy skip clear brings them back")
         end
+        return true
+
+    elseif cmd == "steps" or cmd == "step" then
+        local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+        if a == "on" or a == "show" then addon.ToggleSteps(true)
+        elseif a == "off" or a == "hide" then addon.ToggleSteps(false)
+        elseif a == "auto" then DB().stepsAuto = DB().stepsAuto == false; Print("the step window shows by itself: " .. tostring(DB().stepsAuto ~= false))
+        else addon.ToggleSteps() end
         return true
 
     elseif cmd == "level" or cmd == "levelzone" then

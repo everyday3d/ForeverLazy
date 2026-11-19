@@ -359,6 +359,17 @@ local function BuildControls(parent)
     Check(content, "Follow the quest I have selected or tracked (otherwise the nearest of all)", 16,
         function() return DB().ownFocus ~= false end, function(v) DB().ownFocus = v; Changed() end)
     ColorRow(content, "My quests arrow color", "colorMine")
+    Check(content, "Leave small quests out of the plan when the XP is not worth the time (walking included)", 16,
+        function() return DB().planWorth ~= false end, function(v) DB().planWorth = v end)
+    Check(content, "Autopilot: visit the vendor or trainer between quests when due, and when a zone is done go to the next one and plan it", 16,
+        function() return DB().autopilot == true end, function(v) DB().autopilot = v end)
+    Check(content, "For kills and items, point the arrow at the nearest spot where they are (and move on when I have cleared it)", 16,
+        function() return DB().arrowSpots ~= false end, function(v) DB().arrowSpots = v end)
+    Check(content, "Count quests I have not taken yet that are right here (within about 600 yards)", 16,
+        function() return DB().planNearby ~= false end, function(v) DB().planNearby = v end)
+    Check(content, "Show the step window by itself while a plan is running (what to do, step by step)", 16,
+        function() return DB().stepsAuto ~= false end,
+        function(v) DB().stepsAuto = v; if v then DB().stepsHidden = false end end)
     Button(content, "Plan this zone for the fastest levelling", 16, 270, function() addon.PlanZone() end, true)
     Label(content, "Same as /lazy level, or /lazy level ashenvale for another zone: I take you there, then plan it. Includes every quest worth taking in the zone, not just the ones in your log.")
     y = y - 26
@@ -420,6 +431,8 @@ local function BuildControls(parent)
         function() return DB().classAlert ~= false end, function(v) DB().classAlert = v end)
     Check(content, "A pop-up when I walk into a zone that has something for a class quest (/lazy class here lists it any time)", 16,
         function() return DB().classZoneAlert ~= false end, function(v) DB().classZoneAlert = v end)
+    Check(content, "In a group, a pop-up when I walk into a dungeon my quests need something in (/lazy dungeons here shows it any time)", 16,
+        function() return DB().dungeonQuestPopup ~= false end, function(v) DB().dungeonQuestPopup = v end)
     Check(content, "Put class quest givers in my plan when they are in this zone", 16,
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
     Check(content, "When the next plan stop is a long way off and a flight is quicker, start the trip by itself (off by default)", 16,
@@ -448,6 +461,9 @@ local function BuildControls(parent)
         function() return DB().chainHint ~= false end, function(v) DB().chainHint = v end)
     Check(content, "Mark the best quest reward (likely upgrade, or highest vendor price)", 16,
         function() return DB().rewardPick ~= false end, function(v) DB().rewardPick = v end)
+    Radio(content, "Pick rewards for my:", "rewardRole", {
+        { "auto", "Class and talents (automatic)" }, { "str_melee", "Strength melee" }, { "agi_melee", "Agility melee" },
+        { "hunter", "Hunter" }, { "caster", "Caster" }, { "healer", "Healer" }, { "tank", "Tank" } })
     Check(content, "Leave group quests out of my plan while I am solo", 16,
         function() return DB().planSkipGroup ~= false end, function(v) DB().planSkipGroup = v end)
     Check(content, "Favour quests I share with someone in my group", 16,
@@ -515,6 +531,21 @@ local function BuildControls(parent)
     Radio(content, "Show and farm:", "nodeFilter", { { "all", "Ore and herbs" }, { "ore", "Ore only" }, { "herb", "Herbs only" } })
     Button(content, "Farm them with the arrow", 16, 190, function() addon:HandleExtraCommand("nodes", "farm " .. (DB().nodeFilter or "all")) end, false)
     Button(content, "What do I have?", 216, 130, function() addon:HandleExtraCommand("nodes", "") end, true)
+
+    Header(content, "Quest tracker")
+    Label(content, "Forever Lazy's own tracker: your quests in plan order with XP, live objectives and who to turn in to. Click a quest to do it next, right-click for more. Questie's tracker is another addon: turn it off in Questie's options.")
+    y = y - 50
+    Check(content, "Use Forever Lazy's quest tracker", 16,
+        function() return DB().trackerOn == true end, function(v) if addon.TrackerSet then addon.TrackerSet(v) else DB().trackerOn = v end end)
+    Check(content, "Hide WoW's own quest tracker while mine is on", 16,
+        function() return DB().trackerHideBlizzard ~= false end,
+        function(v) DB().trackerHideBlizzard = v; if addon.TrackerSet and DB().trackerOn then addon.TrackerSet(true, v) end end)
+    Check(content, "Compact: objectives only for the quest I am on, the others take one line", 16,
+        function() return DB().trackerCompact == true end, function(v) DB().trackerCompact = v; if addon.HandleExtraCommand and DB().trackerOn then addon:HandleExtraCommand("tracker", "refresh") end end)
+    Check(content, "No background (just the text, with an outline)", 16,
+        function() return DB().trackerNoBg == true end,
+        function(v) DB().trackerNoBg = v; if addon.HandleExtraCommand and DB().trackerOn then addon:HandleExtraCommand("tracker", "refresh") end end)
+    Button(content, "Put the tracker back at the top right", 16, 250, function() addon:HandleExtraCommand("tracker", "reset") end, true)
 
     Header(content, "Damage meter")
     Label(content, "A damage meter in its own chat tab called Meter, so it stays out of the way. It reads the game's built-in meter (the same source Details uses on this client). In combat the game hides the numbers, so the tab keeps the last picture until the fight ends.")

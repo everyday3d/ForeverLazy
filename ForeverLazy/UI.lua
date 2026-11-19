@@ -332,6 +332,8 @@ function addon:OpenMenu()
     addon.ShowMenu({
         { text = "Do the next thing (Lazy Mode)", fn = function() Cmd("now") end, module = "lazymode" },
         { text = "Plan this zone for the fastest levelling", fn = function() addon.PlanZone() end, module = "plan" },
+        { text = "Step window (what to do, step by step)", fn = function() addon.ToggleSteps() end, module = "plan" },
+        { text = "Quest tracker (Forever Lazy's own)", fn = function() Cmd("tracker") end },
         { text = "Plan my route", fn = function() addon:PlanRoute() end, module = "plan" },
         { text = (DB().planPaused and "Turn the plan back on (where I left it)" or "Turn the plan off (keeps my place)"),
           fn = function() if DB().planPaused then addon.PlanResume() else addon.PlanPause() end end, module = "plan" },

@@ -73,6 +73,12 @@ Back to the [README](../README.md) · [Feature guide](FEATURES.md)
 | `/lazy level` `level <zone>` `level steps` | Plan the whole zone for the fastest levelling (a window of what to get, where to kill, what to hand in); with a zone name, go there first |
 | `/lazy class quest` `class here` `class list` | Your class quests and what to do for each, what the zone you are in needs, or the plain chat list |
 | `/lazy dungeons why <quest>` `dungeons purge` | Why a quest counts as a dungeon quest, and take dungeon quests out of the plan |
+| `/lazy tracker` `tracker on` `off` `bg` `reset` | Forever Lazy's own quest tracker: toggle it, its background, or put it back at the top right |
+| `/lazy autopilot` `autopilot on` `off` | Vendor and trainer stops when due, then the next zone and its plan, by itself |
+| `/lazy plan log` `plan log clear` | The plan log: every change to the plan and why (a window) |
+| `/lazy plan check` | Check the plan against the rules (no dungeon quests, no early hand-ins, nothing already done) and fix what breaks them |
+| `/lazy steps` `steps off` | The step window: what to do, one step at a time |
+| `/lazy dungeons here` | What your quests need inside the dungeon you are in (a pop-up also shows in a group) |
 | `/lazy plan off` `plan on` | Turn the plan off and keep your place, then pick it up again |
 | `/lazy keep` `keep <item>` `keep remove <item>` `keep off` `keep on` | Items a vendor must not keep (the tooltip warns, a sale is bought back) |
 | `/lazy pace reset` | Clear your measured XP per hour and start measuring again (drop counts and quest times are kept) |

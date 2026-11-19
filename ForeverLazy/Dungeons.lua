@@ -337,6 +337,142 @@ local function Go(arg)
     addon:AddWaypointZone(e.uiMapId, e.zx, e.zy, rec.name .. " entrance")
 end
 
+--------------------------------------------------------------------------------
+-- In a dungeon with a group: what my quests need in here, exactly
+--------------------------------------------------------------------------------
+local function ObjectiveLinesHere(QDB, id, rec)
+    local lines = {}
+    if C_QuestLog and C_QuestLog.GetQuestObjectives then
+        local ok, objs = pcall(C_QuestLog.GetQuestObjectives, id)
+        if ok and type(objs) == "table" then
+            for _, o in ipairs(objs) do
+                if not o.finished and o.text and o.text ~= "" then lines[#lines + 1] = o.text end
+            end
+        end
+    end
+    -- where each wanted item drops, inside this dungeon
+    local obj = QDB.QueryQuestSingle(id, "objectives")
+    if type(obj) == "table" and type(obj[3]) == "table" then
+        for _, c in pairs(obj[3]) do
+            local itemId = c[1]
+            if itemId then
+                local itemName = QDB.QueryItemSingle(itemId, "name") or "item"
+                local from, n = {}, 0
+                local drops = QDB.QueryItemSingle(itemId, "npcDrops")
+                if type(drops) == "table" then
+                    for _, npc in pairs(drops) do
+                        local sp = QDB.QueryNPCSingle(npc, "spawns")
+                        local here = false
+                        if type(sp) == "table" then for areaId in pairs(sp) do if areaTo[areaId] == rec then here = true; break end end end
+                        if here then
+                            n = n + 1
+                            if n <= 4 then from[#from + 1] = QDB.QueryNPCSingle(npc, "name") or "?" end
+                        end
+                    end
+                end
+                if #from > 0 then lines[#lines + 1] = "   " .. itemName .. " drops from: " .. table.concat(from, ", ") .. (n > 4 and ", ..." or "") end
+            end
+        end
+    end
+    return lines
+end
+
+-- my quests that have something to do in this dungeon: { title, class, lines }
+function addon.DungeonQuestsHere(instanceName)
+    local out = {}
+    if not (instanceName and Build() and api.QuestieReady and api.QuestieReady() and api.ReadQuestLog) then return out end
+    local rec = byKey[Key(instanceName)]
+    if not rec then return out end
+    local QDB = api.GetQuestie()
+    for _, q in ipairs(api.ReadQuestLog()) do
+        if not q.complete then
+            local inside = false
+            local ok, set = pcall(QuestAreas, QDB, q)
+            if ok and type(set) == "table" then
+                for areaId in pairs(set) do if areaTo[areaId] == rec then inside = true; break end end
+            end
+            if inside then
+                local lines = ObjectiveLinesHere(QDB, q.id, rec)
+                out[#out + 1] = { id = q.id, title = q.title or ("quest " .. q.id), lines = lines,
+                                  class = addon.IsClassQuestId and addon.IsClassQuestId(q.id) or false }
+            end
+        end
+    end
+    table.sort(out, function(a, b) if a.class ~= b.class then return a.class end return a.title < b.title end)
+    return out
+end
+
+local dToast
+local function ShowDungeonToast(name, quests)
+    if not dToast then
+        local f = CreateFrame("Frame", "ForeverLazy_DungeonToast", UIParent)
+        f:SetSize(460, 200)
+        f:SetPoint("TOP", 0, -140)
+        f:SetFrameStrata("DIALOG")
+        f:SetClampedToScreen(true)
+        f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        local bg = f:CreateTexture(nil, "BACKGROUND")
+        bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.95)
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+        f.title:SetPoint("TOP", 0, -12); f.title:SetWidth(420)
+        f.body = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        f.body:SetPoint("TOP", f.title, "BOTTOM", 0, -8); f.body:SetWidth(424); f.body:SetJustifyH("LEFT")
+        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT", 2, 2)
+        local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
+        btn:SetSize(100, 22); btn:SetPoint("BOTTOM", 0, 10); btn:SetText("Close")
+        btn:SetScript("OnClick", function() f:Hide() end)
+        table.insert(UISpecialFrames, "ForeverLazy_DungeonToast")
+        f:Hide()
+        dToast = f
+    end
+    dToast.title:SetText("Your quests in " .. name)
+    local lines = {}
+    for _, q in ipairs(quests) do
+        lines[#lines + 1] = "|cffffd100" .. q.title .. "|r" .. (q.class and "  |cff80c0ff(class quest)|r" or "")
+        if #q.lines == 0 then lines[#lines + 1] = "   (no objective text found)" end
+        for _, l in ipairs(q.lines) do lines[#lines + 1] = "   " .. l end
+        lines[#lines + 1] = ""
+    end
+    dToast.body:SetText(table.concat(lines, "\n"))
+    dToast:SetHeight(math.max(120, 90 + dToast.body:GetStringHeight()))
+    dToast:Show()
+end
+
+-- /lazy dungeons here: what my quests need in the dungeon I am in (any time, group or not)
+function addon.DungeonHere(auto)
+    local name, itype = GetInstanceInfo and GetInstanceInfo()
+    if not name or (itype ~= "party" and itype ~= "raid") then
+        if not auto then Print("you are not inside a dungeon") end
+        return
+    end
+    local quests = addon.DungeonQuestsHere(name)
+    if #quests == 0 then
+        if not auto then Print("none of your quests need anything in " .. name) end
+        return
+    end
+    ShowDungeonToast(name, quests)
+end
+
+local shownIn = {}
+local dEv = CreateFrame("Frame")
+for _, e in ipairs({ "PLAYER_ENTERING_WORLD", "ZONE_CHANGED_NEW_AREA" }) do pcall(dEv.RegisterEvent, dEv, e) end
+dEv:SetScript("OnEvent", function()
+    if not C_Timer or not C_Timer.After then return end
+    C_Timer.After(4, function()
+        local db = addon.GetDB()
+        if not db or db.dungeonQuestPopup == false then return end
+        if not (IsInGroup and IsInGroup()) then return end                      -- only with a group
+        local name, itype, _, _, _, _, _, instanceId = GetInstanceInfo and GetInstanceInfo()
+        if not name or (itype ~= "party" and itype ~= "raid") then return end
+        local key = tostring(instanceId or name)
+        if shownIn[key] and GetTime() - shownIn[key] < 900 then return end      -- once per visit
+        shownIn[key] = GetTime()
+        pcall(addon.DungeonHere, true)
+    end)
+end)
+
 -- /lazy dungeons why <part of a quest title>: why a quest in my plan or log is, or is not, counted as a dungeon quest
 function addon.DungeonWhy(text)
     text = (text or ""):lower()
@@ -381,6 +517,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local sub, arg = (rest or ""):match("^(%S*)%s*(.-)$")
         if sub == "go" then Go(arg)
         elseif sub == "why" then addon.DungeonWhy(arg)
+        elseif sub == "here" then addon.DungeonHere()
         elseif sub == "purge" then
             if addon.PurgeDungeonStops then addon.PurgeDungeonStops(true) end
         else Summary() end
