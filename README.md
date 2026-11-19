@@ -201,6 +201,19 @@ RestedXP, Questie, Blizzard Entertainment or the WoW Forever team.
 </p>
 
 <p align="center">
+  <b>Things Sam would have screamed at this addon</b><br>
+  <sub>(my words, in his spirit. Not his, and not real quotes.)</sub>
+</p>
+
+<p align="center">
+  <i>"You're ALT-TABBING to a GUIDE?! The ARROW is RIGHT THERE!! You're not playing, you're COMMUTING!!"</i><br>
+  <i>"Kill ten boars?! WHERE ARE THE BOARS?! The SKULLS, man! That's what the SKULLS are FOR!!"</i><br>
+  <i>"Why is there a SLEEPING BAG in my bags?! Because it's PROTECTED, that's WHY!! Leave the bag ALONE!!"</i><br>
+  <i>"It says READY to turn in! In GREEN! What do you want, a PARADE?!"</i><br>
+  <i>"No Questie?! NO PROBLEM!! It's got its OWN data, baby! Checked against Questie! IT MATCHED!!"</i><br>
+  <i>"A whole zone planned in ONE click?! I can't even plan my WEEKEND!!"</i>
+</p>
+<p align="center">
   This little addon has your face in its welcome window and your name on its credits, because every time I level a character
   and the arrow takes me somewhere I didn't think to go, I want to scream it. So I do.<br>
   <b>THANK YOU, SAM. OHHHHHHHHH!</b>
