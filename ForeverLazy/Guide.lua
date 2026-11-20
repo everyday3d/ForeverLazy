@@ -131,6 +131,13 @@ local function Refresh()
         if best then head = head .. "\nCoach says: " .. best .. "  (/lazy coach)" end
     end
     win.head:SetText(head)
+    -- the list starts below the top text, however many lines it has (the coach line used to run into the first heading)
+    if win.scroll then
+        local h = win.head:GetStringHeight() or 36
+        win.scroll:ClearAllPoints()
+        win.scroll:SetPoint("TOPLEFT", 16, -(44 + math.max(36, h) + 10))
+        win.scroll:SetPoint("BOTTOMRIGHT", -34, 56)
+    end
 
     local width = W - 70
     local y = 0
@@ -235,6 +242,7 @@ local function Build()
 
     local scroll = CreateFrame("ScrollFrame", "ForeverLazy_GuideScroll", f, "UIPanelScrollFrameTemplate")
     scroll:SetPoint("TOPLEFT", 16, -80); scroll:SetPoint("BOTTOMRIGHT", -34, 56)
+    f.scroll = scroll
     f.content = CreateFrame("Frame", nil, scroll)
     f.content:SetSize(W - 70, 10)
     scroll:SetScrollChild(f.content)

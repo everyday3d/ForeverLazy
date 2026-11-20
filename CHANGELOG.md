@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.0
+- **ONE BAG WINDOW!!** All your bags in one window (B, or the bag buttons) with a search box that dims what does not match, All / Trade / Use / Gear / Quest / Misc buttons, a button per bag to hide its items, quality borders you can set, item levels on gear, free slots and money, and the bank in the same window at the bank. Settings are under the `...` button: auto sort, border colours, quest border, replacing the game's bags, item size, background and layout. It takes over the bag keys when Bagnon is not running; `/lazy bags` always opens it.
+- **Layout by category.** Quest, Gear, Consumables, Trade goods, Misc, Junk, with the empty slots in one row.
+- **Other characters.** Look inside the bags, bank and mail of any character you have played, with their full names.
+- **Nameplate icons.** A sword on mobs a quest needs killed, a loot bag on mobs that drop a quest item, a bag with a ! on mobs that drop an item that starts a quest you can take. `/lazy plates off` hides them.
+- **Tell the party** when you finish a quest, with the item or kill that finished it. `/lazy announce off` stops it.
+- **Quest tools.** Quest search (`/lazy find`), quest history (`/lazy history`), quest chain info and quest link tooltips in chat (`/lazy links`), map filters (hide quest givers far above your level, pin size), and a hand-in ping (`/lazy ping`).
+- **New zones and dungeons** in the coach and the levelling guide, found from the quest data (`/lazy zones`). The levelling guide text no longer overlaps.
+- **Chat tweaks** like Prat, all off until turned on (Options, Chat): timestamps, class colours, levels, short channel names, keyword highlight, copy chat, clickable links, sticky channels, font, and resizable chat windows.
+- **Fix:** a drop rate over 100% in item tooltips now reads "about 1.5 per kill". Characters show their full names in item tooltips, and a character saved twice (while the realm name was empty) is no longer listed twice.
+- The files now have real names (QuestMap.lua, QuestSounds.lua, BagWindow.lua and so on) instead of Spare1 to Spare12.
 ## 0.15.4
 - **STARTER ITEMS GO AWAY!!** An item that only started a quest no longer stays on the quest item button (or the tracker row) once the quest is in your log. Items the quest still needs keep their button.
 ## 0.15.3

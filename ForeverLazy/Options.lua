@@ -237,6 +237,8 @@ local function BuildControls(parent)
     y = y - 22
     Check(content, "Play sounds when a quest step is done and when a quest is ready to hand in", 16,
         function() return DB().questSound ~= false end, function(v) DB().questSound = v and nil or false end)
+    Check(content, "Tell my party in party chat when I complete a quest (not for every step)", 16,
+        function() return DB().questAnnounce ~= false end, function(v) DB().questAnnounce = v and nil or false end)
     Label(content, "|cffffd100A quest step is done|r (all its items or kills): a sound effect")
     y = y - 22
     Button(content, "Hear it", 16, 90, function() if addon.QuestSoundTryStep then addon.QuestSoundTryStep() end end, false)
@@ -258,6 +260,88 @@ local function BuildControls(parent)
     Check(content, "Show quest givers (!) and hand-ins (?) on the map", 16,
         function() return DB().questMap ~= false and DB().questMapGivers ~= false end,
         function(v) DB().questMapGivers = v and nil or false; if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+    Slider(content, "Hide quests to pick up more levels above me than", 0, 10, 1, "%d",
+        function() return tonumber(DB().questMapGiverAbove) or 10 end,
+        function(v) DB().questMapGiverAbove = v; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+    Label(content, "(10 means show everything)")
+    y = y - 22
+    Slider(content, "Pin size", 0.5, 2, 0.1, "%.1f",
+        function() return tonumber(DB().questMapScale) or 1 end,
+        function(v) DB().questMapScale = v; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+
+    Header(content, "Finding quests")
+    Label(content, "Hover a quest link in chat for who gives it, who takes it, its level, its chain and why you cannot take it. Find any quest by name, or see what you have finished in each zone.")
+    y = y - 22
+    Check(content, "Quest link tooltips in chat", 16,
+        function() return DB().questLinkTooltips ~= false end, function(v) DB().questLinkTooltips = v and nil or false end)
+    Check(content, "Ping when I walk up to someone I can hand a quest in to", 16,
+        function() return DB().handInPing ~= false end, function(v) DB().handInPing = v and nil or false end)
+    Button(content, "Find a quest", 16, 120, function() if addon.QuestSearchOpen then addon.QuestSearchOpen() end end, false)
+    Button(content, "Quest history", 146, 120, function() if addon.QuestHistoryOpen then addon.QuestHistoryOpen() end end, true)
+
+    Header(content, "Chat")
+    Label(content, "Chat tweaks, a little like Prat. Everything is off until you turn it on here, and changes show on new lines. A few (input box on top, hidden buttons, no fading) need a /reload to undo.")
+    y = y - 22
+    local function ChatCheck(text, key)
+        Check(content, text, 16, function() return DB()[key] == true end,
+            function(v) DB()[key] = v and true or false; if addon.ChatApply then addon.ChatApply() end end)
+    end
+    Button(content, "Turn on the usual set", 16, 170, function() if addon.ChatPreset then addon.ChatPreset() end end, true)
+    Label(content, "|cffffd100How messages look|r")
+    y = y - 22
+    ChatCheck("Timestamps in front of every line", "chatTime")
+    local tfb
+    tfb = Button(content, "Time format", 16, 200, function()
+        local n = #(addon.ChatTimeFormats and addon.ChatTimeFormats() or { 1 })
+        DB().chatTimeFormat = ((tonumber(DB().chatTimeFormat) or 1) % n) + 1
+        tfb:SetText("Time format: " .. date((addon.ChatTimeFormats()[DB().chatTimeFormat])))
+    end, true)
+    refreshers[#refreshers + 1] = function()
+        if addon.ChatTimeFormats then tfb:SetText("Time format: " .. date(addon.ChatTimeFormats()[tonumber(DB().chatTimeFormat) or 1] or "%H:%M")) end
+    end
+    ChatCheck("Class-coloured names in every channel", "chatClassColor")
+    ChatCheck("Player levels next to names (from group, guild, friends, target, /who)", "chatLevels")
+    ChatCheck("Short channel names ([Guild] becomes [G], [1. General] becomes [1])", "chatShortChannels")
+    ChatCheck("No brackets around channel names", "chatNoBrackets")
+    ChatCheck("Highlight your name and these words (with a sound):", "chatWordsOn")
+    do
+        local eb = CreateFrame("EditBox", "ForeverLazy_ChatWords", content, "InputBoxTemplate")
+        eb:SetSize(330, 22)
+        eb:SetPoint("TOPLEFT", 40, y)
+        Track(eb, 40, y)
+        eb:SetAutoFocus(false)
+        eb:SetScript("OnEnterPressed", function(s) DB().chatWords = s:GetText(); s:ClearFocus() end)
+        eb:SetScript("OnEditFocusLost", function(s) DB().chatWords = s:GetText() end)
+        eb:SetScript("OnEscapePressed", function(s) s:ClearFocus() end)
+        refreshers[#refreshers + 1] = function() eb:SetText(DB().chatWords or "") end
+        y = y - 30
+    end
+    Label(content, "|cffffd100How the windows behave|r")
+    y = y - 22
+    ChatCheck("Click a web link to copy it, and a copy button on each window", "chatLinks")
+    ChatCheck("Resize chat windows by dragging the bottom-right corner", "chatResize")
+    ChatCheck("Input box on top of the chat window", "chatEditTop")
+    ChatCheck("Chat text never fades", "chatNoFade")
+    ChatCheck("Long chat history (1000 lines)", "chatHistory")
+    ChatCheck("Hide the chat side buttons", "chatHideButtons")
+    ChatCheck("Tabs fade away until the mouse is over them", "chatTabFade")
+    ChatCheck("Sticky channels (the input box remembers say, yell, guild, raid ...)", "chatSticky")
+    ChatCheck("An extra sound when someone whispers me", "chatWhisperSound")
+    Slider(content, "Chat font size", 8, 24, 1, "%d",
+        function() return tonumber(DB().chatFontSize) or 14 end,
+        function(v) DB().chatFontSize = v; if addon.ChatApply then addon.ChatApply() end end)
+    local fb
+    fb = Button(content, "Font", 16, 220, function()
+        local fonts = addon.ChatFonts()
+        DB().chatFont = ((tonumber(DB().chatFont) or 1) % #fonts) + 1
+        fb:SetText("Font: " .. fonts[DB().chatFont][1])
+        if addon.ChatApply then addon.ChatApply() end
+    end, true)
+    refreshers[#refreshers + 1] = function()
+        if addon.ChatFonts then fb:SetText("Font: " .. (addon.ChatFonts()[tonumber(DB().chatFont) or 1] or addon.ChatFonts()[1])[1]) end
+    end
+    ChatCheck("Outline the chat font", "chatFontOutline")
+    Button(content, "Copy the chat window I'm using", 16, 220, function() if addon.ChatCopy then addon.ChatCopy() end end, true)
 
     Header(content, "Quest data")
     Label(content, "The addon carries its own quest data, so it no longer needs Questie. This button tries it: it ignores Questie, reloads the screen, and shows a results window a few seconds later.")

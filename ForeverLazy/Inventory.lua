@@ -9,8 +9,19 @@ local Print = addon.Print
 
 local function DB() return addon.GetDB() end
 
+-- the realm name is sometimes empty right after logging in: use the last good one so a character never splits in two
+local function RealmNow()
+    local r = GetRealmName and GetRealmName() or ""
+    local root = addon.GetRoot and addon.GetRoot()
+    if r ~= "" then
+        if root then root.lastRealm = r end
+        return r
+    end
+    return root and root.lastRealm or ""
+end
+
 local function Key()
-    return (UnitName("player") or "?") .. "-" .. (GetRealmName and GetRealmName() or "?")
+    return (UnitName("player") or "?") .. "-" .. RealmNow()
 end
 
 local function Store()
@@ -25,7 +36,10 @@ local function Me()
     inv[k] = inv[k] or {}
     local me = inv[k]
     me.name = UnitName("player")
-    me.realm = GetRealmName and GetRealmName() or ""
+    -- the full name: this server gives each character a second part ("Tank Hanks") as the realm part of the name
+    local okF, n, r = pcall(UnitFullName, "player")
+    if okF and n and r and r ~= "" then me.full = n .. " " .. r else me.full = nil end
+    me.realm = RealmNow()
     me.class = select(2, UnitClass("player"))
     me.faction = UnitFactionGroup and UnitFactionGroup("player") or nil
     return me
@@ -247,11 +261,13 @@ local function AddCounts(tt, id)
     end)
     for _, k in ipairs(keys) do
         local c = inv[k]
-        if k == myKey or db.itemTooltipAlts ~= false then
+        -- an old half-saved copy of a character (saved while the realm name was still empty): the real one is listed instead
+        local ghost = (c.realm or "") == "" and c.name and inv[c.name .. "-" .. RealmNow()] ~= nil and k ~= c.name .. "-" .. RealmNow()
+        if not ghost and (k == myKey or db.itemTooltipAlts ~= false) then
             local parts, total = CountsFor(c, id, k == myKey)
             if total > 0 then
-                local name = (k == myKey) and "You" or (c.name or k)
-                if k ~= myKey and c.realm and c.realm ~= (GetRealmName and GetRealmName() or "") then name = name .. "-" .. c.realm end
+                local name = (k == myKey) and "You" or (c.full or c.name or k)
+                if k ~= myKey and not c.full and (c.realm or "") ~= "" and c.realm ~= RealmNow() then name = name .. "-" .. c.realm end
                 rows[#rows + 1] = { name, table.concat(parts, ", "), c.class, k == myKey }
                 grand = grand + total
                 places = places + #parts
@@ -348,7 +364,7 @@ function addon:HandleExtraCommand(cmd, rest)
                             local bits = {}
                             for k2, c2 in pairs(inv) do
                                 local parts, total = CountsFor(c2, id, k2 == Key())
-                                if total > 0 then bits[#bits + 1] = string.format("%s: %s", k2 == Key() and "you" or (c2.name or k2), table.concat(parts, ", ")) end
+                                if total > 0 then bits[#bits + 1] = string.format("%s: %s", k2 == Key() and "you" or (c2.full or c2.name or k2), table.concat(parts, ", ")) end
                             end
                             Print(string.format("%s - %s", name, table.concat(bits, "; ")))
                         end

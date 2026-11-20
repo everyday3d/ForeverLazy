@@ -273,6 +273,17 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.16.0", {
+        "ONE BAG WINDOW!! All your bags in ONE window with search, category buttons, quality borders, auto sort and the bank too. Press B! Turn Bagnon OFF and this takes over. OHHHH!",
+        "Look inside your OTHER characters' bags, bank and mail from the same window. Full names, like Tank Hanks!",
+        "Pick LAYOUT BY CATEGORY in the ... settings and your stuff sorts into Quest, Gear, Consumables, Trade goods, Misc and Junk!",
+        "NAMEPLATE ICONS like Questie! A SWORD on mobs you need to kill, a LOOT BAG on mobs that drop what you need, a bag with a ! on mobs that drop a quest STARTER.",
+        "The party hears about it! Finish a quest and Forever Lazy tells your group what you did.",
+        "QUEST SEARCH, QUEST HISTORY, QUEST CHAINS and quest link tooltips in chat. A ping when you stand next to the person who takes your finished quest!",
+        "The coach finds NEW zones and dungeons by itself, so the levelling guide keeps up with WoW Forever. The guide text no longer overlaps.",
+        "CHAT TWEAKS like Prat: timestamps, class colours, short channel names, keyword highlight, copy chat, links you can click, and chat windows you can RESIZE. All off until you turn them on in the options!",
+        "FIXED: drop rates over 100% in item tooltips now say about 1.5 per kill. Other characters show their full names in item tooltips, and one character no longer shows up twice.",
+    } },
     { "0.15.4", {
         "QUEST STARTER ITEMS GO AWAY!! An item that only STARTED a quest no longer sits on your quest item button once the quest is in your log. OHHHH!",
     } },

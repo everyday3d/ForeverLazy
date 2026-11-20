@@ -293,6 +293,10 @@ local function Build()
                 local level = data.Field("quests", id, "questLevel")
                 local grey = QDB and QDB.IsTrivial and level and level > 0 and QDB.IsTrivial(level)
                 local skipped = db.planSkip and db.planSkip[id]
+                -- map filter: hide quests far above my level (the slider; 10 = show everything)
+                local above = tonumber(db.questMapGiverAbove) or 10
+                local tooHigh = above < 10 and level and level > 0 and level > (UnitLevel("player") or 1) + above
+                if tooHigh then skipped = true end
                 if not grey and not skipped then
                     local by = data.Field("quests", id, "startedBy")
                     if type(by) == "table" then
@@ -319,6 +323,7 @@ end
 local lastSig = ""
 local function Draw(force)
     if not hbdp then return end
+    local db = DB() or {}
     local ok, order = pcall(Build)
     if not ok then order = {} end
     -- same pins as last time: leave them
@@ -363,12 +368,16 @@ local function Draw(force)
         if i <= MAX_WORLD then
             local f = Frame(worldFrames, i, c.kind == "give" and 16 or 13)
             f.tex:SetTexture(TEX[c.kind]); f.info = c.info; f.cell = c
-            f:SetSize((c.kind == "give" or c.kind == "turnin") and 16 or 13, (c.kind == "give" or c.kind == "turnin") and 16 or 13)
+            local scale = math.max(0.5, math.min(2, tonumber(db.questMapScale) or 1))
+            local sz = ((c.kind == "give" or c.kind == "turnin") and 16 or 13) * scale
+            f:SetSize(sz, sz)
             pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy)
         end
         if i <= MAX_MINI and e.d < 1e18 and e.d < 1500 ^ 2 then
             local f = Frame(miniFrames, i, 11)
             f.tex:SetTexture(TEX[c.kind]); f.info = c.info; f.cell = c
+            local msz = 11 * math.max(0.5, math.min(2, tonumber(db.questMapScale) or 1))
+            f:SetSize(msz, msz)
             pcall(hbdp.AddMinimapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy, false, false)
         end
     end
@@ -433,4 +442,4 @@ function addon:HandleExtraCommand(cmd, rest)
 end
 
 -- reached the end of the file without an error (used by /lazy check)
-do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Spare3.lua"] = true end end
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["QuestMap.lua"] = true end end

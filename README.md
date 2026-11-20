@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.15.4-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.16.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -20,7 +20,19 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.15.4: STARTER ITEMS GO AWAY!! OHHHH!
+## What's new in 0.16.0: ONE BAG TO RULE THEM ALL!! OHHHH!
+
+- **ONE BAG WINDOW!!** Press B and ALL your bags open in ONE window. Search box, category buttons, quality borders, item levels, free slots, money, and the BANK in the same window! Turn Bagnon off and it takes over the bag keys. Use `...` for auto sort, border colours, item size and more!
+- **LAYOUT BY CATEGORY!!** One button and your stuff sorts into Quest, Gear, Consumables, Trade goods, Misc and Junk, with the empty slots tucked in one row!
+- **LOOK AT YOUR OTHER CHARACTERS!!** Cycle through your characters and see their bags, bank and mail, with their FULL names!
+- **NAMEPLATE ICONS!!** A SWORD on the mobs you need to kill. A LOOT BAG on the mobs that drop what you need. A bag with a **!** on mobs that drop a quest STARTER!
+- **TELL THE PARTY!!** Finish a quest and your group hears what you did: `[Forever Lazy] Completed quest ...`. Plain "talk to" quests stay quiet!
+- **QUEST TOOLS!!** Quest search window, quest chain info, quest link tooltips in chat, a history of what you finished zone by zone, map filters, and a ping when you stand by the person who takes your finished quest!
+- **THE COACH KEEPS UP!!** New WoW Forever zones and dungeons show up in the levelling guide by themselves, and the guide text no longer overlaps!
+- **CHAT TWEAKS LIKE PRAT!!** Timestamps, class colours, short channel names, keyword highlight, a copy button, clickable links, and chat windows you can RESIZE! All OFF until you turn them on in the options!
+- **FIXED:** drop rates over 100% now say "about 1.5 per kill". One character no longer shows up twice in item tooltips.
+
+### Also in 0.15.4: STARTER ITEMS GO AWAY!! OHHHH!
 
 - **NO MORE LEFTOVER BUTTONS!!** An item that only STARTED a quest used to sit on your quest item button forever. Not anymore!
   Once the quest is in your log, it's GONE. Items you still NEED keep their button. Yeah!

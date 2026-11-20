@@ -71,12 +71,16 @@ local function Snapshot()
         local ok, info = pcall(C_QuestLog.GetInfo, i)
         if ok and type(info) == "table" and not info.isHeader and info.questID then
             local done = 0
+            local texts = {}
             local okO, objs = pcall(C_QuestLog.GetQuestObjectives, info.questID)
             if okO and type(objs) == "table" then
-                for _, o in ipairs(objs) do if o.finished then done = done + 1 end end
+                for _, o in ipairs(objs) do
+                    if o.finished then done = done + 1 end
+                    texts[#texts + 1] = o.text or ""
+                end
             end
             local okC, complete = pcall(C_QuestLog.IsComplete, info.questID)
-            now[info.questID] = { done = done, complete = okC and complete and true or false }
+            now[info.questID] = { done = done, complete = okC and complete and true or false, title = info.title, texts = texts }
         end
     end
     return now
@@ -84,18 +88,51 @@ end
 
 local function Check()
     local db = DB()
-    if not db or db.questSound == false then before = nil; return end
+    if not db or (db.questSound == false and db.questAnnounce == false) then before = nil; return end
     local now = Snapshot()
     if before then
         local stepDone, questDone = false, false
+        local finished = {}
         for qid, s in pairs(now) do
             local b = before[qid]
             -- only quests I already had: a quest just accepted, or one found at login, does not ring
             if b then
                 if s.done > b.done then stepDone = true end
-                if s.complete and not b.complete then questDone = true end
+                if s.complete and not b.complete then
+                    questDone = true
+                    -- the objective that completed it: the one whose text changed, else the last one
+                    local what
+                    for i, t in ipairs(s.texts or {}) do
+                        if t ~= "" and (b.texts or {})[i] ~= t then what = t end
+                    end
+                    if not what then
+                        for i = #(s.texts or {}), 1, -1 do if s.texts[i] ~= "" then what = s.texts[i]; break end end
+                    end
+                    -- a plain "go talk to X" quest (nothing to kill or collect) is not worth announcing,
+                    -- unless it is the end of its chain
+                    local announce = what ~= nil
+                    if not announce then
+                        local nextQ = ns.data and ns.data.Field and ns.data.Field("quests", qid, "nextQuestInChain")
+                        announce = not (tonumber(nextQ) and tonumber(nextQ) > 0)
+                    end
+                    if announce then finished[#finished + 1] = { title = s.title or ("quest " .. qid), what = what } end
+                end
             end
         end
+        -- tell the party: a whole quest is complete (not a single step)
+        if #finished > 0 and db.questAnnounce ~= false then
+            local channel
+            if IsInRaid and IsInRaid() then channel = "RAID"
+            elseif IsInGroup and IsInGroup() then channel = "PARTY" end
+            if channel and SendChatMessage then
+                for _, f in ipairs(finished) do
+                    local msg = "[Forever Lazy] Completed quest " .. tostring(f.title)
+                    if f.what then msg = msg .. " - " .. f.what end
+                    pcall(SendChatMessage, msg, channel)
+                end
+            end
+        end
+        if db.questSound == false then stepDone, questDone = false, false end
         if stepDone then PlayStep(false) end
         if questDone then
             -- the effect first, then "Job's done!" a moment later
@@ -119,6 +156,13 @@ end)
 --------------------------------------------------------------------------------
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
+    if (cmd or ""):lower() == "announce" then
+        local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
+        local db = DB()
+        if a == "off" then db.questAnnounce = false elseif a == "on" then db.questAnnounce = nil end
+        Print("telling my party when I complete a quest: " .. (db.questAnnounce == false and "OFF" or "on") .. "  (/lazy announce on|off)")
+        return true
+    end
     if (cmd or ""):lower() == "sound" then
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         local db = DB()
@@ -134,4 +178,4 @@ function addon:HandleExtraCommand(cmd, rest)
 end
 
 -- reached the end of the file without an error (used by /lazy check)
-do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Spare4.lua"] = true end end
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["QuestSounds.lua"] = true end end

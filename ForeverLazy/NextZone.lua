@@ -53,6 +53,7 @@ for _, z in ipairs(ZONES) do BY_NAME[z[1]] = z end
 
 local mapCache = {}
 local function MapId(name)
+    if api.ExtraZoneMaps and api.ExtraZoneMaps[name] then return api.ExtraZoneMaps[name] end
     if mapCache[name] ~= nil then return mapCache[name] or nil end
     local found
     if C_Map and C_Map.GetMapInfo then

@@ -212,7 +212,9 @@ local function AddHive(tt, id)
     tt:AddLine(shared and "Seen dropping from (you and other players)" or "Seen dropping from (your own kills)", 0.6, 0.8, 1)
     for i = 1, math.min(3, #list) do
         local d = list[i]
-        tt:AddDoubleLine(d.name, string.format("%d%%  (%d in %d kills)", math.floor(d.rate * 100 + 0.5), d.n, d.kills), 1, 1, 1, 0.8, 0.8, 0.8)
+        -- the counts are items looted (a stack of 2 counts 2), so more than one per kill is an average, not a chance
+        local rateText = d.rate > 1 and string.format("about %.1f per kill", d.rate) or string.format("%d%%", math.floor(d.rate * 100 + 0.5))
+        tt:AddDoubleLine(d.name, string.format("%s  (%d in %d kills)", rateText, d.n, d.kills), 1, 1, 1, 0.8, 0.8, 0.8)
     end
     if tt.Show then tt:Show() end
 end
