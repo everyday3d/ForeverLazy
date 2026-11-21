@@ -1,6 +1,15 @@
 # Changelog
 
-## 0.16.0
+## 0.17.0
+- **Real bag sections.** Equipment, Food and drink, Potions, Bandages, Consumables, Trade goods, Reagents, Recipes, Gems, Ammo, Bags, Keys, Misc and Junk. A section and its tab only exist while you carry something for it. Layout by category is now the default (the `...` settings still switch back to bag order). The tabs are plain text, and the section titles are bigger.
+- **The bag scrolls** with the mouse wheel and never grows past about 60% of the screen.
+- **Spell ranks.** A newly learned rank replaces the old one on your action bars, out of combat. Options, Action bars: on/off and a "Fix my bars now" button.
+- **Interrupt marker on nameplates.** A casting mob shows its spell; the border is green (interrupt ready), red (on cooldown) or grey (no interrupt). Options, Nameplates.
+- **Quest item reminder.** A button with the quest item appears when you are at the spot (or have the mob targeted). Shift-drag moves it. Options, Quest items.
+- **Quest starters.** The gold ! is bigger and sits above the nameplate. Accepting a quest started by an item drop tells your party (same switch as the completed-quest message).
+- **Arrow.** Clicking a quest on the game's world map points the arrow at it. A quest stop in another zone stays off the arrow until you are in that zone. A map pin clicked in another zone is kept until you move to another zone.
+- **Fix:** nameplate sword and loot bag icons go away when the quest is done with that mob (finished objectives, finished quests, late kill counts).
+- New files: RankUp.lua, NameplateCasts.lua, QuestItems.lua (one full game restart needed).## 0.16.0
 - **ONE BAG WINDOW!!** All your bags in one window (B, or the bag buttons) with a search box that dims what does not match, All / Trade / Use / Gear / Quest / Misc buttons, a button per bag to hide its items, quality borders you can set, item levels on gear, free slots and money, and the bank in the same window at the bank. Settings are under the `...` button: auto sort, border colours, quest border, replacing the game's bags, item size, background and layout. It takes over the bag keys when Bagnon is not running; `/lazy bags` always opens it.
 - **Layout by category.** Quest, Gear, Consumables, Trade goods, Misc, Junk, with the empty slots in one row.
 - **Other characters.** Look inside the bags, bank and mail of any character you have played, with their full names.

@@ -416,6 +416,26 @@ if WorldMapFrame and WorldMapFrame.HookScript then
     end)
 end
 
+-- Clicking a quest on the game's own map (or in its quest list) tracks it: point the arrow at that quest too
+do
+    local lastId, lastT = nil, 0
+    local function OnTrack(id)
+        id = tonumber(id)
+        if not id or id <= 0 or not Wants("objectives") then return end
+        if not (WorldMapFrame and WorldMapFrame:IsShown()) then return end          -- only clicks made on the map, not the game tracking by itself
+        local now = GetTime and GetTime() or 0
+        if id == lastId and now - lastT < 2 then return end
+        lastId, lastT = id, now
+        if not (addon.QuestInLog and addon.QuestInLog(id) and addon.QuestPointAt) then return end
+        local name = C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(id) or ("quest " .. id)
+        if C_Timer and C_Timer.After then C_Timer.After(0.1, function() pcall(addon.QuestPointAt, id, name) end) end
+    end
+    if C_SuperTrack and C_SuperTrack.SetSuperTrackedQuestID and hooksecurefunc then
+        pcall(hooksecurefunc, C_SuperTrack, "SetSuperTrackedQuestID", OnTrack)
+    end
+    if hooksecurefunc and _G.SetSuperTrackedQuestID then pcall(hooksecurefunc, "SetSuperTrackedQuestID", OnTrack) end
+end
+
 function addon.QuestMapRefresh() lastSig = ""; spawnCache = {}; Later(0, true) end
 
 --------------------------------------------------------------------------------

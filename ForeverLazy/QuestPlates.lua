@@ -17,21 +17,38 @@ end
 
 -- npc id -> "kill" or "loot" for what my open quests need right now (rebuilt when the quest log changes)
 local needs, dirty = {}, true
+-- text of the kill objectives I still need / have finished ("Wolf slain: 3/8"), so a finished one stops marking its mobs
+local openKillText, doneKillText = "", ""
+
+local function Finished(o)
+    if o.finished then return true end
+    return type(o.numRequired) == "number" and o.numRequired > 0 and type(o.numFulfilled) == "number" and o.numFulfilled >= o.numRequired
+end
 
 local function Rebuild()
     dirty = false
     needs = {}
+    openKillText, doneKillText = "", ""
     if not (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo and C_QuestLog.GetQuestObjectives) then return end
     for i = 1, (C_QuestLog.GetNumQuestLogEntries() or 0) do
         local ok, info = pcall(C_QuestLog.GetInfo, i)
-        if ok and type(info) == "table" and not info.isHeader and info.questID then
+        local complete = false
+        if ok and type(info) == "table" and info.questID and C_QuestLog.IsComplete then
+            local okC, c = pcall(C_QuestLog.IsComplete, info.questID)
+            complete = okC and c and true or false
+        end
+        -- a quest that is finished (ready to hand in) needs nothing more killed or looted
+        if ok and type(info) == "table" and not info.isHeader and info.questID and not complete then
             local okO, objs = pcall(C_QuestLog.GetQuestObjectives, info.questID)
             local openKill, openItem = false, false
             if okO and type(objs) == "table" then
                 for _, o in ipairs(objs) do
-                    if not o.finished then
-                        if o.type == "monster" then openKill = true
+                    local txt = tostring(o.text or ""):lower()
+                    if not Finished(o) then
+                        if o.type == "monster" then openKill = true; openKillText = openKillText .. "\n" .. txt
                         elseif o.type == "item" then openItem = true end
+                    elseif o.type == "monster" then
+                        doneKillText = doneKillText .. "\n" .. txt
                     end
                 end
             end
@@ -52,6 +69,14 @@ local function Rebuild()
                 if openItem then
                     for _, e in ipairs(obj[3] or {}) do
                         local d = e[1] and data.Field("items", e[1], "npcDrops")
+                        -- skip an item whose own objective is already done (e.g. 4/4 pelts while the quest still wants something else)
+                        local itemName = e[1] and GetItemInfo and GetItemInfo(e[1])
+                        if itemName and okO and type(objs) == "table" then
+                            local lname = itemName:lower()
+                            for _, o in ipairs(objs) do
+                                if o.type == "item" and Finished(o) and tostring(o.text or ""):lower():find(lname, 1, true) then d = nil end
+                            end
+                        end
                         if type(d) == "table" then
                             for _, n in pairs(d) do if type(n) == "number" then needs[n] = needs[n] or "loot" end end
                         end
@@ -163,8 +188,9 @@ local function IconFor(plate)
     f.ring:SetColorTexture(1, 0.82, 0, 1)
     f.ring:SetDrawLayer("BACKGROUND")
     f.tex:SetDrawLayer("ARTWORK")
-    f.mark = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    f.mark:SetPoint("CENTER", f, "TOPRIGHT", -1, -1)
+    f.mark = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
+    f.mark:SetFont(select(1, f.mark:GetFont()), 26, "OUTLINE")
+    f.mark:SetPoint("BOTTOM", plate, "TOP", 0, -2)
     f.mark:SetText("!")
     f.mark:SetTextColor(1, 0.82, 0)
     f.mark:Hide()
@@ -188,12 +214,23 @@ local function Update(unit)
     if okD and not (issecretvalue and issecretvalue(d)) and d then dead = true end
     if id and not dead and UnitCanAttack("player", unit) then
         kind = needs[id]
+        if kind == "kill" then
+            -- this mob's own kill objective is finished (and no other open one names it): no sword
+            local okN, nm = pcall(UnitName, unit)
+            if okN and type(nm) == "string" and not (issecretvalue and issecretvalue(nm)) then
+                nm = nm:lower()
+                if doneKillText:find(nm, 1, true) and not openKillText:find(nm, 1, true) then kind = nil end
+            end
+        end
         if not kind and StartsQuest(id) then kind = "start" end
     end
     if not kind then if f then f:Hide() end return end
     f = f or IconFor(plate)
     f.tex:SetTexture(kind == "kill" and SWORD or BAG)
     f.mark:SetShown(kind == "start")
+    -- a quest starter gets just the "!" above the plate; the icon beside it is only for kill and loot
+    f.tex:SetShown(kind ~= "start")
+    f.ring:SetShown(kind ~= "start")
     f:Show()
 end
 
@@ -206,7 +243,7 @@ local function UpdateAll()
 end
 
 local ev = CreateFrame("Frame")
-for _, e in ipairs({ "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "QUEST_LOG_UPDATE", "UNIT_QUEST_LOG_CHANGED", "QUEST_TURNED_IN", "PLAYER_LEVEL_UP", "PLAYER_ENTERING_WORLD" }) do
+for _, e in ipairs({ "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "QUEST_LOG_UPDATE", "UNIT_QUEST_LOG_CHANGED", "QUEST_TURNED_IN", "PLAYER_LEVEL_UP", "PLAYER_ENTERING_WORLD", "QUEST_WATCH_UPDATE", "BAG_UPDATE_DELAYED" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 local pending
@@ -221,6 +258,8 @@ ev:SetScript("OnEvent", function(_, event, unit)
         if not pending and C_Timer and C_Timer.After then
             pending = true
             C_Timer.After(0.5, function() pending = false; UpdateAll() end)
+            -- the game sometimes counts the last kill a moment after the event: check again so no stale icon stays
+            C_Timer.After(2.5, function() dirty = true; UpdateAll() end)
         end
     end
 end)

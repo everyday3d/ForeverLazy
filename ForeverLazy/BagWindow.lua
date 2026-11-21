@@ -16,25 +16,31 @@ local function DB() return addon.GetDB() end
 
 local SZ, GAP = 37, 3
 local catFilter = nil        -- nil = everything, otherwise a key of CATS
--- the Bagnon-style sidebar: what each button shows (item class ids)
+local CategoryOf             -- defined further down
+local function ByCat() local db = addon.GetDB(); return not (db and db.bagsByCategory == false) end
+-- the categories: each one is a tab and a section, and only exists while you carry something of that kind
 local CATS = {
-    { key = "all",   text = "All" },
-    { key = "trade", text = "Trade",  classes = { [7] = true, [5] = true, [9] = true } },
-    { key = "use",   text = "Use",    classes = { [0] = true } },
-    { key = "gear",  text = "Gear",   classes = { [2] = true, [4] = true } },
-    { key = "quest", text = "Quest",  classes = { [12] = true }, quest = true },
-    { key = "misc",  text = "Misc",   classes = { [15] = true, [3] = true, [16] = true, [1] = true, [6] = true, [8] = true, [10] = true, [11] = true, [13] = true, [17] = true, [18] = true } },
+    { key = "all",     text = "All" },
+    { key = "quest",   text = "Quest" },
+    { key = "gear",    text = "Equipment" },
+    { key = "food",    text = "Food & drink" },
+    { key = "potion",  text = "Potions" },
+    { key = "bandage", text = "Bandages" },
+    { key = "use",     text = "Consumables" },
+    { key = "trade",   text = "Trade goods" },
+    { key = "reagent", text = "Reagents" },
+    { key = "recipe",  text = "Recipes" },
+    { key = "gem",     text = "Gems" },
+    { key = "ammo",    text = "Ammo" },
+    { key = "bags",    text = "Bags" },
+    { key = "key",     text = "Keys" },
+    { key = "misc",    text = "Misc" },
+    { key = "junk",    text = "Junk" },
 }
-local function CatMatch(info)
+local function CatMatch(info, bag, slot)
     if not catFilter or catFilter == "all" then return true end
     if not info then return false end
-    local cat
-    for _, c in ipairs(CATS) do if c.key == catFilter then cat = c end end
-    if not cat then return true end
-    local id = info.itemID
-    local classId = id and GetItemInfoInstant and select(6, GetItemInfoInstant(id))
-    if cat.quest and info.questPath then return true end
-    return classId ~= nil and cat.classes[classId] == true
+    return CategoryOf({ info = info, bag = bag, slot = slot }) == catFilter
 end
 local frame, buttons, bagFrames, offButtons = nil, {}, {}, {}
 local view = { char = nil, place = "bags" }     -- char nil = me
@@ -230,8 +236,8 @@ local function BuildNow()
         function() local v = (DB().bagsAlpha or 0.92); v = (v >= 0.99) and 0.4 or (v < 0.6 and 0.7 or (v < 0.9 and 0.92 or 1)); DB().bagsAlpha = v; frame:SetBackdropColor(0.04, 0.04, 0.06, v) end)
     Row(7, function() return "Item level on gear: " .. ((DB().bagsItemLevel ~= false) and "on" or "off") end,
         function() DB().bagsItemLevel = (DB().bagsItemLevel == false) and nil or false end)
-    Row(8, function() return "Layout: " .. ((DB().bagsByCategory == true) and "by category" or "bag order") end,
-        function() DB().bagsByCategory = (DB().bagsByCategory ~= true) and true or nil end)
+    Row(8, function() return "Layout: " .. (ByCat() and "by category" or "bag order") end,
+        function() DB().bagsByCategory = ByCat() and false or nil end)
     panel:SetSize(210, 8 + 8 * 26 + 26)
     local note = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     note:SetPoint("BOTTOM", 0, 6)
@@ -261,19 +267,38 @@ local function BuildNow()
     -- the category buttons (like Bagnon's sidebar): show only one kind of item
     frame.cats = {}
     local prevCat
+    -- plain text tabs with an underline under the chosen one (no chunky buttons)
+    local function PaintTabs()
+        for _, t in ipairs(frame.cats) do
+            local on = t.key == (catFilter or "all")
+            t.label:SetTextColor(on and 1 or 0.65, on and 0.82 or 0.65, on and 0.2 or 0.7)
+            t.line:SetShown(on)
+        end
+    end
     for _, c in ipairs(CATS) do
-        local b = Button(c.text, 46, function()
-            catFilter = (c.key == "all") and nil or c.key
-            for _, other in ipairs(frame.cats) do other:SetAlpha((other.key == (catFilter or "all")) and 1 or 0.6) end
-            Refresh(true)
-        end, c.key == "all" and "Show everything" or ("Show only: " .. c.text))
+        local b = CreateFrame("Button", nil, frame)
         b.key = c.key
-        b:SetHeight(18)
-        if prevCat then b:SetPoint("LEFT", prevCat, "RIGHT", 2, 0) else b:SetPoint("TOPLEFT", 10, -52) end
-        b:SetAlpha(c.key == "all" and 1 or 0.6)
+        b.label = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        b.label:SetPoint("CENTER")
+        b.label:SetText(c.text)
+        b:SetSize(b.label:GetStringWidth() + 4, 16)
+        b.line = b:CreateTexture(nil, "ARTWORK")
+        b.line:SetColorTexture(1, 0.82, 0.2, 0.9)
+        b.line:SetHeight(1)
+        b.line:SetPoint("BOTTOMLEFT", 0, 0)
+        b.line:SetPoint("BOTTOMRIGHT", 0, 0)
+        b:SetScript("OnClick", function()
+            catFilter = (c.key == "all") and nil or c.key
+            PaintTabs()
+            Refresh(true)
+        end)
+        b:SetScript("OnEnter", function(self) self.label:SetTextColor(1, 1, 1) end)
+        b:SetScript("OnLeave", PaintTabs)
+        if prevCat then b:SetPoint("LEFT", prevCat, "RIGHT", 10, 0) else b:SetPoint("TOPLEFT", 12, -54) end
         frame.cats[#frame.cats + 1] = b
         prevCat = b
     end
+    PaintTabs()
 
     -- one small button per bag: click to hide that bag's items (like Bagnon's bag toggle)
     frame.bagBtns = {}
@@ -302,8 +327,34 @@ local function BuildNow()
         frame.bagBtns[#frame.bagBtns + 1] = b
     end
 
-    frame.body = CreateFrame("Frame", nil, frame)
-    frame.body:SetPoint("TOPLEFT", 10, -76)
+    -- the items live in a scroll frame so a full bag never makes a giant window (mouse wheel to scroll)
+    frame.scroll = CreateFrame("ScrollFrame", nil, frame)
+    frame.scroll:SetPoint("TOPLEFT", 10, -76)
+    frame.scroll:EnableMouseWheel(true)
+    frame.body = CreateFrame("Frame", nil, frame.scroll)
+    frame.body:SetSize(10, 10)
+    frame.scroll:SetScrollChild(frame.body)
+    frame.thumb = frame.scroll:CreateTexture(nil, "OVERLAY")
+    frame.thumb:SetColorTexture(0.7, 0.7, 0.8, 0.5)
+    frame.thumb:SetWidth(4)
+    frame.thumb:Hide()
+    local function ScrollMax() return math.max(0, frame.body:GetHeight() - frame.scroll:GetHeight()) end
+    frame.UpdateThumb = function()
+        local sc = frame.scroll
+        local max = ScrollMax()
+        if max <= 0 then frame.thumb:Hide(); return end
+        local h = sc:GetHeight()
+        local th = math.max(20, h * h / (h + max))
+        frame.thumb:ClearAllPoints()
+        frame.thumb:SetHeight(th)
+        frame.thumb:SetPoint("TOPRIGHT", sc, "TOPRIGHT", 0, -(h - th) * (sc:GetVerticalScroll() / max))
+        frame.thumb:Show()
+    end
+    frame.scroll:SetScript("OnMouseWheel", function(self, delta)
+        local v = math.max(0, math.min(ScrollMax(), self:GetVerticalScroll() - delta * (SZ + GAP) * 1.5))
+        self:SetVerticalScroll(v)
+        frame.UpdateThumb()
+    end)
 
     frame.free = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     frame.money = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -388,8 +439,8 @@ local function QualityColor(q)
     end
 end
 
-local function Matches(info)
-    if not CatMatch(info) then return false end
+local function Matches(info, bag, slot)
+    if not CatMatch(info, bag, slot) then return false end
     if searchText == "" then return true end
     if not info then return false end
     local name = info.itemName
@@ -411,7 +462,7 @@ local function UpdateButton(b, bag, slot)
     end
     if quest and not (DB() and DB().bagsQuestBorder == false) then r, g, bl = 1, 0.82, 0 end
     if r then b.flBorder:SetVertexColor(r, g, bl, 0.9); b.flBorder:Show() else b.flBorder:Hide() end
-    b:SetAlpha(Matches(info) and 1 or 0.25)
+    b:SetAlpha(Matches(info, bag, slot) and 1 or 0.25)
     -- item level on gear
     if not b.flLevel then
         b.flLevel = b:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
@@ -495,29 +546,57 @@ end
 --------------------------------------------------------------------------------
 -- Layout by category: labelled sections instead of bag order
 --------------------------------------------------------------------------------
-local SECTIONS = {
-    { key = "quest", text = "Quest" }, { key = "gear", text = "Gear" }, { key = "use", text = "Consumables" },
-    { key = "trade", text = "Trade goods" }, { key = "misc", text = "Misc" }, { key = "junk", text = "Junk" },
-}
-local CLASS_SECTION = { [2] = "gear", [4] = "gear", [0] = "use", [7] = "trade", [5] = "trade", [9] = "trade", [12] = "quest" }
+local warned = false
+local SECTIONS = {}
+for _, c in ipairs(CATS) do if c.key ~= "all" then SECTIONS[#SECTIONS + 1] = c end end
 local headers = {}
 local HideHeaders, LayoutCategories
 
-local function CategoryOf(e)
+CategoryOf = function(e)
     local info = e.info
     if C_Container and C_Container.GetContainerItemQuestInfo then
         local ok, qi = pcall(C_Container.GetContainerItemQuestInfo, e.bag, e.slot)
         if ok and type(qi) == "table" and (qi.isQuestItem or (qi.questID and qi.questID > 0)) then return "quest" end
     end
     if info.quality == 0 then return "junk" end
-    local classId = info.itemID and GetItemInfoInstant and select(6, GetItemInfoInstant(info.itemID))
-    return CLASS_SECTION[classId] or "misc"
+    local classId, subId
+    local ref = info.itemID or info.hyperlink
+    if ref then
+        local instant = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+        if instant then
+            local ok, _, _, _, _, _, c, s = pcall(instant, ref)
+            if ok then classId, subId = c, s end
+        end
+        if not classId and GetItemInfo then
+            local ok, _, _, _, _, _, _, _, _, _, _, _, c, s = pcall(GetItemInfo, ref)
+            if ok then classId, subId = c, s end
+        end
+    end
+    if not classId and not warned then
+        warned = true
+        Print("bag sections: could not read the item type of " .. tostring(info.hyperlink or info.itemID) .. " (id " .. tostring(info.itemID) .. ")")
+    end
+    if classId == 2 or classId == 4 then return "gear" end
+    if classId == 0 then
+        if subId == 5 then return "food" end
+        if subId == 1 or subId == 2 or subId == 3 then return "potion" end
+        if subId == 7 then return "bandage" end
+        return "use"
+    end
+    if classId == 7 then return "trade" end
+    if classId == 5 then return "reagent" end
+    if classId == 9 then return "recipe" end
+    if classId == 3 then return "gem" end
+    if classId == 6 then return "ammo" end
+    if classId == 1 or classId == 11 then return "bags" end
+    if classId == 13 then return "key" end
+    return "misc"
 end
 
 local function Header(i)
     local h = headers[i]
     if not h then
-        h = frame.body:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        h = frame.body:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         headers[i] = h
     end
     return h
@@ -560,7 +639,7 @@ LayoutCategories = function(entries, cols)
         h:SetPoint("TOPLEFT", frame.body, "TOPLEFT", 2, -y)
         h:SetText(label)
         h:Show()
-        y = y + 15
+        y = y + 18
         for n = 1, count do Place(list[n], n, y) end
         for n = count + 1, #list do list[n].b:Hide() end
         y = y + math.ceil(count / cols) * (SZ + GAP) + 6
@@ -628,7 +707,7 @@ Refresh = function(contentOnly)
         if canLayout then
             for bag, bf in pairs(bagFrames) do bf:SetShown(want[bag] and true or false) end
         end
-        local byCat = DB() and DB().bagsByCategory == true
+        local byCat = ByCat()
         local idx = 0
         local entries = {}
         for _, bag in ipairs(bags) do
@@ -661,6 +740,26 @@ Refresh = function(contentOnly)
                 for slot = n + 1, #buttons[bag] do if buttons[bag][slot] then buttons[bag][slot]:Hide() end end
             end
         end
+        -- a category tab only exists while you carry something of that kind
+        local have = {}
+        for _, e in ipairs(entries) do if e.info then local k = CategoryOf(e); have[k] = (have[k] or 0) + 1 end end
+        if catFilter and not have[catFilter] then
+            catFilter = nil
+            for _, e in ipairs(entries) do UpdateButton(e.b, e.bag, e.slot) end
+        end
+        local prevTab
+        for _, tb in ipairs(frame.cats) do
+            local show = tb.key == "all" or have[tb.key]
+            tb:SetShown(show and true or false)
+            if show then
+                tb:ClearAllPoints()
+                if prevTab then tb:SetPoint("LEFT", prevTab, "RIGHT", 10, 0) else tb:SetPoint("TOPLEFT", 12, -54) end
+                prevTab = tb
+            end
+            local on = tb.key == (catFilter or "all")
+            tb.label:SetTextColor(on and 1 or 0.65, on and 0.82 or 0.65, on and 0.2 or 0.7)
+            tb.line:SetShown(on)
+        end
         local bodyHeight
         if byCat and canLayout then
             bodyHeight = LayoutCategories(entries, cols)
@@ -686,7 +785,15 @@ Refresh = function(contentOnly)
     end
 
     if not InCombatLockdown() then
-        frame:SetSize(math.max(frame.body:GetWidth() + 20, 360), frame.body:GetHeight() + 76 + 28)
+        -- at most about 60% of the screen tall; anything more scrolls
+        local maxH = math.max(120, math.floor((UIParent:GetHeight() * 0.6) / (frame:GetScale() or 1)) - 104)
+        local viewH = math.min(frame.body:GetHeight(), maxH)
+        frame.scroll:SetSize(frame.body:GetWidth() + 6, viewH)
+        frame:SetSize(math.max(frame.body:GetWidth() + 26, 360), viewH + 76 + 28)
+        if frame.scroll:GetVerticalScroll() > math.max(0, frame.body:GetHeight() - viewH) then
+            frame.scroll:SetVerticalScroll(math.max(0, frame.body:GetHeight() - viewH))
+        end
+        frame.UpdateThumb()
     end
     frame.free:ClearAllPoints()
     frame.free:SetPoint("BOTTOMLEFT", 10, 9)
@@ -785,7 +892,7 @@ local sortPending, lastSort = false, 0
 local function AutoSort()
     sortPending = false
     local db = DB()
-    if not db or db.bagsAutoSort == false or db.bagsByCategory == true or not Takeover() then return end
+    if not db or db.bagsAutoSort == false or ByCat() or not Takeover() then return end
     if InCombatLockdown() or (CursorHasItem and CursorHasItem()) or searchText ~= "" then return end
     if GetTime() - lastSort < 3 then return end
     local f = (C_Container and C_Container.SortBags) or SortBags

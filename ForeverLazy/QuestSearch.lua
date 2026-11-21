@@ -48,6 +48,8 @@ local function PointAt(id, name)
     if addon.RefreshOptions then addon.RefreshOptions() end
 end
 
+addon.QuestPointAt = PointAt
+
 --------------------------------------------------------------------------------
 -- The window
 --------------------------------------------------------------------------------

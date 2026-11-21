@@ -273,6 +273,17 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.17.0", {
+        "THE BAG HAS REAL SECTIONS NOW!! Equipment, Food and drink, Potions, Bandages, Consumables, Trade goods, Reagents, Recipes, Gems, Ammo, Bags, Keys, Misc and Junk. A section only shows up when you carry something for it! OHHHH!",
+        "The bag SCROLLS now, so a full bag is not a giant window. The category buttons are plain text tabs, and the section names are bigger.",
+        "NEW SPELL RANK? It goes on your action bars BY ITSELF, in place of the old rank. Switch it off in the options if you hate fun.",
+        "INTERRUPT MARKER on nameplates! A mob casts, you see the spell. GREEN border, your interrupt is ready. RED, it is on cooldown. GREY, you have none.",
+        "QUEST ITEM REMINDER! Stand where a quest wants an item used and a BUTTON with the item pops up. Click it. Shift-drag to move it.",
+        "Quest starter mobs get a BIG gold ! above the nameplate. Pick up a quest from an item drop and your party hears about it!",
+        "Click a quest on the game's world map and the arrow points to it. A pin you click in another zone no longer vanishes.",
+        "The arrow no longer points at a quest in ANOTHER zone. It waits until you are there, or shows the next stop that is here.",
+        "FIXED: nameplate swords and loot bags go away when the quest needs no more of that mob.",
+    } },
     { "0.16.0", {
         "ONE BAG WINDOW!! All your bags in ONE window with search, category buttons, quality borders, auto sort and the bank too. Press B! Turn Bagnon OFF and this takes over. OHHHH!",
         "Look inside your OTHER characters' bags, bank and mail from the same window. Full names, like Tank Hanks!",

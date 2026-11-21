@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.16.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.17.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -20,8 +20,18 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.16.0: ONE BAG TO RULE THEM ALL!! OHHHH!
+## What's new in 0.17.0: THE BAG GETS SECTIONS!! OHHHH!
 
+- **REAL SECTIONS IN THE BAG!!** Equipment, Food and drink, Potions, Bandages, Consumables, Trade goods, Reagents, Recipes, Gems, Ammo, Bags, Keys, Misc and Junk. A section ONLY shows when you carry something for it! The tabs on top match, in plain text, no chunky buttons!
+- **THE BAG SCROLLS!!** A full bag is not a giant window anymore. Mouse wheel!
+- **NEW SPELL RANK, NEW BAR SLOT!!** Learn a higher rank and it takes the old rank's place on your action bars. By itself! Off switch in the options.
+- **INTERRUPT MARKER!!** A casting mob shows its spell beside the plate. GREEN means your interrupt is ready, RED on cooldown, GREY you have none.
+- **QUEST ITEM REMINDER!!** Stand where a quest wants an item used and a button with the item appears. Click it!
+- **BIG GOLD !** above mobs that drop a quest starter, and the party hears when you pick one up from a drop!
+- **THE ARROW GETS SMARTER!!** Click a quest on the game's map and the arrow goes there. It stays off quests in OTHER zones until you are in them!
+- **FIXED:** nameplate icons vanish once the quest has had enough of that mob. A map pin you click in another zone stays.
+
+### Also in 0.16.0: ONE BAG TO RULE THEM ALL!! OHHHH!
 - **ONE BAG WINDOW!!** Press B and ALL your bags open in ONE window. Search box, category buttons, quality borders, item levels, free slots, money, and the BANK in the same window! Turn Bagnon off and it takes over the bag keys. Use `...` for auto sort, border colours, item size and more!
 - **LAYOUT BY CATEGORY!!** One button and your stuff sorts into Quest, Gear, Consumables, Trade goods, Misc and Junk, with the empty slots tucked in one row!
 - **LOOK AT YOUR OTHER CHARACTERS!!** Cycle through your characters and see their bags, bank and mail, with their FULL names!

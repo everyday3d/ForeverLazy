@@ -151,6 +151,31 @@ ev:SetScript("OnEvent", function()
     C_Timer.After(0.4, function() pending = false; pcall(Check) end)
 end)
 
+-- a quest I just picked up from an item that dropped: tell the party (same switch as the completed-quest message)
+do
+    local f = CreateFrame("Frame")
+    pcall(f.RegisterEvent, f, "QUEST_ACCEPTED")
+    f:SetScript("OnEvent", function(_, _, index, questId)
+        local db = DB()
+        if not db or db.questAnnounce == false then return end
+        local qid = tonumber(questId)
+        if not qid and index and C_QuestLog and C_QuestLog.GetQuestIDForLogIndex then qid = C_QuestLog.GetQuestIDForLogIndex(index) end
+        if not qid then return end
+        local by = ns.data and ns.data.Field and ns.data.Field("quests", qid, "startedBy")
+        local items = type(by) == "table" and by[3]
+        if type(items) ~= "table" or not next(items) then return end
+        local channel
+        if IsInRaid and IsInRaid() then channel = "RAID" elseif IsInGroup and IsInGroup() then channel = "PARTY" end
+        if not (channel and SendChatMessage) then return end
+        local title = C_QuestLog and C_QuestLog.GetTitleForQuestID and C_QuestLog.GetTitleForQuestID(qid) or ("quest " .. qid)
+        local item
+        for _, id in pairs(items) do
+            if type(id) == "number" then item = GetItemInfo and GetItemInfo(id); break end
+        end
+        pcall(SendChatMessage, "[Forever Lazy] New quest from a drop: " .. tostring(title) .. (item and (" (" .. item .. ")") or ""), channel)
+    end)
+end
+
 --------------------------------------------------------------------------------
 -- /lazy sound
 --------------------------------------------------------------------------------

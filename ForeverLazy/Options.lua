@@ -279,6 +279,21 @@ local function BuildControls(parent)
     Button(content, "Find a quest", 16, 120, function() if addon.QuestSearchOpen then addon.QuestSearchOpen() end end, false)
     Button(content, "Quest history", 146, 120, function() if addon.QuestHistoryOpen then addon.QuestHistoryOpen() end end, true)
 
+    Header(content, "Quest items")
+    Check(content, "Remind me to use a quest item when I am at the spot (a button with the item appears)", 16,
+        function() return DB().questItemReminder ~= false end, function(v) DB().questItemReminder = v and nil or false end)
+
+    Header(content, "Nameplates")
+    Check(content, "Quest icons on nameplates (sword, loot bag, gold !)", 16,
+        function() return DB().questPlates ~= false end, function(v) DB().questPlates = v and nil or false; if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
+    Check(content, "Interrupt marker when a mob casts (green: my interrupt is ready, red: on cooldown, grey: I have none)", 16,
+        function() return DB().nameplateCasts ~= false end, function(v) DB().nameplateCasts = v and nil or false end)
+
+    Header(content, "Action bars")
+    Check(content, "Newest spell rank on my action bars (swapped in when I learn it)", 16,
+        function() return DB().rankUp ~= false end, function(v) DB().rankUp = v and nil or false end)
+    Button(content, "Fix my bars now", 16, 130, function() if addon.RankUpRun then addon.RankUpRun() end end, true)
+
     Header(content, "Chat")
     Label(content, "Chat tweaks, a little like Prat. Everything is off until you turn it on here, and changes show on new lines. A few (input box on top, hidden buttons, no fading) need a /reload to undo.")
     y = y - 22

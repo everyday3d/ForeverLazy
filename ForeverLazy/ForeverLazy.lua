@@ -906,7 +906,9 @@ end
 local wpArrived
 local function UpdateWaypointArrow(show)
     local f = arrows.waypoint
-    local wp = (addon.ArrowTarget and addon.ArrowTarget()) or db.waypoints[1] or (db.simpleArrows ~= false and addon.SimpleTarget and addon.SimpleTarget()) or nil
+    local at = addon.ArrowTarget and addon.ArrowTarget()
+    -- false = the next stop is a quest in another zone: no arrow until I am in that zone
+    local wp = at or (at ~= false and (db.waypoints[1] or (db.simpleArrows ~= false and addon.SimpleTarget and addon.SimpleTarget()))) or nil
     if not show or not wp or db.waypointArrowOff then f:Hide(); return end
     f:Show()
     f:SetAlpha(db.alpha)

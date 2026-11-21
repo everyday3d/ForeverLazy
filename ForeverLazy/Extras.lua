@@ -571,7 +571,22 @@ function addon.ArrowTarget()
     if okD and ds then return ds end
     local wp = BaseArrowTarget()
     local db = DB()
-    if wp and wp.quests and db and db.waypoints and wp == db.waypoints[1] then
+    local skipped
+    -- a quest stop in another zone stays off the arrow until I am in that zone: the arrow goes to the next stop that is here,
+    -- or nowhere (false) when none is
+    if wp and wp.quests and wp.uiMapId and db and db.waypoints and wp == db.waypoints[1] and db.arrowSameZone ~= false then
+        local zone = hbd and hbd:GetPlayerZone()
+        if zone and wp.uiMapId ~= zone then
+            local pick
+            for i = 2, #db.waypoints do
+                local w = db.waypoints[i]
+                if not (w.quests and w.uiMapId and w.uiMapId ~= zone) then pick = w; break end
+            end
+            if not pick then return false end
+            wp, skipped = pick, true
+        end
+    end
+    if wp and wp.quests and db and db.waypoints and (wp == db.waypoints[1] or skipped) then
         local ok, s = pcall(ObjectiveSpot, wp)
         if ok and s then return s end
     end
@@ -1844,8 +1859,13 @@ local function ReplanForZone()
         local dropped
         for i = #(wps or {}), 1, -1 do
             local w = wps[i]
-            if w.questMapPin and ((zoneNow and w.uiMapId ~= zoneNow) or (inst and w.instance ~= inst)) then
-                table.remove(wps, i); dropped = true
+            if w.questMapPin then
+                -- only drop it once I have moved to another zone SINCE I clicked it (a pin clicked far away must stay: it is where I am going)
+                if w.setZone == nil then w.setZone, w.setInst = zoneNow or false, inst or false end
+                local moved = (zoneNow and w.setZone and w.setZone ~= zoneNow) or (inst and w.setInst and w.setInst ~= inst)
+                if moved then
+                    table.remove(wps, i); dropped = true
+                end
             end
         end
         if dropped then
