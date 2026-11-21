@@ -54,7 +54,7 @@ end
 
 -- quests in plan order, then the rest of the log
 -- Outside a dungeon its quests stay out of sight (apart from one that is finished and waits for its hand-in); inside, only
--- the quests that belong to dungeons are shown.
+-- the quests that have something to do in THIS dungeon are shown.
 local function QuestList()
     local out, seen = {}, {}
     if not api.ReadQuestLog then return out end
@@ -80,7 +80,8 @@ local function QuestList()
         local isDungeon = api.IsDungeonQuest and api.IsDungeonQuest(q.id, q.complete) or false
         local show
         if here then
-            show = here[q.id] or isDungeon
+            -- only this dungeon's quests (not the ones for other dungeons)
+            show = here[q.id] and true or false
         else
             show = q.complete or not isDungeon
         end
@@ -741,6 +742,21 @@ function addon:HandleExtraCommand(cmd, rest)
             DB().trackerCollapsed = not DB().trackerCollapsed
             dirty = true
             Print("tracker " .. (DB().trackerCollapsed and "minimized" or "restored"))
+        elseif a == "debug" then
+            local name, itype, diff, _, _, _, _, instId = GetInstanceInfo()
+            local L = { "instance: " .. tostring(name) .. "  type: " .. tostring(itype) .. "  id: " .. tostring(instId) }
+            L[#L + 1] = "questie ready: " .. tostring(api.QuestieReady and api.QuestieReady())
+            L[#L + 1] = "DungeonQuestsHere exists: " .. tostring(addon.DungeonQuestsHere ~= nil)
+            local ids = DungeonIds()
+            local n = 0
+            if ids then for id in pairs(ids) do n = n + 1; L[#L + 1] = "  here: " .. id end end
+            L[#L + 1] = "DungeonIds: " .. (ids and (n .. " quests") or "nil (not seen as a dungeon)")
+            for _, q in ipairs(api.ReadQuestLog and api.ReadQuestLog() or {}) do
+                L[#L + 1] = string.format("log: %s [%s] complete=%s dungeonQuest=%s here=%s", tostring(q.title), tostring(q.id), tostring(q.complete),
+                    tostring(api.IsDungeonQuest and api.IsDungeonQuest(q.id, q.complete)), tostring(ids and ids[q.id]))
+            end
+            dcache = { name = nil, t = 0, ids = {} }
+            if addon.ShowTextPopup then addon.ShowTextPopup("Tracker debug", table.concat(L, "\n")) else Print(table.concat(L, "\n")) end
         elseif a == "refresh" then
             ApplyLook(); dirty = true
         elseif a == "bg" or a == "background" then

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.1
+- **The bank is a second window.** At the bank your bags and the bank open side by side (bank on the left), so you can move items across. Closing the bank window leaves the bank.
+- **Travel section.** The Hearthstone has its own Travel section (and tab) at the top of the bag.
+- **Right-click uses an item** in the bag again (recipes, food, sleeping bag).
+- **OpenMap.** Quest areas are sized to their zone, and the skulls, diamonds, ! and ? show on OpenMap's stitched map. Quest givers show for the map you are viewing, not only the zone you stand in.
+- **Debug popups.** `/lazy questmap debug` and `/lazy tracker debug` open a window with text you can copy.
+- **Dungeon tracker.** Inside a dungeon the tracker keeps only that dungeon's quests (still being checked; `/lazy tracker debug` shows what it matched).
+
 ## 0.17.0
 - **Real bag sections.** Equipment, Food and drink, Potions, Bandages, Consumables, Trade goods, Reagents, Recipes, Gems, Ammo, Bags, Keys, Misc and Junk. A section and its tab only exist while you carry something for it. Layout by category is now the default (the `...` settings still switch back to bag order). The tabs are plain text, and the section titles are bigger.
 - **The bag scrolls** with the mouse wheel and never grows past about 60% of the screen.

@@ -14,13 +14,21 @@ local Print = addon.Print
 
 local function DB() return addon.GetDB() end
 
+local atBank = false                 -- shared by both windows
+local NUMBAGS = NUM_BAG_SLOTS or 4
+
+-- Everything below (up to the end of "Open, close") is ONE bag window. At the bank there are two of them side by side:
+-- the main one shows my bags, the second (isBank) shows the bank, so things can be moved from one to the other.
+local function NewWindow(id, isBank)
+local GN = (id == 1) and "" or tostring(id)          -- keeps the global frame names apart
 local SZ, GAP = 37, 3
-local catFilter = nil        -- nil = everything, otherwise a key of CATS
+local catFilter = nil       -- nil = everything, otherwise a key of CATS
 local CategoryOf             -- defined further down
 local function ByCat() local db = addon.GetDB(); return not (db and db.bagsByCategory == false) end
 -- the categories: each one is a tab and a section, and only exists while you carry something of that kind
 local CATS = {
     { key = "all",     text = "All" },
+    { key = "travel",  text = "Travel" },
     { key = "quest",   text = "Quest" },
     { key = "gear",    text = "Equipment" },
     { key = "food",    text = "Food & drink" },
@@ -45,14 +53,12 @@ end
 local frame, buttons, bagFrames, offButtons = nil, {}, {}, {}
 local view = { char = nil, place = "bags" }     -- char nil = me
 local searchText = ""
-local atBank = false
 local btnCount = 0
 local dirty, layoutNeeded = true, true
 
 --------------------------------------------------------------------------------
 -- Which bags
 --------------------------------------------------------------------------------
-local NUMBAGS = NUM_BAG_SLOTS or 4
 local function BagList()
     local list = {}
     for b = 0, NUMBAGS do list[#list + 1] = b end
@@ -94,7 +100,7 @@ local function Cols() return math.max(4, math.min(24, (DB() and DB().bagsCols) o
 
 local function SavePos()
     local db = DB()
-    if not (db and frame) then return end
+    if not (db and frame) or isBank then return end
     local p, _, rp, x, y = frame:GetPoint(1)
     db.bagsPos = { p, rp, x, y }
 end
@@ -135,7 +141,7 @@ end
 local BORDER_NAMES = { [-1] = "none", [0] = "all items", [1] = "common and up", [2] = "uncommon and up", [3] = "rare and up" }
 
 local function BuildNow()
-    frame = CreateFrame("Frame", "ForeverLazyBagsFrame", UIParent, "BackdropTemplate")
+    frame = CreateFrame("Frame", "ForeverLazyBagsFrame" .. GN, UIParent, "BackdropTemplate")
     frame:SetFrameStrata("HIGH")
     frame:SetClampedToScreen(true)
     frame:SetMovable(true)
@@ -148,9 +154,11 @@ local function BuildNow()
     frame:SetBackdropColor(0.04, 0.04, 0.06, (DB() and DB().bagsAlpha) or 0.92)
     frame:SetBackdropBorderColor(0.6, 0.6, 0.7, 1)
     local pos = DB() and DB().bagsPos
-    if pos then frame:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4]) else frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 110) end
+    if isBank then
+        frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 110)      -- placed beside the bag window each time the bank opens
+    elseif pos then frame:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4]) else frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 110) end
     frame:SetScale((DB() and DB().bagsScale) or 1)
-    if UISpecialFrames then table.insert(UISpecialFrames, "ForeverLazyBagsFrame") end
+    if UISpecialFrames then table.insert(UISpecialFrames, "ForeverLazyBagsFrame" .. GN) end
     frame:Hide()
 
     frame.title = frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
@@ -247,13 +255,20 @@ local function BuildNow()
         if panel:IsShown() then panel:Hide() else for _, r in ipairs(rows) do r.update() end; panel:Show() end
     end, "Settings: auto sort, border colours, replacing the game's bags")
     frame.gear:SetPoint("LEFT", frame.sort, "RIGHT", 4, 0)
+    if isBank then
+        -- the bank window is just the bank: no character / place / settings buttons
+        frame.who:Hide(); frame.place:Hide(); frame.gear:Hide()
+        frame.sort:ClearAllPoints(); frame.sort:SetPoint("TOPLEFT", 10, -28)
+        -- closing it (Esc or the X) leaves the bank, like the game's own bank window does
+        frame:HookScript("OnHide", function() if atBank and CloseBankFrame then pcall(CloseBankFrame) end end)
+    end
 
     frame.less = Button("-", 22, function() DB().bagsCols = math.max(4, Cols() - 1); layoutNeeded = true; Refresh() end, "Fewer slots per row")
     frame.more = Button("+", 22, function() DB().bagsCols = math.min(24, Cols() + 1); layoutNeeded = true; Refresh() end, "More slots per row")
     frame.more:SetPoint("TOPRIGHT", -28, -28)
     frame.less:SetPoint("RIGHT", frame.more, "LEFT", -2, 0)
 
-    frame.search = CreateFrame("EditBox", "ForeverLazyBagsSearch", frame, "InputBoxTemplate")
+    frame.search = CreateFrame("EditBox", "ForeverLazyBagsSearch" .. GN, frame, "InputBoxTemplate")
     frame.search:SetSize(120, 18)
     frame.search:SetAutoFocus(false)
     frame.search:SetPoint("RIGHT", frame.less, "LEFT", -8, 0)
@@ -382,9 +397,9 @@ end
 --------------------------------------------------------------------------------
 local function NewItemButton(parent)
     btnCount = btnCount + 1
-    local ok, b = pcall(CreateFrame, "ItemButton", "ForeverLazyBagBtn" .. btnCount, parent, "ContainerFrameItemButtonTemplate")
+    local ok, b = pcall(CreateFrame, "ItemButton", "ForeverLazyBagBtn" .. GN .. "x" .. btnCount, parent, "ContainerFrameItemButtonTemplate")
     if not ok or not b then
-        ok, b = pcall(CreateFrame, "Button", "ForeverLazyBagBtn" .. btnCount, parent, "ContainerFrameItemButtonTemplate")
+        ok, b = pcall(CreateFrame, "Button", "ForeverLazyBagBtn" .. GN .. "x" .. btnCount, parent, "ContainerFrameItemButtonTemplate")
     end
     if not ok or not b then return nil end
     b:SetSize(SZ, SZ)
@@ -554,6 +569,7 @@ local HideHeaders, LayoutCategories
 
 CategoryOf = function(e)
     local info = e.info
+    if info and (info.itemID == 6948 or info.itemName == "Hearthstone") then return "travel" end
     if C_Container and C_Container.GetContainerItemQuestInfo then
         local ok, qi = pcall(C_Container.GetContainerItemQuestInfo, e.bag, e.slot)
         if ok and type(qi) == "table" and (qi.isQuestItem or (qi.questID and qi.questID > 0)) then return "quest" end
@@ -687,7 +703,7 @@ Refresh = function(contentOnly)
         local c = root and root.inv and root.inv[view.char]
         who = c and (c.full or c.name) or view.char
     end
-    frame.title:SetText(who .. (mine and "" or " (saved)"))
+    frame.title:SetText(isBank and (who .. "'s bank") or (who .. (mine and "" or " (saved)")))
     local placeName = view.place == "bank" and "Bank" or view.place == "mail" and "Mail" or "Bags"
     frame.place:SetText(placeName)
 
@@ -718,7 +734,15 @@ Refresh = function(contentOnly)
                 local b = buttons[bag][slot]
                 if not b and canLayout then
                     b = NewItemButton(bf)
-                    if b then b:SetID(slot); buttons[bag][slot] = b end
+                    if b then
+                        b:SetID(slot); buttons[bag][slot] = b
+                        -- right-click uses the item in this exact bag slot (a secure action, so it works for sleeping bags, food, scrolls...)
+                        if b.SetAttribute then
+                            pcall(b.RegisterForClicks, b, "AnyUp")
+                            b:SetAttribute("type2", "item")
+                            b:SetAttribute("item2", bag .. " " .. slot)
+                        end
+                    end
                 end
                 local info = SlotInfo(bag, slot)
                 if b then
@@ -824,9 +848,23 @@ local function ToggleNow()
     Build()
     if frame:IsShown() then Close() else view.char = nil; if view.place ~= "bank" or not atBank then view.place = "bags" end; Open() end
 end
+return {
+    Build = Build, Open = Open, Close = Close, ToggleNow = ToggleNow, Refresh = function(c) return Refresh(c) end,
+    Frame = function() return frame end,
+    View = function() return view end,
+    NeedLayout = function() layoutNeeded = true end,
+    SetDirty = function() dirty = true end,
+    Searching = function() return searchText ~= "" end,
+    Shown = function() return frame and frame:IsShown() end,
+}
+end   -- NewWindow
+
+local main = NewWindow(1, false)
+local bankWin = NewWindow(2, true)
+
 -- any error is shown in chat (not everyone has Lua errors switched on)
 local function Toggle()
-    local ok, err = pcall(ToggleNow)
+    local ok, err = pcall(main.ToggleNow)
     if not ok then Print("the bag window hit an error: " .. tostring(err)) end
 end
 addon.ToggleBags = Toggle
@@ -867,12 +905,13 @@ local function InitWrappers()
     Wrap("ToggleAllBags", function() Toggle() end)
     Wrap("ToggleBackpack", function() Toggle() end)
     Wrap("ToggleBag", function(id) if id == nil or id <= NUMBAGS + (NUM_REAGENTBAG_SLOTS or 0) then Toggle() end end)
-    Wrap("OpenAllBags", function() Build(); if not frame:IsShown() then view.char = nil; Open("bags") end end)
-    Wrap("OpenBackpack", function() Build(); if not frame:IsShown() then view.char = nil; Open("bags") end end)
-    Wrap("OpenBag", function() Build(); if not frame:IsShown() then view.char = nil; Open("bags") end end)
-    Wrap("CloseAllBags", function() Close() end)
-    Wrap("CloseBackpack", function() Close() end)
-    Wrap("CloseBag", function() Close() end)
+    local function OpenMain() main.Build(); if not main.Shown() then main.View().char = nil; main.Open("bags") end end
+    Wrap("OpenAllBags", OpenMain)
+    Wrap("OpenBackpack", OpenMain)
+    Wrap("OpenBag", OpenMain)
+    Wrap("CloseAllBags", function() main.Close() end)
+    Wrap("CloseBackpack", function() main.Close() end)
+    Wrap("CloseBag", function() main.Close() end)
 end
 InitWrappers()
 
@@ -881,10 +920,14 @@ InitWrappers()
 --------------------------------------------------------------------------------
 local pending
 local function Soon()
-    dirty = true
+    main.SetDirty(); bankWin.SetDirty()
     if pending then return end
     pending = true
-    C_Timer.After(0.05, function() pending = false; if frame and frame:IsShown() then Refresh() end end)
+    C_Timer.After(0.05, function()
+        pending = false
+        if main.Shown() then main.Refresh() end
+        if bankWin.Shown() then bankWin.Refresh() end
+    end)
 end
 
 -- auto sort: a moment after the bags settle, tidy them (never in combat, never while carrying something, never while searching)
@@ -893,7 +936,7 @@ local function AutoSort()
     sortPending = false
     local db = DB()
     if not db or db.bagsAutoSort == false or ByCat() or not Takeover() then return end
-    if InCombatLockdown() or (CursorHasItem and CursorHasItem()) or searchText ~= "" then return end
+    if InCombatLockdown() or (CursorHasItem and CursorHasItem()) or main.Searching() then return end
     if GetTime() - lastSort < 3 then return end
     local f = (C_Container and C_Container.SortBags) or SortBags
     if f then lastSort = GetTime(); pcall(f) end
@@ -917,18 +960,24 @@ ev:SetScript("OnEvent", function(_, event)
     elseif event == "BANKFRAME_OPENED" then
         atBank = true
         if Takeover() then
-            Build()
-            view.char = nil
+            -- two windows side by side: my bags, and the bank to their left (so things can go from one to the other)
+            main.Build(); bankWin.Build()
+            main.View().char = nil; bankWin.View().char = nil
             -- the game's own bank window is hidden from view (it still has to be "open" for the bank to work)
             if BankFrame then BankFrame:SetAlpha(0) end
-            Open("bank")
+            main.Open("bags")
+            local bf = bankWin.Frame()
+            bf:ClearAllPoints()
+            bf:SetPoint("BOTTOMRIGHT", main.Frame(), "BOTTOMLEFT", -12, 0)
+            bankWin.Open("bank")
         end
     elseif event == "BANKFRAME_CLOSED" then
         atBank = false
         if BankFrame then BankFrame:SetAlpha(1) end
-        if frame and frame:IsShown() and view.place == "bank" and not view.char then view.place = "bags"; layoutNeeded = true; Refresh() end
+        bankWin.Close()
+        if main.Shown() and main.View().place == "bank" and not main.View().char then main.View().place = "bags"; main.NeedLayout(); main.Refresh() end
     elseif event == "PLAYER_REGEN_ENABLED" then
-        layoutNeeded = true
+        main.NeedLayout(); bankWin.NeedLayout()
         Soon()
     elseif event == "BAG_UPDATE_DELAYED" then
         Soon()
@@ -951,11 +1000,15 @@ function addon:HandleExtraCommand(cmd, rest)
             if b == "on" then db.bagsReplace = true elseif b == "off" then db.bagsReplace = false else db.bagsReplace = nil end
             Print("bag window takes over the bag keys: " .. (Takeover() and "YES" or "no") .. (db.bagsReplace == nil and "  (automatic: only when Bagnon is not loaded)" or ""))
         elseif a == "cols" and tonumber(b) then
-            db.bagsCols = math.max(4, math.min(24, tonumber(b))); layoutNeeded = true; if frame then Refresh() end
+            db.bagsCols = math.max(4, math.min(24, tonumber(b)))
+            main.NeedLayout(); bankWin.NeedLayout()
+            if main.Frame() then main.Refresh() end
+            if bankWin.Frame() then bankWin.Refresh() end
         elseif a == "scale" and tonumber(b) then
-            db.bagsScale = math.max(0.5, math.min(2, tonumber(b))); Build(); frame:SetScale(db.bagsScale)
+            db.bagsScale = math.max(0.5, math.min(2, tonumber(b))); main.Build(); main.Frame():SetScale(db.bagsScale)
+            bankWin.Build(); bankWin.Frame():SetScale(db.bagsScale)
         elseif a == "reset" then
-            db.bagsPos = nil; Build(); frame:ClearAllPoints(); frame:SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 110)
+            db.bagsPos = nil; main.Build(); main.Frame():ClearAllPoints(); main.Frame():SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 110)
         else
             Print("/lazy bags  (open)   /lazy bags replace on|off   /lazy bags cols <n>   /lazy bags scale <n>   /lazy bags reset")
         end

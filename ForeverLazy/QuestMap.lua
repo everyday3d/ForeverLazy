@@ -31,7 +31,7 @@ local TEX = {
     give = "Interface\\GossipFrame\\AvailableQuestIcon",
     turnin = "Interface\\GossipFrame\\ActiveQuestIcon",
 }
-local MAX_WORLD, MAX_MINI, PER_OBJECTIVE = 320, 70, 45
+local MAX_WORLD, MAX_MINI, PER_OBJECTIVE = 450, 70, 45
 local CELL = 70                                          -- spots closer than 1/70 of a zone map share one pin
 
 --------------------------------------------------------------------------------
@@ -115,11 +115,31 @@ local function Colour(title)
     return 0.35 + r * 0.65, 0.35 + g * 0.65, 0.35 + b * 0.65
 end
 
-local function AreaSize()
+-- With OpenMap's stitched map the canvas shows more than one zone, so a zone is only a part of the canvas: how big a part
+-- (1 on the game's own zone map)
+local function ZoneFraction(uiMapId)
+    local om = _G.OpenMapAPI
+    if not (uiMapId and om and om.IsStitched and om.IsStitched() and om.WorldFromMap and om.MapFromWorld
+            and WorldMapFrame and WorldMapFrame.GetMapID) then return 1 end
+    local ok, f = pcall(function()
+        local host = WorldMapFrame:GetMapID()
+        if not host or host == uiMapId then return 1 end
+        local u1, v1 = om.WorldFromMap(uiMapId, 0.45, 0.5)
+        local u2, v2 = om.WorldFromMap(uiMapId, 0.55, 0.5)
+        if not (u1 and u2) then return 1 end
+        local x1 = om.MapFromWorld(host, u1, v1)
+        local x2 = om.MapFromWorld(host, u2, v2)
+        if not (x1 and x2) then return 1 end
+        return math.max(0.02, math.min(3, math.abs(x2 - x1) / 0.1))
+    end)
+    return ok and tonumber(f) or 1
+end
+
+local function AreaSize(uiMapId)
     local canvas = WorldMapFrame and WorldMapFrame.GetCanvas and WorldMapFrame:GetCanvas()
     local w = canvas and canvas.GetWidth and canvas:GetWidth() or 1000
     if not w or w <= 0 then w = 1000 end
-    return w * 2.4 / CELL
+    return w * 2.4 / CELL * ZoneFraction(uiMapId)
 end
 
 local function Clear()
@@ -281,14 +301,26 @@ local function Build()
     end
 
     -- quests I can pick up in this zone
-    if Wants("givers") and mapNow and data.Available then
+    -- the zone I am in, and whatever the world map is showing now (a zone, or a continent with all its zones)
+    local zones = {}
+    if mapNow then zones[mapNow] = true end
+    local viewed = WorldMapFrame and WorldMapFrame:IsShown() and WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()
+    if viewed then
+        zones[viewed] = true
+        if C_Map and C_Map.GetMapChildrenInfo then
+            local okK, kids = pcall(C_Map.GetMapChildrenInfo, viewed, nil, true)
+            if okK and type(kids) == "table" then for _, k in ipairs(kids) do if k.mapID then zones[k.mapID] = true end end end
+        end
+    end
+    local giverCap = viewed and 400 or 120
+    if Wants("givers") and next(zones) and data.Available then
         local avail = data.Available()
         local n = 0
         local QDB = api.GetQuestie and api.GetQuestie()
         local mine = {}
         for _, q in ipairs(MyQuests()) do mine[q.questID] = true end
         for id in pairs(avail or {}) do
-            if n >= 120 then break end
+            if n >= giverCap then break end
             if not mine[id] and not (api.IsDungeonQuest and api.IsDungeonQuest(id, false)) then
                 local level = data.Field("quests", id, "questLevel")
                 local grey = QDB and QDB.IsTrivial and level and level > 0 and QDB.IsTrivial(level)
@@ -304,7 +336,7 @@ local function Build()
                         if api.AddNpcs then pcall(api.AddNpcs, list, by[1]) end
                         if api.AddObjects then pcall(api.AddObjects, list, by[2]) end
                         for _, s in ipairs(list) do
-                            if s.uiMapId == mapNow then
+                            if zones[s.uiMapId] then
                                 n = n + 1
                                 AddCell(cells, order, "give", s, string.format("[%s] %s", tostring(level or "?"), tostring(data.Field("quests", id, "name"))), { "Quest to pick up" })
                             end
@@ -321,6 +353,7 @@ end
 -- Draw
 --------------------------------------------------------------------------------
 local lastSig = ""
+local LiftAfterDraw
 local function Draw(force)
     if not hbdp then return end
     local db = DB() or {}
@@ -345,13 +378,13 @@ local function Draw(force)
 
     -- the coloured areas first, so the icons sit on top
     if Wants("areas") then
-        local size = AreaSize()
         local n = 0
         for _, e in ipairs(byDistance) do
             local c = e.c
             if c.kind == "kill" or c.kind == "collect" or c.kind == "object" then
                 n = n + 1
                 if n > MAX_WORLD then break end
+                local size = AreaSize(c.uiMapId)
                 local f = AreaFrame(n)
                 local r, g, b = Colour(c.title or "")
                 f.tex:SetVertexColor(r, g, b, 0.30)
@@ -371,7 +404,7 @@ local function Draw(force)
             local scale = math.max(0.5, math.min(2, tonumber(db.questMapScale) or 1))
             local sz = ((c.kind == "give" or c.kind == "turnin") and 16 or 13) * scale
             f:SetSize(sz, sz)
-            pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy)
+            pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy, _G.HBD_PINS_WORLDMAP_SHOW_CONTINENT or 2)
         end
         if i <= MAX_MINI and e.d < 1e18 and e.d < 1500 ^ 2 then
             local f = Frame(miniFrames, i, 11)
@@ -381,6 +414,7 @@ local function Draw(force)
             pcall(hbdp.AddMinimapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy, false, false)
         end
     end
+    if LiftAfterDraw then LiftAfterDraw() end
 end
 
 local pending
@@ -406,14 +440,58 @@ ev:SetScript("OnUpdate", function(_, dt)
     if hbdp and DB() and DB().questMap ~= false then Later(0, true) end
 end)
 
-if WorldMapFrame and WorldMapFrame.HookScript then
-    pcall(WorldMapFrame.HookScript, WorldMapFrame, "OnShow", function()
-        local size = AreaSize()
-        for _, f in ipairs(areaFrames) do
+-- OpenMap draws its map art over the canvas and lifts only the pins it knows by name; ours would sit under the art, so lift them
+-- above it (areas lowest, then the skulls and diamonds, the ! and ? on top)
+local function LiftAll()
+    local om = _G.OpenMapAPI
+    if not (om and om.IsStitched and om.IsStitched() and om.ArtTopLevel) then return end
+    local top = om.ArtTopLevel()
+    if type(top) ~= "number" or InCombatLockdown() then return end
+    local function Up(f, level)
+        if f and f.SetFrameLevel and f:GetFrameLevel() < level then pcall(f.SetFrameLevel, f, level) end
+    end
+    for _, f in ipairs(areaFrames) do Up(f, top + 1) end
+    for _, f in ipairs(worldFrames) do
+        local k = f.cell and f.cell.kind
+        Up(f, (k == "give" or k == "turnin") and top + 5 or top + 3)
+    end
+end
+
+local function ResizeAreas()
+    pcall(LiftAll)
+    local cache = {}
+    for _, f in ipairs(areaFrames) do
+        if f:IsShown() or f.cell then
+            local id = f.cell and f.cell.uiMapId
+            local size = cache[id or 0]
+            if not size then size = AreaSize(id); cache[id or 0] = size end
             f:SetSize(size, size)
             if f.SetHitRectInsets then local ins = size * 0.15; f:SetHitRectInsets(ins, ins, ins, ins) end
         end
-    end)
+    end
+end
+
+-- the map moves to another zone or continent while it is open: show that place's quest givers too
+if WorldMapFrame and hooksecurefunc and WorldMapFrame.OnMapChanged then
+    pcall(hooksecurefunc, WorldMapFrame, "OnMapChanged", function() if WorldMapFrame:IsShown() then lastSig = ""; Later(0.4, true) end end)
+end
+
+LiftAfterDraw = function()
+    -- once now, and again a moment later: the map places the pins just after they are handed to it
+    pcall(LiftAll)
+    if C_Timer and C_Timer.After then C_Timer.After(0.5, function() pcall(LiftAll) end) end
+end
+if WorldMapFrame and WorldMapFrame.HookScript then
+    pcall(WorldMapFrame.HookScript, WorldMapFrame, "OnShow", function() lastSig = ""; Later(0.2, true); ResizeAreas(); if C_Timer then C_Timer.After(0.3, function() pcall(LiftAll) end) end end)
+end
+-- OpenMap: the stitched map changes what a zone is on the canvas as you zoom, so the areas follow
+do
+    local om = _G.OpenMapAPI
+    if om and om.RegisterCallback then
+        local owner = {}
+        pcall(om.RegisterCallback, owner, "OpenMap_StitchedChanged", function() pcall(ResizeAreas) end)
+        pcall(om.RegisterCallback, owner, "OpenMap_ViewChanged", function() pcall(ResizeAreas) end)
+    end
 end
 
 -- Clicking a quest on the game's own map (or in its quest list) tracks it: point the arrow at that quest too
@@ -441,11 +519,88 @@ function addon.QuestMapRefresh() lastSig = ""; spawnCache = {}; Later(0, true) e
 --------------------------------------------------------------------------------
 -- /lazy questmap
 --------------------------------------------------------------------------------
+-- a small window with text you can select and copy (Ctrl-A, Ctrl-C)
+function addon.ShowTextPopup(title, text)
+    local f = addon.textPopup
+    if not f then
+        f = CreateFrame("Frame", "ForeverLazyTextPopup", UIParent, "BackdropTemplate")
+        f:SetSize(560, 300)
+        f:SetPoint("CENTER", 0, 60)
+        f:SetFrameStrata("FULLSCREEN_DIALOG")
+        f:SetMovable(true); f:EnableMouse(true); f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving); f:SetScript("OnDragStop", f.StopMovingOrSizing)
+        f:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border", edgeSize = 14,
+                        insets = { left = 3, right = 3, top = 3, bottom = 3 } })
+        f:SetBackdropColor(0.04, 0.04, 0.06, 0.97)
+        f:SetBackdropBorderColor(0.6, 0.6, 0.7, 1)
+        f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.title:SetPoint("TOPLEFT", 12, -10)
+        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
+        close:SetPoint("TOPRIGHT", 2, 2)
+        local sf = CreateFrame("ScrollFrame", "ForeverLazyTextPopupScroll", f, "UIPanelScrollFrameTemplate")
+        sf:SetPoint("TOPLEFT", 12, -32)
+        sf:SetPoint("BOTTOMRIGHT", -30, 12)
+        local eb = CreateFrame("EditBox", nil, sf)
+        eb:SetMultiLine(true)
+        eb:SetAutoFocus(false)
+        eb:SetFontObject(ChatFontNormal or GameFontHighlight)
+        eb:SetWidth(510)
+        eb:SetScript("OnEscapePressed", function(self) self:ClearFocus(); f:Hide() end)
+        sf:SetScrollChild(eb)
+        f.edit = eb
+        if UISpecialFrames then table.insert(UISpecialFrames, "ForeverLazyTextPopup") end
+        addon.textPopup = f
+    end
+    f.title:SetText(title or "Forever Lazy")
+    f.edit:SetText(text or "")
+    f:Show()
+    f.edit:SetFocus()
+    f.edit:HighlightText()
+end
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     if (cmd or ""):lower() == "questmap" then
         local a, b = (rest or ""):lower():match("^%s*(%S*)%s*(%S*)")
         local db = DB()
+        if a == "debug" then
+            -- what the map pins look like with the map OPEN (closed, the map lets go of them): opens it, looks 2 seconds later
+            local function Dump()
+            local lines = {}
+            local function Say(s) lines[#lines + 1] = s end
+            local om = _G.OpenMapAPI
+            local okB, order = pcall(Build)
+            local counts = {}
+            if okB then for _, c in ipairs(order) do counts[c.kind] = (counts[c.kind] or 0) + 1 end end
+            local parts = {}
+            for k, v in pairs(counts) do parts[#parts + 1] = k .. "=" .. v end
+            Say("quest map debug: pins wanted: " .. (#parts > 0 and table.concat(parts, " ") or "none") .. (okB and "" or (" (build error: " .. tostring(order) .. ")")))
+            Say(string.format("  OpenMap %s, stitched %s, art level %s, map shown %s, map id %s, my zone %s", om and "yes" or "no",
+                tostring(om and om.IsStitched and om.IsStitched()), tostring(om and om.ArtTopLevel and om.ArtTopLevel()),
+                tostring(WorldMapFrame and WorldMapFrame:IsShown()), tostring(WorldMapFrame and WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()),
+                tostring(hbd and hbd:GetPlayerZone())))
+            local seen = {}
+            for _, f in ipairs(worldFrames) do
+                local k = f.cell and f.cell.kind
+                if k and not seen[k] and f.cell then
+                    seen[k] = true
+                    local p = f:GetParent()
+                    local cx, cy = f:GetCenter()
+                    Say(string.format("  %s: shown %s visible %s level %s strata %s alpha %.2f size %.0f scale %.2f parent %s points %d center %s",
+                        k, tostring(f:IsShown()), tostring(f:IsVisible()), tostring(f:GetFrameLevel()), tostring(f:GetFrameStrata()), f:GetAlpha(),
+                        f:GetWidth(), f:GetEffectiveScale(), tostring(p and (p:GetName() or p:GetObjectType())), f:GetNumPoints(), cx and string.format("%.0f,%.0f", cx, cy) or "none"))
+                end
+            end
+            if not next(seen) then Say("  no pin frames have been made yet") end
+            addon.ShowTextPopup("Quest map pins", table.concat(lines, "\n"))
+            end
+            if WorldMapFrame and not WorldMapFrame:IsShown() and ToggleWorldMap and not InCombatLockdown() then
+                pcall(ToggleWorldMap)
+                if C_Timer then C_Timer.After(2, function() pcall(Dump) end) else pcall(Dump) end
+            else
+                Dump()
+            end
+            return true
+        end
         local on = (b == "on" or a == "on")
         local off = (b == "off" or a == "off")
         local function Set(key) if on then db[key] = nil elseif off then db[key] = false end end

@@ -273,6 +273,13 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.17.1", {
+        "THE BANK IS A SECOND WINDOW!! Open the bank and your bags sit on the right, the bank on the left. Move stuff across. OHHHH!",
+        "Your HEARTHSTONE has its own TRAVEL section at the very top of the bag.",
+        "Right-click an item in the bag to USE it again (recipes, food, the sleeping bag).",
+        "OPENMAP PLAYS NICE: quest areas, skulls, diamonds, ! and ? show on its big map, and quest givers show for the map you are LOOKING at, not just where you stand.",
+        "/lazy questmap debug opens a popup you can copy. /lazy tracker debug does the same for the tracker.",
+    } },
     { "0.17.0", {
         "THE BAG HAS REAL SECTIONS NOW!! Equipment, Food and drink, Potions, Bandages, Consumables, Trade goods, Reagents, Recipes, Gems, Ammo, Bags, Keys, Misc and Junk. A section only shows up when you carry something for it! OHHHH!",
         "The bag SCROLLS now, so a full bag is not a giant window. The category buttons are plain text tabs, and the section names are bigger.",
