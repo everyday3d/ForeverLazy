@@ -202,14 +202,22 @@ local function RowClick(self, button)
     if not q then return end
     if button == "RightButton" then OpenMenu(q); return end
     if IsShiftKeyDown() then
-        local link = GetQuestLink and GetQuestLink(q.id)
-        if link and ChatEdit_InsertLink then ChatEdit_InsertLink(link) end
-        return
-    end
-    -- ctrl-click: do this quest next; a plain click opens the quest in the quest log
-    if IsControlKeyDown and IsControlKeyDown() then
+        -- with a chat box open: paste the quest link; otherwise a shift-click does the quest next, like a plain click
+        local box = ChatEdit_GetActiveWindow and ChatEdit_GetActiveWindow()
+        if box then
+            local link = GetQuestLink and GetQuestLink(q.id)
+            if link and ChatEdit_InsertLink then ChatEdit_InsertLink(link) end
+            return
+        end
+        Select(q.id)
         if addon.FocusQuest then addon:FocusQuest(q.id, q.title) end
         dirty = true
+        return
+    end
+    -- ctrl-click: share the quest with my group; a plain click opens the quest in the quest log
+    if IsControlKeyDown and IsControlKeyDown() then
+        Select(q.id)
+        if QuestLogPushQuest then pcall(QuestLogPushQuest) end
         return
     end
     Select(q.id)
@@ -286,7 +294,7 @@ local function BuildRow(i)
     b:SetPoint("TOPRIGHT", r, "TOPRIGHT", 0, 0)
     b:SetFrameLevel(r:GetFrameLevel() + 3)
     b:RegisterForClicks("AnyUp")
-    b:SetAttribute("type", "item")
+    b:SetAttribute("type", "macro")
     b.icon = b:CreateTexture(nil, "ARTWORK"); b.icon:SetAllPoints()
     local bhl = b:CreateTexture(nil, "HIGHLIGHT"); bhl:SetAllPoints(); bhl:SetColorTexture(1, 1, 1, 0.25)
     b:SetScript("OnEnter", function(self)
@@ -603,7 +611,7 @@ local function Layout()
                         if not inCombat then
                             if link then
                                 r.item.link = link
-                                r.item:SetAttribute("item", itemStr)
+                                r.item:SetAttribute("macrotext", "/use " .. itemStr)
                                 r.item.icon:SetTexture(icon or "Interface\\Icons\\INV_Misc_QuestionMark")
                                 r.item:Show()
                             else

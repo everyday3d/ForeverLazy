@@ -29,7 +29,7 @@ local function MakeButton(i)
     b:SetSize(40, 40)
     b:SetFrameStrata("MEDIUM")
     b:RegisterForClicks("AnyUp")
-    b:SetAttribute("type", "item")
+    b:SetAttribute("type", "macro")
     b.icon = b:CreateTexture(nil, "ARTWORK")
     b.icon:SetAllPoints()
     b.border = b:CreateTexture(nil, "OVERLAY")
@@ -141,7 +141,7 @@ local function RefreshItems()
         local it = items[i]
         if it then
             b.link = it.link
-            b:SetAttribute("item", it.itemStr)
+            b:SetAttribute("macrotext", "/use " .. it.itemStr)
             b.icon:SetTexture(it.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
             b:Show()
         else

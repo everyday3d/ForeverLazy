@@ -127,7 +127,7 @@ function addon.PlanCheckStops(stops, env)
                     local done = env.isComplete and env.isComplete(id)
                     if seen[key] then
                         mark(si, qi, "duplicate", title .. " is in the plan twice", id)
-                    elseif env.isSkipped and env.isSkipped(id) then
+                    elseif env.isSkipped and env.isSkipped(id) and not (kind == "turn" and done == true) then
                         mark(si, qi, "skipped", title .. " was skipped by you", id)
                     elseif kind ~= "turn" and env.isDungeon and env.isDungeon(id) and not done then
                         mark(si, qi, "dungeon", title .. " is a dungeon quest", id)

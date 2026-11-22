@@ -240,6 +240,15 @@ local function PickMine()
 
     -- narrow down to the quest I picked, or to my tracked quests
     local groups = mine.groups
+    -- a quest I skipped is not an arrow target (even when it is the one selected in the quest log), unless it is finished
+    local skip = DB().planSkip
+    if skip and next(skip) then
+        local kept = {}
+        for _, g in ipairs(groups) do
+            if g.complete or not (g.id and skip[g.id]) then kept[#kept + 1] = g end
+        end
+        groups = kept
+    end
     if DB().ownFocus ~= false then
         local sel = SelectedQuestId()
         local narrowed
@@ -578,15 +587,21 @@ local function BaseArrowTarget()    local db = DB()
 end
 
 function addon.ArrowTarget()
+    addon.arrowWhy = nil          -- a few words on why the arrow points where it does (shown under it)
     -- inside a dungeon with quests that need something here: the spots in there come first
     local okD, ds = pcall(function() return addon.DungeonArrowTarget and addon.DungeonArrowTarget() end)
-    if okD and ds then return ds end
+    if okD and ds then addon.arrowWhy = "a spot in this dungeon"; return ds end
     local wp = BaseArrowTarget()
     local db = DB()
     local skipped
     -- the closest stop first: of the next few stops that are in this zone, the arrow goes to the nearest one (it sticks with its
     -- choice until another is a lot closer, so it does not flip back and forth)
-    if wp and db and db.arrowNearest ~= false and db.waypoints and wp == db.waypoints[1] and #db.waypoints > 1 and hbd then
+    -- a quest I picked to do next (clicked in the tracker, or "do this next") is not overridden by closest-first
+    local focused = false
+    if wp and db and db.planFocus and wp == (db.waypoints and db.waypoints[1]) then
+        for _, q in ipairs(wp.quests or {}) do if q.id == db.planFocus.id then focused = true; break end end
+    end
+    if wp and db and not focused and db.arrowNearest ~= false and db.waypoints and wp == db.waypoints[1] and #db.waypoints > 1 and hbd then
         local okN, pick = pcall(function()
             local px, py, pinst = hbd:GetPlayerWorldPosition()
             if not px then return nil end
@@ -627,7 +642,25 @@ function addon.ArrowTarget()
                     if d and (not ud or d < ud) then urgent, ud = w, d end
                 end
             end
-            if urgent then addon.arrowNearestPick = urgent; return urgent end
+            if urgent then addon.arrowNearestPick = urgent; addon.arrowWhy = "hand-in before it turns grey"; return urgent end
+            -- a finished quest I can hand in close by goes before anything else (not the ones back in town)
+            local near, nd
+            for i = 1, math.min(#db.waypoints, 15) do
+                local w = db.waypoints[i]
+                if w.quests and not (w.uiMapId and zone and w.uiMapId ~= zone) then
+                    for _, q in ipairs(w.quests) do
+                        if q.id and (q.label or ""):find("^Turn in:") and C_QuestLog and C_QuestLog.IsComplete then
+                            local okC, done = pcall(C_QuestLog.IsComplete, q.id)
+                            if okC and done then
+                                local d = dist(w)
+                                if d and d <= 450 and (not nd or d < nd) then near, nd = w, d end
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+            if near then addon.arrowNearestPick = near; addon.arrowWhy = "a hand-in close by"; return near end
             local best, bd
             for i = 1, math.min(#db.waypoints, 8) do
                 local w = db.waypoints[i]
@@ -651,7 +684,10 @@ function addon.ArrowTarget()
             addon.arrowNearestPick = best
             return best
         end)
-        if okN and pick then wp, skipped = pick, (pick ~= db.waypoints[1]) end
+        if okN and pick then
+            wp, skipped = pick, (pick ~= db.waypoints[1])
+            if not addon.arrowWhy then addon.arrowWhy = "the closest stop" end
+        end
     end
     -- a quest stop in another zone stays off the arrow until I am in that zone: the arrow goes to the next stop that is here,
     -- or nowhere (false) when none is
@@ -665,7 +701,12 @@ function addon.ArrowTarget()
             end
             if not pick then return false end
             wp, skipped = pick, true
+            addon.arrowWhy = "the next stop in this zone"
         end
+    end
+    if not addon.arrowWhy and wp then
+        if focused then addon.arrowWhy = "the quest you picked"
+        elseif db and db.waypoints and wp == db.waypoints[1] and wp.label then addon.arrowWhy = "next in your plan" end
     end
     if wp and wp.quests and db and db.waypoints and (wp == db.waypoints[1] or skipped) then
         local ok, s = pcall(ObjectiveSpot, wp)
@@ -1316,7 +1357,13 @@ function addon:PlanRoute(allZones, quiet, auto)
     for _, g in ipairs(mine.groups) do
         if g.id and api.IsDungeonQuest and api.IsDungeonQuest(g.id, g.complete) and not g.complete then
             -- a dungeon quest: not part of a plan (a finished one is still handed in)
-        elseif (db.planSkip and g.id and db.planSkip[g.id]) or (g.id and LaterActive(db, g.id)) then
+        elseif ((db.planSkip and g.id and db.planSkip[g.id]) and not (g.complete and (function()
+                    -- a skipped quest that is finished still gets its hand-in when the hand-in is close
+                    for _, s in ipairs(g.spawns or {}) do
+                        if s.instance == pinst and Dist(s, here0) < 450 then return true end
+                    end
+                    return false
+                end)())) or (g.id and LaterActive(db, g.id)) then
             -- skipped by me from the arrow's right-click menu
         elseif g.group and g.group > 1 and not g.complete and db.planSkipGroup ~= false and g.tier ~= "green"
             and (GetNumGroupMembers and GetNumGroupMembers() or 0) < 2 then
@@ -1654,9 +1701,10 @@ function addon:PlanRoute(allZones, quiet, auto)
         end
         local near, rest = {}, {}
         for _, w in ipairs(list) do
-            local onlyTurnIns = w.quests and #w.quests > 0
+            -- any finished hand-in at the stop counts: I am walking there anyway
+            local onlyTurnIns = false
             for _, q in ipairs(w.quests or {}) do
-                if not ((q.label or ""):find("^Turn in:") and Finished(q.id)) then onlyTurnIns = false; break end
+                if (q.label or ""):find("^Turn in:") and Finished(q.id) then onlyTurnIns = true; break end
             end
             if onlyTurnIns and w.instance == pinst and Dist(w, start) < HOIST then near[#near + 1] = w else rest[#rest + 1] = w end
         end
@@ -2967,6 +3015,15 @@ function addon:FocusQuest(id, label)
     local db = DB()
     db.planFocus = { id = id, label = PlainTitle(label) }
     ApplyFocus(db.waypoints)
+    -- the quest has no stop in the plan (skipped, put off, another zone...): rebuild so it gets one, it then goes first
+    local has = false
+    for _, q in ipairs(db.waypoints[1] and db.waypoints[1].quests or {}) do if q.id == id then has = true end end
+    if not has then
+        if db.planSkip and db.planSkip[id] then db.planSkip[id] = nil end
+        addon.planWhy = "you picked a quest to do next"
+        pcall(addon.PlanRoute, addon, lastPlanAll and true or false, true)
+        ApplyFocus(db.waypoints)
+    end
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
     local first = db.waypoints[1]

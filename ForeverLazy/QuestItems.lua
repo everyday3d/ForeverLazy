@@ -11,7 +11,7 @@ local Print = addon.Print
 local function DB() return addon.GetDB() end
 local function On()
     local db = DB()
-    return db and db.questItemReminder ~= false and addon.ModuleOn("quests")
+    return db and db.questItemReminder == true and addon.ModuleOn("quests")          -- off unless I turn it on
 end
 
 local NEAR = 45          -- yards from where the quest wants it
@@ -113,8 +113,8 @@ local function Build()
         local b = CreateFrame("Button", "ForeverLazyQuestItemBtn" .. i, holder, "SecureActionButtonTemplate")
         b:SetSize(44, 44)
         b:SetPoint("BOTTOM", holder, "BOTTOM", (i - 2) * 50, 0)
-        b:RegisterForClicks("AnyUp", "AnyDown")
-        b:SetAttribute("type", "item")
+        b:RegisterForClicks("AnyUp")
+        b:SetAttribute("type", "macro")
         b.tex = b:CreateTexture(nil, "ARTWORK")
         b.tex:SetAllPoints()
         b.tex:SetTexCoord(0.08, 0.92, 0.08, 0.92)
@@ -158,7 +158,7 @@ local function Apply()
         if w then
             b.link, b.title = w.link, w.title
             b.tex:SetTexture(w.icon)
-            b:SetAttribute("item", w.itemId and ("item:" .. w.itemId) or w.link)
+            b:SetAttribute("macrotext", "/use " .. (w.itemId and ("item:" .. w.itemId) or tostring(w.link)))
             b:Show()
             local now = GetTime()
             if not told[w.qid] or now - told[w.qid] > 90 then
@@ -193,7 +193,7 @@ ev:SetScript("OnUpdate", function(_, dt)
     acc = acc + dt
     if acc < 0.7 then return end
     acc = 0
-    if holder and On() then pcall(Apply) end
+    if holder then pcall(Apply) end          -- also while off, so the buttons go away when I switch it off
 end)
 
 -- reached the end of the file without an error (used by /lazy check)

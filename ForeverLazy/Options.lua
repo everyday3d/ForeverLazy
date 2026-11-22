@@ -47,6 +47,29 @@ local function SetOpen(title, open)
     t[title] = open and true or false
 end
 
+-- groups that belong to one module: they are hidden while that module is switched off
+local SECTION_MODULE = {
+    ["Quest items"] = "quests",
+    ["Lazy mode"] = "lazymode",
+    ["Journey"] = "zones",
+    ["Hunter pet"] = "pet",
+    ["Ore and herb nodes"] = "gather",
+    ["Library books"] = "books",
+}
+local function SectionModuleOff(s)
+    local m = SECTION_MODULE[s.title]
+    return m ~= nil and addon.ModuleOn and not addon.ModuleOn(m)
+end
+-- the basics: what a new player needs. "Show all options" at the top brings back the rest.
+local BASIC = {
+    ["Start here"] = true, ["Extras to turn on or off"] = true, ["Help"] = true, ["Modules"] = true, ["Lazy mode"] = true,
+    ["Arrows"] = true, ["Hide arrows"] = true, ["Alerts"] = true, ["Quest tracker"] = true, ["Settings"] = true,
+}
+local function SectionHidden(s)
+    if SectionModuleOff(s) then return true end
+    return DB().optAdvanced ~= true and not BASIC[s.title]
+end
+
 local function Header(parent, text)
     if cur then cur.bodyEnd = y end
     y = y - 12
@@ -77,8 +100,10 @@ local function Label(parent, text, x)
 end
 
 local checkId = 0
+local noConfirm = false
 local function Check(parent, text, x, get, set, advance)
     checkId = checkId + 1
+    local quiet = noConfirm
     local name = "ForeverLazy_Check" .. checkId
     local cb = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
     cb:SetPoint("TOPLEFT", x or 16, y)
@@ -86,7 +111,16 @@ local function Check(parent, text, x, get, set, advance)
     local fs = _G[name .. "Text"]
     if fs then fs:SetText(text) end
     cb.Refresh = function() cb:SetChecked(get()) end
-    cb:SetScript("OnClick", function(self) set(self:GetChecked() and true or false) end)
+    cb:SetScript("OnClick", function(self)
+        local v = self:GetChecked() and true or false
+        set(v)
+        -- say what happened, so a tick is never silent (not for the radio choices: those are not on/off)
+        if not quiet and addon.Print and text and text ~= "" then
+            local short = tostring(text):gsub("%s*[:(].*$", "")
+            if #short > 56 then short = short:sub(1, 53) .. "..." end
+            addon.Print(short .. ": " .. (v and "on" or "off"))
+        end
+    end)
     refreshers[#refreshers + 1] = cb.Refresh
     if advance ~= false then y = y - 26 end
     return cb
@@ -141,6 +175,8 @@ local function Radio(parent, labelText, key, choices)
     y = y - 22
     local boxes = {}
     local col = 0
+    local wasNo = noConfirm
+    noConfirm = true
     for _, ch in ipairs(choices) do
         local value, text = ch[1], ch[2]
         local cb = Check(parent, text, 16 + col * 150, function() return DB()[key] == value end,
@@ -150,6 +186,7 @@ local function Radio(parent, labelText, key, choices)
         if col == 3 then col = 0; y = y - 26 end
     end
     if col ~= 0 then y = y - 26 end
+    noConfirm = wasNo
 end
 
 local function OpenPicker(get, set)
@@ -213,15 +250,47 @@ local function BuildControls(parent)
         Layout()
     end
     local b1 = Button(content, "Expand all", 16, 100, function() setAll(true) end, false)
-    local b2 = Button(content, "Collapse all", 126, 100, function() setAll(false) end, true)
+    local b2 = Button(content, "Collapse all", 126, 100, function() setAll(false) end, false)
+    local b3 = Button(content, "", 236, 190, function() DB().optAdvanced = not (DB().optAdvanced == true); Layout() end, true)
+    refreshers[#refreshers + 1] = function() b3:SetText(DB().optAdvanced == true and "Show only the basics" or "Show all options") end
     shared.scroll, shared.content = scroll, content
-    shared.top = { t, intro, b1, b2 }
+    shared.top = { t, intro, b1, b2, b3 }
     topY = y
 
-    ----------------------------------------------------------------- Arrows
+    ---------------------------------------------------------------- Start here
+    Header(content, "Start here")
+    Label(content, "New? Pick how much help you want. One click sets which parts are on, and you can change any of them afterwards.")
+    y = y - 22
+    Button(content, "Just point me", 16, 120, function() if addon.ApplyPreset then addon.ApplyPreset("minimal") end end, false)
+    Button(content, "Leveler", 146, 100, function() if addon.ApplyPreset then addon.ApplyPreset("leveler") end end, false)
+    Button(content, "Duo", 256, 80, function() if addon.ApplyPreset then addon.ApplyPreset("duo") end end, false)
+    Button(content, "Everything", 346, 110, function() if addon.ApplyPreset then addon.ApplyPreset("full") end end, true)
+    Label(content, "Just point me = the arrow, the route plan and services. Leveler = the usual levelling helpers. Duo = Leveler plus group features.")
+    y = y - 34
+
+    Header(content, "Extras to turn on or off")
+    Label(content, "The parts people most often want to switch. A tick means it is on.")
+    y = y - 22
+    Check(content, "Hunt panel: buttons for the mobs your quests need", 16,
+        function() return DB().huntPanel ~= false end, function(v) DB().huntPanel = OffFlag(v); if addon.HuntPanelRefresh then addon.HuntPanelRefresh() end end)
+    Check(content, "Quest markers on the nameplates", 16,
+        function() return DB().questPlates ~= false end, function(v) DB().questPlates = OffFlag(v); if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
+    Check(content, "Quest item bar: a button for a quest item when you are at the spot", 16,
+        function() return DB().questItemReminder == true end, function(v) DB().questItemReminder = v or nil end)
+    Check(content, "Craft planner beside the profession window", 16,
+        function() return DB().craftPanel == true end, function(v) DB().craftPanel = v or nil; if addon.CraftPanelRefresh then addon.CraftPanelRefresh() end end)
+    Check(content, "Our bag window instead of the game's bags", 16,
+        function() return DB().bagsReplace == true end, function(v) DB().bagsReplace = v or nil; if addon.BagSyncWrappers then addon.BagSyncWrappers(true) end end)
+    Check(content, "Damage meter (in a chat tab called Meter)", 16,
+        function() return DB().meterOn == true end, function(v) if addon.MeterSet then addon.MeterSet(v) end end)
+    Check(content, "The arrow goes to the closest stop first", 16,
+        function() return DB().arrowNearest ~= false end, function(v) DB().arrowNearest = OffFlag(v) end)
+    Check(content, "The arrow says why it points where it does", 16,
+        function() return DB().arrowWhy ~= false end, function(v) DB().arrowWhy = OffFlag(v) end)
+
     ---------------------------------------------------------------- Modules
     Header(content, "Buttons in the game windows")
-    Label(content, "Forever Lazy adds a search box and menu to the world map, buttons under the quest log, a craft plan beside your profession window, and more.")
+    Label(content, "Adds a search box and menu to the world map, and buttons under the quest log.")
     y = y - 22
     Check(content, "Show Forever Lazy buttons and panels in the game windows", 16,
         function() return DB().uiButtons ~= false end, function(v) DB().uiButtons = v end)
@@ -235,34 +304,34 @@ local function BuildControls(parent)
     Button(content, "Import settings", 416, 130, function() if addon.ImportSettings then addon.ImportSettings() end end, true)
 
     Header(content, "Quest sounds")
-    Label(content, "All from the game, nothing to install. When a quest is ready to hand in you hear the voice (Alliance Peasant 'Job's done!', Horde Peon 'Work complete!'). When you have all the items or kills a quest step needs you hear a different sound, an effect.")
+    Label(content, "Sounds from the game, nothing to install. A quest ready to hand in plays a voice (Peasant 'Job's done!' for the Alliance, Peon 'Work complete!' for the Horde). A finished quest step plays an effect.")
     y = y - 22
-    Check(content, "Play sounds when a quest step is done and when a quest is ready to hand in", 16,
+    Check(content, "Play sounds for finished steps and quests ready to hand in", 16,
         function() return DB().questSound ~= false end, function(v) DB().questSound = OffFlag(v) end)
-    Check(content, "Tell my party in party chat when I complete a quest (not for every step)", 16,
+    Check(content, "Announce in party chat when I complete a quest (not every step)", 16,
         function() return DB().questAnnounce ~= false end, function(v) DB().questAnnounce = OffFlag(v) end)
-    Label(content, "|cffffd100A quest step is done|r (all its items or kills): a sound effect")
+    Label(content, "|cffffd100Step done|r (all its items or kills): a sound effect")
     y = y - 22
     Button(content, "Hear it", 16, 90, function() if addon.QuestSoundTryStep then addon.QuestSoundTryStep() end end, false)
     Button(content, "Change the sound", 116, 150, function() if addon.QuestSoundNextStep then addon.QuestSoundNextStep() end end, true)
-    Label(content, "|cffffd100A quest is ready to hand in|r: the Job's done voice (Peasant for the Alliance, Peon for the Horde)")
+    Label(content, "|cffffd100Ready to hand in|r: the Job's done voice")
     y = y - 22
     Button(content, "Hear it", 16, 90, function() if addon.QuestSoundTryDone then addon.QuestSoundTryDone() end end, false)
     Button(content, "Change the voice", 116, 150, function() if addon.QuestSoundNextDone then addon.QuestSoundNextDone() end end, true)
 
     Header(content, "Quest map")
-    Label(content, "Where your quests' mobs, items and objects are, on the world map and the minimap: skull = kill, purple diamond = collect, green triangle = use. Yellow ! = a quest to pick up in this zone, yellow ? = a finished quest to hand in. Hover a pin for the quest.")
+    Label(content, "Shows where your quests' mobs, items and objects are, on the world map and minimap. Skull = kill, purple diamond = collect, green triangle = use, yellow ! = quest to pick up, yellow ? = ready to hand in. Hover a pin for the quest.")
     y = y - 22
     Check(content, "Show quest objectives on the map and minimap", 16,
         function() return DB().questMap ~= false and DB().questMapObjectives ~= false end,
         function(v) DB().questMapObjectives = OffFlag(v); if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
-    Check(content, "Draw coloured areas where the quest mobs are (world map)", 16,
+    Check(content, "Coloured areas where the quest mobs are (world map)", 16,
         function() return DB().questMap ~= false and DB().questMapAreas ~= false end,
         function(v) DB().questMapAreas = OffFlag(v); if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
     Check(content, "Show quest givers (!) and hand-ins (?) on the map", 16,
         function() return DB().questMap ~= false and DB().questMapGivers ~= false end,
         function(v) DB().questMapGivers = OffFlag(v); if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
-    Slider(content, "Hide quests to pick up more levels above me than", 0, 10, 1, "%d",
+    Slider(content, "Hide pick-ups more levels above me than", 0, 10, 1, "%d",
         function() return tonumber(DB().questMapGiverAbove) or 10 end,
         function(v) DB().questMapGiverAbove = v; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
     Label(content, "(10 means show everything)")
@@ -272,34 +341,34 @@ local function BuildControls(parent)
         function(v) DB().questMapScale = v; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
 
     Header(content, "Finding quests")
-    Label(content, "Hover a quest link in chat for who gives it, who takes it, its level, its chain and why you cannot take it. Find any quest by name, or see what you have finished in each zone.")
+    Label(content, "Hover a quest link in chat for who gives it, who takes it, its level and chain, and why you cannot take it. The buttons find any quest by name or show what you finished in each zone.")
     y = y - 22
     Check(content, "Quest link tooltips in chat", 16,
         function() return DB().questLinkTooltips ~= false end, function(v) DB().questLinkTooltips = OffFlag(v) end)
-    Check(content, "Ping when I walk up to someone I can hand a quest in to", 16,
+    Check(content, "Ping when I am near someone I can hand a quest in to", 16,
         function() return DB().handInPing ~= false end, function(v) DB().handInPing = OffFlag(v) end)
     Button(content, "Find a quest", 16, 120, function() if addon.QuestSearchOpen then addon.QuestSearchOpen() end end, false)
     Button(content, "Quest history", 146, 120, function() if addon.QuestHistoryOpen then addon.QuestHistoryOpen() end end, true)
 
     Header(content, "Quest items")
-    Check(content, "Remind me to use a quest item when I am at the spot (a button with the item appears)", 16,
-        function() return DB().questItemReminder ~= false end, function(v) DB().questItemReminder = OffFlag(v) end)
+    Check(content, "Quest item bar: a button for a quest item when I am at the spot", 16,
+        function() return DB().questItemReminder == true end, function(v) DB().questItemReminder = v or nil end)
 
     Header(content, "Nameplates")
     Check(content, "Quest icons on nameplates (sword, loot bag, gold !)", 16,
         function() return DB().questPlates ~= false end, function(v) DB().questPlates = OffFlag(v); if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
     Check(content, "Hunt panel: buttons for the mobs my quests need, click one to target it", 16,
         function() return DB().huntPanel ~= false end, function(v) DB().huntPanel = OffFlag(v); if addon.HuntPanelRefresh then addon.HuntPanelRefresh() end end)
-    Check(content, "Interrupt marker when a mob casts (green: my interrupt is ready, red: on cooldown, grey: I have none)", 16,
+    Check(content, "Interrupt marker when a mob casts (green ready, red on cooldown, grey none)", 16,
         function() return DB().nameplateCasts ~= false end, function(v) DB().nameplateCasts = OffFlag(v) end)
 
     Header(content, "Action bars")
-    Check(content, "Newest spell rank on my action bars (swapped in when I learn it)", 16,
+    Check(content, "Swap in the newest spell rank on my action bars when I learn it", 16,
         function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
     Button(content, "Fix my bars now", 16, 130, function() if addon.RankUpRun then addon.RankUpRun() end end, true)
 
     Header(content, "Chat")
-    Label(content, "Chat tweaks, a little like Prat. Everything is off until you turn it on here, and changes show on new lines. A few (input box on top, hidden buttons, no fading) need a /reload to undo.")
+    Label(content, "Chat tweaks, a little like Prat. All off until you turn them on, and changes show on new lines. Undoing input box on top, hidden buttons or no fading needs a /reload.")
     y = y - 22
     local function ChatCheck(text, key)
         Check(content, text, 16, function() return DB()[key] == true end,
@@ -363,22 +432,14 @@ local function BuildControls(parent)
     Button(content, "Copy the chat window I'm using", 16, 220, function() if addon.ChatCopy then addon.ChatCopy() end end, true)
 
     Header(content, "Quest data")
-    Label(content, "The addon carries its own quest data, so it no longer needs Questie. This button tries it: it ignores Questie, reloads the screen, and shows a results window a few seconds later.")
+    Label(content, "Forever Lazy has its own quest data and does not need Questie. To test it: ignore Questie, reload, and a results window shows a few seconds later.")
     y = y - 22
     Button(content, "Test without Questie", 16, 170, function() if addon.SelfTest then addon.SelfTest(false) end end, false)
     Button(content, "Back to normal", 196, 130, function() if addon.SelfTest then addon.SelfTest(true) end end, false)
     Button(content, "Compare with Questie", 336, 170, function() SlashCmdList["FOREVERLAZY"]("data verify") end, true)
 
-    Header(content, "Presets")
-    Label(content, "One click sets which modules are on. Change any of them below afterwards.")
-    y = y - 22
-    Button(content, "Minimal", 16, 90, function() if addon.ApplyPreset then addon.ApplyPreset("minimal") end end, false)
-    Button(content, "Leveler", 116, 90, function() if addon.ApplyPreset then addon.ApplyPreset("leveler") end end, false)
-    Button(content, "Duo", 216, 90, function() if addon.ApplyPreset then addon.ApplyPreset("duo") end end, false)
-    Button(content, "Everything", 316, 110, function() if addon.ApplyPreset then addon.ApplyPreset("full") end end, true)
-
     Header(content, "Modules")
-    Label(content, "Switch off the parts you do not want. A module that is off does nothing, and its commands say so.")
+    Label(content, "Switch off what you do not want. A module that is off does nothing, and its options are hidden.")
     y = y - 22
     for _, m in ipairs(addon.MODULES or {}) do
         Check(content, m[2], 16,
@@ -388,6 +449,7 @@ local function BuildControls(parent)
                 db.modules = db.modules or {}
                 db.modules[m[1]] = v and true or false
                 if addon.ModulesChanged then addon.ModulesChanged() end
+                Refresh()          -- the options of a module that is now off go away (or come back)
             end)
     end
 
@@ -402,7 +464,7 @@ local function BuildControls(parent)
     Label(content, "Also: /lazy now, the macro Lazy Now (/lazy macros), or a key under Key Bindings > Forever Lazy.")
     y = y - 26
     Header(content, "Journey")
-    Label(content, "Which zones to level in, in order, from your level to 60. It is kept for each character.")
+    Label(content, "The zones to level in, in order, from your level to 60. Saved for each character.")
     y = y - 22
     Button(content, "Generate my journey", 16, 170, function() if addon.JourneyGenerate then addon.JourneyGenerate() end end, false)
     Button(content, "Regenerate", 196, 110, function() if addon.JourneyRegenerate then addon.JourneyRegenerate() end end, false)
@@ -417,7 +479,7 @@ local function BuildControls(parent)
         function(v) DB().guideScale = v; if _G.ForeverLazy_Guide and _G.ForeverLazy_Guide:IsShown() then _G.ForeverLazy_Guide:SetScale(v) end end)
 
     Header(content, "Arrows")
-    Check(content, "Simple arrows: one main arrow (plus the ghost and follow arrows). Everything else shows on the compass.", 16,
+    Check(content, "Simple arrows: one main arrow, plus the ghost and follow arrows. The rest show on the compass.", 16,
         function() return DB().simpleArrows ~= false end, function(v) DB().simpleArrows = v; Changed() end)
     Radio(content, "Arrow style:", "style", {
         { "minimap", "Classic" }, { "chevron", "Chevron" }, { "thick", "Thick" } })
@@ -429,12 +491,12 @@ local function BuildControls(parent)
         function(v) DB().alpha = v; Changed() end)
     Slider(content, "Count as arrived within (yards)", 3, 40, 1, "%d", function() return DB().arrival end,
         function(v) DB().arrival = v end)
-    Check(content, "Lock positions (uncheck to drag arrows and panel)", 16,
+    Check(content, "Lock positions (untick to drag the arrows and panels)", 16,
         function() return DB().locked end, function(v) DB().locked = v end)
 
     ---------------------------------------------------------------- Display
     Header(content, "Text")
-    Check(content, "Show quest / player name under arrow", 16,
+    Check(content, "Show the name under the arrow", 16,
         function() return DB().showText end, function(v) DB().showText = v end)
     Check(content, "Show distance", 16, function() return DB().showDistance end, function(v) DB().showDistance = v end)
     Radio(content, "Distance units:", "units", { { "yd", "Yards" }, { "m", "Meters" }, { "steps", "Steps" } })
@@ -496,21 +558,21 @@ local function BuildControls(parent)
     Check(content, "Follow the quest I have selected or tracked (otherwise the nearest of all)", 16,
         function() return DB().ownFocus ~= false end, function(v) DB().ownFocus = v; Changed() end)
     ColorRow(content, "My quests arrow color", "colorMine")
-    Check(content, "Leave small quests out of the plan when the XP is not worth the time (walking included)", 16,
+    Check(content, "Leave small quests out of the plan when the XP is not worth the time", 16,
         function() return DB().planWorth ~= false end, function(v) DB().planWorth = v end)
-    Check(content, "Autopilot: visit the vendor or trainer between quests when due, and when a zone is done go to the next one and plan it", 16,
+    Check(content, "Autopilot: visit the vendor or trainer between quests, and move on to the next zone when this one is done", 16,
         function() return DB().autopilot == true end, function(v) DB().autopilot = v end)
-    Check(content, "For kills and items, point the arrow at the nearest spot where they are (and move on when I have cleared it)", 16,
+    Check(content, "For kills and items, point the arrow at the nearest spot and move on when it is cleared", 16,
         function() return DB().arrowSpots ~= false end, function(v) DB().arrowSpots = v end)
-    Check(content, "Closest first: the arrow goes to the nearest of my next stops in this zone, not strictly plan order", 16,
+    Check(content, "Closest first: the arrow goes to the nearest of my next stops, not strictly plan order", 16,
         function() return DB().arrowNearest ~= false end, function(v) DB().arrowNearest = OffFlag(v) end)
-    Check(content, "Count quests I have not taken yet that are right here (within about 600 yards)", 16,
+    Check(content, "Plan for quests I have not taken yet that are right here (about 600 yards)", 16,
         function() return DB().planNearby ~= false end, function(v) DB().planNearby = v end)
-    Check(content, "Show the step window by itself while a plan is running (what to do, step by step)", 16,
+    Check(content, "Show the step window while a plan is running", 16,
         function() return DB().stepsAuto ~= false end,
         function(v) DB().stepsAuto = v; if v then DB().stepsHidden = false end end)
     Button(content, "Plan this zone for the fastest levelling", 16, 270, function() addon.PlanZone() end, true)
-    Label(content, "Same as /lazy level, or /lazy level ashenvale for another zone: I take you there, then plan it. Includes every quest worth taking in the zone, not just the ones in your log.")
+    Label(content, "Same as /lazy level (or /lazy level ashenvale for another zone). Takes you there, then plans every quest worth taking in the zone, not just the ones in your log.")
     y = y - 26
     Button(content, "Plan my route (replaces waypoints)", 16, 240, function() addon:PlanRoute() end, true)
     Label(content, "Same as /lazy plan. Orders your quest spots into a walking route, one waypoint each.")
@@ -525,15 +587,15 @@ local function BuildControls(parent)
         refreshers[#refreshers + 1] = show
         show()
     end
-    Label(content, "Off stops all planning and replanning, and remembers the stops still to do. On puts them back. Same as /lazy plan off and /lazy plan on.")
+    Label(content, "Off stops all planning and keeps your remaining stops. On puts them back. Same as /lazy plan off and /lazy plan on.")
     y = y - 26
-    Check(content, "Plan for XP: do the quests that give the most XP for the walking first", 16,
+    Check(content, "Plan for XP: the quests with the most XP for the walking come first", 16,
         function() return DB().planXP ~= false end, function(v) DB().planXP = v end)
-    Check(content, "Keep the plan to the zone I'm in (/lazy plan all ignores this)", 16,
+    Check(content, "Keep the plan to the zone I am in (/lazy plan all ignores this)", 16,
         function() return DB().planZoneOnly ~= false end, function(v) DB().planZoneOnly = v end)
     Check(content, "Leave grey (too low level) quests out of the plan", 16,
         function() return DB().planSkipGrey ~= false end, function(v) DB().planSkipGrey = v end)
-    Check(content, "When I take a new quest, add it to the plan where it costs the least walking", 16,
+    Check(content, "Add a new quest to the plan where it costs the least walking", 16,
         function() return DB().planAuto ~= false end, function(v) DB().planAuto = v end)
 
     Header(content, "Hunter pet")
@@ -555,54 +617,54 @@ local function BuildControls(parent)
         function() return DB().petScream ~= false end, function(v) DB().petScream = v end)
     Button(content, "Test the pet reminder", 16, 170, function() addon:HandleExtraCommand("pet", "test") end, true)
 
-    Header(content, "Extras")
+    Header(content, "More features")
     Check(content, "Animate arrows (pulse when near, dim when facing away)", 16,
         function() return DB().animate end, function(v) DB().animate = v end)
-    Check(content, "Flight timer: show how long a flight takes (learns each route the first time)", 16,
+    Check(content, "Flight timer: how long a flight takes (learned the first time)", 16,
         function() return DB().flightTimer ~= false end, function(v) DB().flightTimer = v end)
     Check(content, "Suggest the next zone when I have outgrown the one I am in", 16,
         function() return DB().nextZoneHint ~= false end, function(v) DB().nextZoneHint = v end)
     Check(content, "Tell me when I reach a dungeon entrance my quests need", 16,
         function() return DB().dungeonHint ~= false end, function(v) DB().dungeonHint = v end)
-    Check(content, "Cozy Sleeping Bag chain: guide me, and make its next spot stop 1 in the zone it is in", 16,
+    Check(content, "Cozy Sleeping Bag chain: guide me, with its next spot as stop 1", 16,
         function() return DB().bagGuide ~= false end, function(v) DB().bagGuide = v end)
     Check(content, "Tell me when a new class quest opens up", 16,
         function() return DB().classAlert ~= false end, function(v) DB().classAlert = v end)
-    Check(content, "A pop-up when I walk into a zone that has something for a class quest (/lazy class here lists it any time)", 16,
+    Check(content, "Pop-up when I enter a zone with something for a class quest (/lazy class here)", 16,
         function() return DB().classZoneAlert ~= false end, function(v) DB().classZoneAlert = v end)
-    Check(content, "In a group, a pop-up when I walk into a dungeon my quests need something in (/lazy dungeons here shows it any time)", 16,
+    Check(content, "In a group, a pop-up when I enter a dungeon my quests need (/lazy dungeons here)", 16,
         function() return DB().dungeonQuestPopup ~= false end, function(v) DB().dungeonQuestPopup = v end)
     Check(content, "Put class quest givers in my plan when they are in this zone", 16,
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
-    Check(content, "When the next plan stop is a long way off and a flight is quicker, start the trip by itself (off by default)", 16,
+    Check(content, "Start a flight trip by itself when the next stop is far and flying is quicker", 16,
         function() return DB().autoTrip == true end, function(v) DB().autoTrip = v end)
     Check(content, "Finish the quests in an area before walking back to hand any in (unless it continues a chain)", 16,
         function() return DB().planBatch ~= false end, function(v) DB().planBatch = v end)
     Check(content, "Show my plan's numbered stops on the world map", 16,
         function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
-    Check(content, "... and draw lines between them (off by default)", 16,
+    Check(content, "... and draw lines between them", 16,
         function() return DB().mapRouteLines == true end, function(v) DB().mapRouteLines = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
-    Check(content, "Item tooltips say how many I have in my bags, bank, mail and worn", 16,
+    Check(content, "Item tooltips show how many I have in bags, bank, mail and worn", 16,
         function() return DB().itemTooltip ~= false end, function(v) DB().itemTooltip = v end)
     Check(content, "... and how many my other characters have", 16,
         function() return DB().itemTooltipAlts ~= false end, function(v) DB().itemTooltipAlts = v end)
-    Check(content, "Show XP hot spots on the world map (where the quests worth doing for my level are)", 16,
+    Check(content, "XP hot spots on the world map (where the best quests for my level are)", 16,
         function() return DB().xpHeat == true end, function(v) DB().xpHeat = v; if addon.DrawXPHeat then addon.DrawXPHeat() end end)
-    Check(content, "Draw my route on the minimap (numbered stops joined by lines, off by default)", 16,
+    Check(content, "Draw my route on the minimap (numbered stops joined by lines)", 16,
         function() return DB().minimapLine == true end, function(v) DB().minimapLine = v end)
     Check(content, "Offer to plan a new zone once I have stayed in it a while", 16,
         function() return DB().zonePrompt ~= false end, function(v) DB().zonePrompt = v end)
-    Check(content, "Share boat docks I teach with my guild and group (hidden addon messages, nothing shows in chat)", 16,
+    Check(content, "Share boat docks I learn with my guild and group (nothing shows in chat)", 16,
         function() return DB().community == true end, function(v) DB().community = v end)
-    Check(content, "Craft planner: a panel beside the profession window (off by default)", 16,
+    Check(content, "Craft planner: a panel beside the profession window", 16,
         function() return DB().craftPanel == true end, function(v) DB().craftPanel = v or nil; if addon.CraftPanelRefresh then addon.CraftPanelRefresh() end end)
     Check(content, "When I open a profession window, tell me the best next craft", 16,
         function() return DB().craftHint ~= false end, function(v) DB().craftHint = v end)
-    Check(content, "Show a button for quest items I need to use", 16,
+    Check(content, "Quest-giver panel: a button for quest items I need to use", 16,
         function() return DB().questItemButton ~= false end, function(v) DB().questItemButton = v; if addon.RefreshQuestItems then addon.RefreshQuestItems() end end)
     Check(content, "Tell me what comes next after I hand in a quest in a chain", 16,
         function() return DB().chainHint ~= false end, function(v) DB().chainHint = v end)
-    Check(content, "Mark the best quest reward (likely upgrade, or highest vendor price)", 16,
+    Check(content, "Mark the best quest reward (likely upgrade or best price)", 16,
         function() return DB().rewardPick ~= false end, function(v) DB().rewardPick = v end)
     Radio(content, "Pick rewards for my:", "rewardRole", {
         { "auto", "Class and talents (automatic)" }, { "str_melee", "Strength melee" }, { "agi_melee", "Agility melee" },
@@ -631,7 +693,7 @@ local function BuildControls(parent)
     y = y - 26
 
     Header(content, "The Hive")
-    Label(content, "The Hive learns from how you play, and shares with other players who have it on. Turn it on to use the features that need it.")
+    Label(content, "The Hive learns from how you play and shares with other players who have it on.")
     y = y - 26
     -- one on/off button that shows its state
     local function Toggle(x, w, name, get, set, advance)
@@ -646,7 +708,7 @@ local function BuildControls(parent)
         function(v) if addon.HiveLiveSet then addon.HiveLiveSet(v) else DB().hiveOn = v end end, true)
     Label(content, "ON: it learns your real XP per hour, the drops you loot and how long quests take, and exchanges those numbers, rare spawns and zone counts with other players who have it on, as hidden addon messages. It never sends your name, guild, items or chat, and never a track of where you are. The only places shared are rare sightings and coarse map squares where a quest objective was done or someone died (no name, no time). OFF: nothing is learned or shared.")
     y = y - 70
-    Check(content, "Use the places where quest objectives were really done (learned from play) instead of the original data", 16,
+    Check(content, "Use the places where quest objectives were really done instead of the original data", 16,
         function() return DB().hiveSpots ~= false end, function(v) DB().hiveSpots = v end)
     Check(content, "Item tooltips show the mobs seen dropping the item", 16,
         function() return DB().hiveTooltip ~= false end, function(v) DB().hiveTooltip = v end)
@@ -665,7 +727,7 @@ local function BuildControls(parent)
     y = y - 26
 
     Header(content, "Ore and herb nodes")
-    Label(content, "Every node you mine or pick is remembered and marked on the world map. Hover a pin to see what it is. The arrow can walk you from node to node to farm them (right-click the arrow, or /lazy nodes farm).")
+    Label(content, "Every node you mine or pick is marked on the world map. Hover a pin to see what it is. The arrow can lead you from node to node to farm them (right-click the arrow, or /lazy nodes farm).")
     y = y - 50
     Check(content, "Show my found nodes on the world map", 16,
         function() return DB().nodePins ~= false end, function(v) DB().nodePins = v; if addon.RefreshNodePins then addon.RefreshNodePins() end end)
@@ -676,7 +738,7 @@ local function BuildControls(parent)
     Button(content, "What do I have?", 216, 130, function() addon:HandleExtraCommand("nodes", "") end, true)
 
     Header(content, "Quest tracker")
-    Label(content, "Forever Lazy's own tracker: your quests in plan order with XP, live objectives and who to turn in to. Click a quest to open it in your quest log, ctrl-click to do it next, right-click for more. Questie's tracker is another addon: turn it off in Questie's options.")
+    Label(content, "Forever Lazy's own tracker: your quests in plan order with XP, live objectives and who to turn in to. Click a quest to open it in your quest log, shift-click to do it next, ctrl-click to share it, right-click for more. Questie has its own tracker: turn it off in Questie's options.")
     y = y - 50
     Check(content, "Use Forever Lazy's quest tracker", 16,
         function() return DB().trackerOn == true end, function(v) if addon.TrackerSet then addon.TrackerSet(v) else DB().trackerOn = v end end)
@@ -696,15 +758,15 @@ local function BuildControls(parent)
     Button(content, "Put the tracker back at the top right", 16, 250, function() addon:HandleExtraCommand("tracker", "reset") end, true)
 
     Header(content, "Talents and skills")
-    Check(content, "Remind me when I have a talent point to spend or new skills at my trainer (/lazy talents shows where my points are)", 16,
+    Check(content, "Remind me about unspent talent points and new skills at my trainer (/lazy talents)", 16,
         function() return DB().talentReminder ~= false end, function(v) DB().talentReminder = v end)
 
     Header(content, "Couch mode")
-    Label(content, "For playing on the TV with a controller: big text, quests accept and hand in by themselves, and the steps are read aloud. A quest with a choice of rewards is never picked for you: the best one for your class and spec is starred. Hold Shift to do it by hand.")
+    Label(content, "For playing on the TV with a controller: big text, quests accept and hand in by themselves, and steps are read aloud. A reward is never picked for you; the best one for your class is starred. Hold Shift to do it by hand.")
     y = y - 50
     Check(content, "Couch mode (big text, auto accept and hand in, steps read aloud)", 16,
         function() return DB().couch == true end, function(v) if addon.CouchSet then addon.CouchSet(v) end end)
-    Check(content, "Accept and hand in quests by myself (not dungeon, skipped or grey quests; never choosing a reward)", 16,
+    Check(content, "Accept and hand in quests by myself (not dungeon, skipped or grey ones, and never choosing a reward)", 16,
         function() return DB().couchAuto == true end, function(v) DB().couchAuto = v end)
     Check(content, "Read the steps aloud as they change", 16,
         function() return DB().couchSpeak == true end, function(v) DB().couchSpeak = v end)
@@ -713,7 +775,7 @@ local function BuildControls(parent)
         function() return DB().dungeonArrow ~= false end, function(v) DB().dungeonArrow = v end)
 
     Header(content, "Damage meter")
-    Label(content, "A damage meter in its own chat tab called Meter, so it stays out of the way. It reads the game's built-in meter (the same source Details uses on this client). In combat the game hides the numbers, so the tab keeps the last picture until the fight ends.")
+    Label(content, "A damage meter in its own chat tab called Meter, laid out like Details: class icon, rank, name, a class-coloured bar, and total, per second and percent. Hover a name for that player's moves. It reads the game's built-in meter (the same source Details uses on this client). In combat the game hides the numbers, so the window keeps the last picture until the fight ends.")
     y = y - 50
     local function MeterToggle()
         local b
@@ -816,6 +878,11 @@ local function BuildControls(parent)
         for _, w in ipairs(shared.top) do w:Show() end
         local pos = topY
         for _, s in ipairs(sections) do
+          if SectionHidden(s) then
+            -- its module is switched off: the whole group goes away until the module is switched on again
+            s.header:Hide()
+            for _, it in ipairs(s.items) do it.obj:Hide() end
+          else
             local open = IsOpen(s.title)
             pos = pos - 12
             s.header:Show()
@@ -833,9 +900,12 @@ local function BuildControls(parent)
                 end
             end
             pos = open and (body - (s.bodyY - s.bodyEnd)) or body
+          end
         end
         content:SetHeight(-pos + 10)
     end
+    -- switching a module on or off (or a preset) shows or hides its options at once
+    refreshers[#refreshers + 1] = function() if not shared.split and Layout then Layout() end end
 end
 
 -- one group at a time, each shown on its own page in the Settings list
@@ -843,7 +913,7 @@ local function LayoutSplit(sec)
     shared.split = true
     for _, w in ipairs(shared.top) do w:Hide() end
     for _, s in ipairs(sections) do
-        if s == sec then
+        if s == sec and not SectionModuleOff(s) then
             s.header:Show()
             s.header:ClearAllPoints()
             s.header:SetPoint("TOPLEFT", 16, -10)

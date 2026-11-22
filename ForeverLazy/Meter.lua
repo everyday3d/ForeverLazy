@@ -280,16 +280,37 @@ local function BuildLines()
     local maxRows = math.min(20, math.max(3, tonumber(db.meterRows) or 8))
     -- the tooltip rows belong to THIS list only (an old list's players must never show under a new list's names)
     for k in pairs(rowInfo) do rowInfo[k] = nil end
-    for i = 1, math.min(maxRows, #rows) do
+    -- the players to list: the top ones, and me at the bottom when I am further down (like Details)
+    local order = {}
+    for i = 1, math.min(maxRows, #rows) do order[i] = i end
+    if #rows > maxRows then
+        for i = maxRows + 1, #rows do
+            if rows[i].isLocalPlayer then order[maxRows] = i; break end
+        end
+    end
+    for slot, i in ipairs(order) do
         local src = rows[i]
         local amount = tonumber(src.totalAmount) or 0
         local r, g, b, hex = ClassColour(src.classFilename)
-        local width = (maxAmount and maxAmount > 0) and math.max(2, math.floor(110 * amount / maxAmount)) or 2
-        local bar = string.format("|TInterface\\Buttons\\WHITE8X8:9:%d:0:0:8:8:0:8:0:8:%d:%d:%d|t", width, r, g, b)
+        -- a Details-style bar: the class colour for the share of the top player, a dark track for the rest
+        local BARW = 90
+        local width = (maxAmount and maxAmount > 0) and math.max(2, math.floor(BARW * amount / maxAmount)) or 2
+        local bar = string.format("|TInterface\\Buttons\\WHITE8X8:10:%d:0:0:8:8:0:8:0:8:%d:%d:%d|t", width, r, g, b)
+        if width < BARW then
+            bar = bar .. string.format("|TInterface\\Buttons\\WHITE8X8:10:%d:0:0:8:8:0:8:0:8:50:50:55|t", BARW - width)
+        end
+        -- the class icon in front
+        local icon = ""
+        local tc = _G.CLASS_ICON_TCOORDS and src.classFilename and _G.CLASS_ICON_TCOORDS[src.classFilename]
+        if tc then
+            icon = string.format("|TInterface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES:14:14:0:0:256:256:%d:%d:%d:%d|t ",
+                math.floor(tc[1] * 256), math.floor(tc[2] * 256), math.floor(tc[3] * 256), math.floor(tc[4] * 256))
+        end
         local name = tostring(src.name or "?"):match("^([^%-]+)") or tostring(src.name or "?")
         local pct = (total > 0) and math.floor(amount / total * 100 + 0.5) or 0
         local per = tonumber(src.amountPerSecond)
-        local extra = (per and per > 0 and metric.enum ~= "Dps" and metric.enum ~= "Hps") and string.format(" |cff888888%s/s|r", Short(per)) or ""
+        local isRate = (metric.enum == "Dps" or metric.enum == "Hps")
+        local extra = ""        -- "total (per second, percent)" like Details; a rate metric has no separate per second
         -- the name is a link, so hovering it gives the tooltip (guid and creature id are only used when readable)
         local guid = (not IsSecret(src.sourceGUID)) and src.sourceGUID or nil
         local linkName = name
@@ -300,7 +321,10 @@ local function BuildLines()
                 mt = Enum.DamageMeterType[metric.enum] }
             linkName = string.format("|Hflmeter:%d|h%s|h", i, name)
         end
-        lines[#lines + 1] = string.format("%s%2d. %s |cff%s%s|r  %s%s |cff888888%d%%|r", src.isLocalPlayer and "|cffffd100>|r" or " ", i, bar, hex, linkName, Short(amount), extra, pct)
+        local detail
+        if per and per > 0 and not isRate then detail = string.format("%s, %d%%", Short(per), pct) else detail = string.format("%d%%", pct) end
+        local nameCol = src.isLocalPlayer and "ffffd100" or hex
+        lines[#lines + 1] = string.format("%s%s%d. |cff%s%s|r %s  %s |cff999999(%s)|r", icon, "", i, nameCol, linkName, bar, Short(amount), detail)
     end
     if #rows == 0 then lines[#lines + 1] = "|cff888888nothing recorded yet|r" end
     if hiddenCount > 0 then lines[#lines + 1] = string.format("|cff888888(%d hidden while you fight)|r", hiddenCount) end

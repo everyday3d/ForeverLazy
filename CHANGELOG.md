@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.19.0
+- **Arrow and plan.** A finished quest you can hand in close by goes first (the plan moves it to the front within about 600 yards, the arrow within about 450). Hand-ins back in town stay where they were. The arrow now clears the stop it points at when you arrive, even when it is not the first stop. A quest you skipped is never an arrow target, but if it is finished and its hand-in is close it still gets a hand-in stop. Picking a quest to do next moves the plan and the arrow to it, and brings back a skipped one.
+- **The arrow says why.** A grey line under it: a hand-in close by, a hand-in before it turns grey, the closest stop, the quest you picked, or next in your plan. Options has a checkbox.
+- **Quest tracker.** Click opens the quest in the quest log, shift-click does it next, ctrl-click shares it. The item buttons in the tracker, the quest bar and the quest-giver panel use a /use macro, so they work again.
+- **Options.** They open on a Start here page with the presets (Just point me, Leveler, Duo, Everything) and a group of extras to tick on or off. Only the basics show until you press Show all options. Switching a module off hides its options. Ticking an option says what happened in chat. The tour describes all of it. The long option texts were rewritten in plainer words.
+- **Quest item bar** is off by default.
+- **Damage meter** tab laid out like Details: class icon, rank, name, a class-coloured bar, and total, per second and percent. Your own row stays on screen.
+- **Fresh quest data** from Questie 12.12.0 (QuestieDB 1.1.4): about 100 new quests, 173 objects, 113 items, and many fixes to levels, zones, drops and names. The data files are rebuilt without the game now; see tools/README.md.
 ## 0.17.7
 - **Yellow party tag.** The [Forever Lazy] tag in party announcements shows in yellow for everyone running the addon.
 

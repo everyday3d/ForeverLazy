@@ -19,19 +19,23 @@ end
 -- The tour
 --------------------------------------------------------------------------------
 local STEPS = {
-    { text = "|cffffd100Welcome to Forever Lazy.|r This is a quick tour (8 short steps). It shows where the buttons are, so you never need to type a command. Press Next.",
+    { text = "|cffffd100Welcome to Forever Lazy.|r This is a quick tour (10 short steps). It shows where the buttons are, so you never need to type a command. Press Next.",
       target = nil },
     { text = "|cffffd100The minimap button.|r Left-click: do the next best thing (Lazy Mode). Right-click: the menu with everything. Shift-click: the options.",
       target = function() return _G.ForeverLazy_MinimapButton end },
     { text = "|cffffd100The menu.|r This is what the right-click opens: go somewhere, plan your route, boats, journey, crafting, group, settings. Pick anything to try it.",
       target = nil, onShow = function() if addon.OpenMenu then addon:OpenMenu() end end, onHide = function() if _G.ForeverLazy_Menu then _G.ForeverLazy_Menu:Hide() end end },
+    { text = "|cffffd100The arrow.|r It points at your next stop. It goes to a finished quest you can hand in close by first, then to the closest stop, and it only points at stops in the zone you are in. Right-click it to skip a quest, put one off, or see why it chose this stop.",
+      target = function() local a = _G.ForeverLazy_WaypointArrow; return a and a:IsShown() and a or nil end },
     { text = "|cffffd100The world map.|r Press M. In the top right there is a search box (\"Go to...\") and a Lazy button. Type a place, a city, a dungeon or a flight point, and press Enter: the arrow plans the whole trip. Your route shows on the map with numbered stops.",
       target = function() local w = _G.WorldMapFrame; return w and w:IsShown() and w or nil end },
-    { text = "|cffffd100The quest log.|r Press L. Under it: Plan my route, Do this next, Skip this. Right-clicking the main arrow does the same.",
+    { text = "|cffffd100The quest log.|r Press L. Under it: Plan my route, Do this next, Skip this. Right-clicking the main arrow does the same. A skipped quest still gets its hand-in when it is close.",
       target = function() local q = _G.QuestLogFrame; return q and q:IsShown() and q or nil end },
-    { text = "|cffffd100Professions.|r Open a profession window once. Beside it, a craft plan appears: what to craft, the materials counting your bags and bank, and where to get what is missing.",
-      target = function() local p = _G.ForeverLazy_CraftPanel; return p and p:IsShown() and p or nil end },
-    { text = "|cffffd100The options.|r /lazy opens them. At the top: Presets (Minimal, Leveler, Duo, Everything) and a switch for every module, so you only keep what you want.",
+    { text = "|cffffd100The hunt panel.|r When your quests need certain mobs, a small panel lists them. Click one to target it and put a skull on it. Close it with the X; the options bring it back.",
+      target = function() local p = _G.ForeverLazy_HuntPanel; return p and p:IsShown() and p or nil end },
+    { text = "|cffffd100Extras that are off until you want them.|r The craft planner (a plan beside your profession window), our own bag window and the quest item bar are all in the options. Tick the ones you like.",
+      target = nil },
+    { text = "|cffffd100The options.|r /lazy opens them. At the top: Start here (Just point me, Leveler, Duo, Everything) and the extras you can tick on or off. It shows only the basics; press Show all options for the rest. Switching a module off hides its options.",
       target = nil, onShow = function() if addon.OpenOptions then addon:OpenOptions() end end },
     { text = "|cffffd100That is it.|r Lazy Mode (/lazy now, or left-click the minimap button) is the one to remember. /lazy tour shows this again, and /lazy check says if everything is working.",
       target = nil },
@@ -273,6 +277,14 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.19.0", {
+        "ARROW AND PLAN: a finished quest you can hand in CLOSE BY now goes first (not the ones back in town), the arrow clears the stop it points at when you arrive, and the arrow says why it points where it does. A quest you skipped still gets its hand-in when it is close.",
+        "THE TRACKER: click a quest to open it in the quest log, shift-click to move the plan and arrow to it, ctrl-click to share it. Quest item buttons work again.",
+        "THE OPTIONS open on a Start here page (Just point me, Leveler, Duo, Everything), with the extras you can tick on or off, and show only the basics until you press Show all options. A module that is off hides its options.",
+        "The DAMAGE METER tab looks more like Details: class icon, rank, name, a bar, total, per second and percent.",
+        "The quest item bar is off by default, and the whole options text got a plain-words pass.",
+        "FRESH QUEST DATA from Questie 12.12.0 (QuestieDB 1.1.4): about 100 new quests, many fixes to levels, zones, drops and names. Rebuilt without needing the game.",
+    } },
     { "0.17.7", {
         "Party announcements show [Forever Lazy] in YELLOW for everyone running the addon.",
     } },

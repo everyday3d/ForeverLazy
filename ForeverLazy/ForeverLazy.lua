@@ -935,6 +935,10 @@ local function UpdateWaypointArrow(show)
     if wp.area and db.showAreas ~= false then
         detail = "|cffffd100" .. wp.area .. "|r" .. (detail and (" - " .. detail) or "")
     end
+    -- a few grey words on why the arrow points here
+    if db.arrowWhy ~= false and addon.arrowWhy and at then
+        detail = (detail and (detail .. " ") or "") .. "|cff999999(" .. addon.arrowWhy .. ")|r"
+    end
     local dist = PointAt(f, wp.instance, wp.x, wp.y, wp.name, detail and ("|cffffffff" .. detail .. "|r\n") or nil)
     if dist and dist < db.arrival and wpArrived ~= wp then
         wpArrived = wp
@@ -944,9 +948,15 @@ local function UpdateWaypointArrow(show)
         if addon.PlanLog and wp.quests then addon.PlanLog("arrival", (open and "arrived but kept the stop (its quest step is not done): " or "arrived, stop is done: ") .. tostring(wp.name or wp.label)) end
         if db.waypointAutoClear and not open then
             C_Timer.After(1.5, function()
-                if db.waypoints[1] == wp and not (addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(wp)) then
-                    addon:RemoveWaypoint(1)
-                    Print("arrived at " .. wp.name)
+                -- the arrow may point at a later stop (closest first) or at a spot inside a stop: find the stop itself
+                local idx
+                for i, s in ipairs(db.waypoints) do
+                    if s == wp or (wp.quests and s.quests == wp.quests) then idx = i; break end
+                end
+                if idx and not (addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(db.waypoints[idx])) then
+                    local nm = db.waypoints[idx].name or wp.name
+                    addon:RemoveWaypoint(idx)
+                    Print("arrived at " .. tostring(nm))
                 end
             end)
         end
