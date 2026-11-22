@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.2
+- **Fix: plan-sharing spam.** The group plan is only sent again when it (or the group) changes, and a plan you already have is not announced again.
+- **Cleaner release.** The zip holds only the ForeverLazy folder, with proper paths. Download ForeverLazy-0.17.2.zip from the release, not GitHub's Source code link.
+
 ## 0.17.1
 - **The bank is a second window.** At the bank your bags and the bank open side by side (bank on the left), so you can move items across. Closing the bank window leaves the bank.
 - **Travel section.** The Hearthstone has its own Travel section (and tab) at the top of the bag.

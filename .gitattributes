@@ -1,2 +1,7 @@
 * text=auto eol=lf
 *.tga binary
+docs/ export-ignore
+tests/ export-ignore
+CHANGELOG.md export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore

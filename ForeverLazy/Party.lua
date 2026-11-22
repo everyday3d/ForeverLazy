@@ -147,6 +147,12 @@ local function SharePlan(silent)
         end
     end
     if #stops == 0 then Print("you have no plan to share. /lazy plan builds one"); return end
+    -- the same plan to the same group is not sent again (the leader's plan is re-checked often; that was spamming everybody)
+    local parts = { tostring(GetNumGroupMembers and GetNumGroupMembers() or 0) }
+    for _, s in ipairs(stops) do parts[#parts + 1] = string.format("%s|%s|%.4f|%.4f", s.label, tostring(s.map), s.zx, s.zy) end
+    local sig = table.concat(parts, ";")
+    if silent and sig == addon.lastPlanSent then return end
+    addon.lastPlanSent = sig
     addon:SendCommMessage(PLAN_PREFIX, addon:Serialize({ stops = stops, lead = addon.DuoRole() == "lead" }), ch)
     if not silent then Print(string.format("sent your plan (%d stops) to the group. Players with the addon can follow it with /lazy acceptplan", #stops)) end
 end
@@ -167,6 +173,13 @@ function addon:OnPartyPlan(prefix, message, distribution, sender)
         end
     end
     if #clean == 0 then return end
+    -- the same plan again: nothing to say
+    local parts = {}
+    for _, s in ipairs(clean) do parts[#parts + 1] = string.format("%s|%s|%.4f|%.4f", s.label, tostring(s.map), s.zx, s.zy) end
+    local sig = table.concat(parts, ";")
+    addon.planSigSeen = addon.planSigSeen or {}
+    if addon.planSigSeen[who] == sig then return end
+    addon.planSigSeen[who] = sig
     received[who] = clean
     if t.lead and addon.DuoRole() == "follow" and IsLeaderName(who) then
         addon.duoPlanAt = GetTime()

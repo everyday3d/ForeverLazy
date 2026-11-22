@@ -273,6 +273,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.17.2", {
+        "PLAN SPAM FIXED! A group plan is only sent, and only announced, when it actually changes. No more same message over and over!",
+        "The release zip is cleaner (just the ForeverLazy folder). Download ForeverLazy-0.17.2.zip, not GitHub's Source code.",
+    } },
     { "0.17.1", {
         "THE BANK IS A SECOND WINDOW!! Open the bank and your bags sit on the right, the bank on the left. Move stuff across. OHHHH!",
         "Your HEARTHSTONE has its own TRAVEL section at the very top of the bag.",
