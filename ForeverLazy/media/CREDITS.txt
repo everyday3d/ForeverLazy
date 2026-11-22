@@ -9,3 +9,10 @@ This file is distributed under the same licence (CC BY-SA 2.0). The rest of the 
 media\icon.tga (the minimap button) is a cropped version of the same photo, under the same licence (CC BY-SA 2.0).
 
 docs/sam-kinison.png (in the repository, used on the README page) is the same photo, cropped and enlarged, under the same licence (CC BY-SA 2.0).
+
+Questie and the libraries
+-------------------------
+Quest, NPC, object, item and drop data, and the group message format, come from Questie (GPL-3.0): https://github.com/Questie/Questie
+Forever Lazy is built on HereBeDragons, AceComm, AceSerializer, CallbackHandler, LibDeflate and LibStub, which keep their own licences (see their folders under libs).
+Flight path information comes from the wowforever.be flight path guide: https://wowforever.be/guides/flight-paths/
+Forever Lazy is not affiliated with Blizzard Entertainment or the Questie team.

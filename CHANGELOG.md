@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.5
+- **Free slots on top.** In the sectioned bag window the Free row comes first.
+- **Fix: pet test.** /lazy pet test left the pet reminder on for good when you were not a hunter. It switches off when the test ends.
+- **Credits.** Questie and the libraries are credited in media/CREDITS.txt and the description.
+
 ## 0.17.4
 - **Fix: options that could only be switched off.** Eleven checkboxes (quest sounds, quest announce, the three quest map switches, quest link tooltips, hand-in ping, quest item reminder, nameplate quest icons, interrupt marker, newest spell rank) stored the wrong value when ticked, so once off they stayed off. The bag settings for auto sort, quest border and item level had the same fault. All work both ways now.
 - **Spell rank swap says why.** The Fix my bars now button and the new /lazy rankup report why nothing changed (switched off, in combat, carrying something, nothing to change). /lazy rankup debug opens a popup with what the action bars and the spellbook look like.

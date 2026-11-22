@@ -13,6 +13,7 @@ local frame
 local testUntil = 0
 local lastNag = 0
 local lastState
+local fakeHunter = false
 
 local function MakeFrame()
     local f = CreateFrame("Frame", "ForeverLazy_PetAlert", UIParent)
@@ -110,6 +111,11 @@ addon.PetScream = Scream
 local function Update()
     local db = DB()
     if not db or not isHunter then return end
+    if fakeHunter and GetTime() >= testUntil then       -- the test is over: go back to not being a hunter
+        fakeHunter = false; isHunter = false
+        if frame then frame:Hide() end
+        return
+    end
     if not addon.ModuleOn("pet") then if frame then frame:Hide() end; return end
     if not frame then frame = MakeFrame(); Place() end
 
@@ -321,7 +327,7 @@ function addon:HandleExtraCommand(cmd, rest)
             UpgradeCheck(true)
         elseif rest == "test" then
             testUntil = GetTime() + 6
-            if not isHunter then Print("you are not a hunter - the reminder only runs for hunters, test shown anyway"); isHunter = true end
+            if not isHunter then Print("you are not a hunter - the reminder only runs for hunters, test shown anyway"); isHunter = true; fakeHunter = true end
             Update()
         else
             if not isHunter then Print("you are not a hunter, so there is no pet to watch"); return true end

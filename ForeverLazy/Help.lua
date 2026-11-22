@@ -273,6 +273,11 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.17.5", {
+        "FREE SLOTS ON TOP! The bag window shows your empty slots first, so you can drop things in right away.",
+        "/lazy pet test no longer leaves the pet reminder stuck on when you are not a hunter.",
+        "CREDITS: thanks to Questie, whose quest data this addon builds on. See media/CREDITS.txt.",
+    } },
     { "0.17.4", {
         "OPTIONS FIXED! Eleven checkboxes (quest sounds, the quest map switches, nameplate icons, the interrupt marker, the spell rank swap and more) could only turn OFF, never back ON. Now they work both ways. OHHHH!",
         "The bag settings for auto sort, quest border and item level had the same bug. Fixed too.",
@@ -466,7 +471,7 @@ local function ShowNew(current, newer, who)
         f.title:SetWidth(320); f.title:SetJustifyH("LEFT")
         f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         f.sub:SetPoint("TOPLEFT", f.title, "BOTTOMLEFT", 0, -4); f.sub:SetWidth(320); f.sub:SetJustifyH("LEFT")
-        -- Sam, top right (photo: media\CREDITS.txt, CC BY-SA 2.0)
+        -- Sam, top right (photo: media/CREDITS.txt, CC BY-SA 2.0)
         local face = f:CreateTexture(nil, "ARTWORK")
         face:SetSize(56, 56)
         face:SetPoint("TOPRIGHT", -14, -12)

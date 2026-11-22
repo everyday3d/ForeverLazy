@@ -660,6 +660,8 @@ LayoutCategories = function(entries, cols)
         for n = count + 1, #list do list[n].b:Hide() end
         y = y + math.ceil(count / cols) * (SZ + GAP) + 6
     end
+    -- empty slots first: one row is enough to drop things into
+    Section("Free (" .. #free .. ")", free, cols)
     for _, s in ipairs(SECTIONS) do
         local g = groups[s.key]
         if g then
@@ -673,8 +675,6 @@ LayoutCategories = function(entries, cols)
             Section(s.text .. " (" .. #g .. ")", g)
         end
     end
-    -- empty slots: one row is enough to drop things into
-    Section("Free (" .. #free .. ")", free, cols)
     HideHeaders(hdr)
     return y
 end
