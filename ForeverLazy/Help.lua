@@ -273,6 +273,13 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.17.3", {
+        "BAG BUG FIXED! An error popped up after every bag change since 0.17.1 (the auto sort). GONE!",
+        "PLAN SPAM FIXED! A group plan is only sent, and only announced, when it actually changes.",
+        "The ARROW stays in the zone you are in. It no longer picks a kill spot over the border.",
+        "FEWER ! on nameplates: only mobs that really drop a quest starter, and not when you already carry the item or did the quest.",
+        "A TOUGHER DAMAGE METER: one hidden player no longer blanks the list, the Meter tab comes back if you close it, hover tooltips never go stale, and a new dungeon starts a fresh meter (/lazy meter autoreset off to keep old numbers).",
+    } },
     { "0.17.2", {
         "PLAN SPAM FIXED! A group plan is only sent, and only announced, when it actually changes. No more same message over and over!",
         "The release zip is cleaner (just the ForeverLazy folder). Download ForeverLazy-0.17.2.zip, not GitHub's Source code.",

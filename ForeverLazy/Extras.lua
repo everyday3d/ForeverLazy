@@ -454,10 +454,16 @@ local function WorldSpots(ids, pinst)
     local want = {}
     for _, id in ipairs(ids) do want[id] = true end
     local cands, grid = {}, {}
+    -- stay in the zone I am in: a spot in another zone only counts when it is right next to me (the arrow must not hop around the world)
+    local db = DB()
+    local zone = db and db.arrowSameZone ~= false and hbd and hbd:GetPlayerZone() or nil
+    local px, py = hbd and hbd:GetPlayerWorldPosition()
     for _, g in ipairs(addon.QuestLogSpawns()) do
         if g.id and want[g.id] and not g.complete then
             for _, s in ipairs(g.spawns) do
-                if s.instance == pinst and s.x then
+                local near = (not zone) or s.uiMapId == nil or s.uiMapId == zone
+                    or (px and s.x and math.sqrt((s.x - px) ^ 2 + (s.y - py) ^ 2) < 400)
+                if s.instance == pinst and s.x and near then
                     local key = math.floor(s.x / 25) .. ":" .. math.floor(s.y / 25)
                     if not grid[key] then
                         grid[key] = true
@@ -484,6 +490,12 @@ local function PickSpot(key, ids, label, quests, getCands)
         state.candsAt = now
         if state.sigIds ~= sigIds then state.cur = nil; state.visited = {}; state.sig = nil end
         state.sigIds = sigIds
+        -- the spot I was heading for is no longer a candidate (I left its zone): choose again from the ones left
+        if state.cur then
+            local still = false
+            for _, c in ipairs(state.cands) do if c.key == state.cur.key then still = true; break end end
+            if not still then state.cur = nil end
+        end
     end
     local cands = state.cands
     if #cands == 0 then return nil end

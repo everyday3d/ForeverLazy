@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.3
+- **Fix: bag error.** Since 0.17.1 the bag auto sort hit a Lua error after every bag change. Fixed.
+- **Arrow stays in your zone.** The kill or collect spot the arrow picks is in the zone you are in (or right next to you). Cross a zone border and it chooses again.
+- **Nameplate ! checks.** Only mobs that really drop a quest starter get it: not when you already carry the item, did or have the quest, or when the item is a random drop from many mobs.
+- **Damage meter.** One hidden player no longer blanks the whole list. The Meter chat tab is found or made again if it is closed. Hover tooltips never show an old list, and a stuck hover lets go. Zoning clears a stale picture, and a new dungeon or raid starts a fresh meter (/lazy meter autoreset off keeps the old numbers).
+- **Plan sharing** is only sent and announced when the plan changes (from 0.17.2).
+- The .toc now has Author, License (GPL-3.0-or-later) and Website lines.
+
 ## 0.17.2
 - **Fix: plan-sharing spam.** The group plan is only sent again when it (or the group) changes, and a plan you already have is not announced again.
 - **Cleaner release.** The zip holds only the ForeverLazy folder, with proper paths. Download ForeverLazy-0.17.2.zip from the release, not GitHub's Source code link.

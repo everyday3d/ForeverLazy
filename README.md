@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.17.2-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.17.3-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -19,6 +19,13 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 <p align="center"><i>Brought to you by Sam Skinison and Tank Hanks.</i></p>
 
 ---
+
+## What's new in 0.17.3: BUGS GET SQUASHED!! OHHHH!
+
+- **BAG ERROR GONE!!** The auto sort no longer errors after every bag change.
+- **THE ARROW STAYS IN YOUR ZONE!** No more hopping over the border for a kill spot.
+- **FEWER ! ON NAMEPLATES!** Only mobs that really drop a quest starter, and not when you already have it or did the quest.
+- **A TOUGHER DAMAGE METER!!** Hidden players, closed tabs, stale tooltips and new dungeons all handled.
 
 ## What's new in 0.17.1: THE BANK GETS ITS OWN WINDOW!! OHHHH!
 

@@ -15,6 +15,7 @@ local Print = addon.Print
 local function DB() return addon.GetDB() end
 
 local atBank = false                 -- shared by both windows
+local function ByCat() local db = addon.GetDB(); return not (db and db.bagsByCategory == false) end
 local NUMBAGS = NUM_BAG_SLOTS or 4
 
 -- Everything below (up to the end of "Open, close") is ONE bag window. At the bank there are two of them side by side:
@@ -24,7 +25,6 @@ local GN = (id == 1) and "" or tostring(id)          -- keeps the global frame n
 local SZ, GAP = 37, 3
 local catFilter = nil       -- nil = everything, otherwise a key of CATS
 local CategoryOf             -- defined further down
-local function ByCat() local db = addon.GetDB(); return not (db and db.bagsByCategory == false) end
 -- the categories: each one is a tab and a section, and only exists while you carry something of that kind
 local CATS = {
     { key = "all",     text = "All" },

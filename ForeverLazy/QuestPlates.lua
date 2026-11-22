@@ -135,11 +135,22 @@ do
             for item, quests in pairs(itemQuest) do
                 local d = data.Field("items", item, "npcDrops")
                 if type(d) == "table" then
-                    for _, n in pairs(d) do
-                        if type(n) == "number" then
-                            local l = starters[n]
-                            if not l then l = {}; starters[n] = l end
-                            for _, q in ipairs(quests) do l[#l + 1] = q end
+                    -- an item that drops from a crowd of mobs is a random world drop, not "this mob has it": no marks for those
+                    local count = 0
+                    for _, n in pairs(d) do if type(n) == "number" then count = count + 1 end end
+                    if count > 0 and count <= 25 then
+                        -- the item must point back at the quest too (when its own record names one)
+                        local ownQuest = data.Field("items", item, "startQuest")
+                        local useful = {}
+                        for _, q in ipairs(quests) do
+                            if type(ownQuest) ~= "number" or ownQuest == 0 or ownQuest == q then useful[#useful + 1] = q end
+                        end
+                        for _, n in pairs(d) do
+                            if type(n) == "number" then
+                                local l = starters[n]
+                                if not l then l = {}; starters[n] = l end
+                                for _, q in ipairs(useful) do l[#l + 1] = { q = q, item = item } end
+                            end
                         end
                     end
                 end
@@ -154,9 +165,13 @@ end
 local function StartsQuest(npcId)
     local list = starters[npcId]
     if not list then return false end
-    for _, q in ipairs(list) do
-        if not (addon.QuestCompleted and addon.QuestCompleted(q)) and not (addon.QuestInLog and addon.QuestInLog(q))
-           and not (data.WhyNot and data.WhyNot(q)) then
+    for _, e in ipairs(list) do
+        local q = e.q
+        -- not if I already carry the item (the quest can be started from the bag), have the quest, or did it
+        local have = GetItemCount and (GetItemCount(e.item) or 0) > 0
+        if not have and not (addon.QuestCompleted and addon.QuestCompleted(q)) and not (addon.QuestInLog and addon.QuestInLog(q))
+           and not (C_QuestLog and C_QuestLog.IsQuestFlaggedCompleted and C_QuestLog.IsQuestFlaggedCompleted(q))
+           and not ((data.WhyNotNow or data.WhyNot) and (data.WhyNotNow or data.WhyNot)(q)) then
             return true
         end
     end
