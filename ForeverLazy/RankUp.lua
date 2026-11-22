@@ -66,12 +66,19 @@ end
 
 local pending, running = false, false
 
-local function Run()
+local function Run(verbose)
+    verbose = verbose == true                      -- only the button and the command say anything when nothing changes
     pending = false
-    if running or not Enabled() then return end
-    if InCombatLockdown() then pending = true; return end
-    if GetCursorInfo and GetCursorInfo() then pending = true; return end     -- carrying something: try again later
-    if not (GetActionInfo and PickupSpell and PlaceAction) then return end
+    if running or not Enabled() then
+        if verbose then Print("action bars: " .. (running and "already busy" or "switched off in the options")) end
+        return
+    end
+    if InCombatLockdown() then pending = true; if verbose then Print("action bars: in combat, I will do it when the fight ends") end; return end
+    if GetCursorInfo and GetCursorInfo() then pending = true; if verbose then Print("action bars: you are carrying something, put it down first") end; return end
+    if not (GetActionInfo and PickupSpell and PlaceAction) then
+        if verbose then Print("action bars: this client is missing GetActionInfo, PickupSpell or PlaceAction") end
+        return
+    end
     running = true
     local best = KnownBest()
     local swapped = 0
@@ -93,9 +100,49 @@ local function Run()
         end
     end
     running = false
-    if swapped > 0 then Print("action bars: put the newest rank of " .. swapped .. " spell" .. (swapped == 1 and "" or "s") .. " in place of the old one" .. (swapped == 1 and "" or "s") .. ".") end
+    if swapped > 0 then Print("action bars: put the newest rank of " .. swapped .. " spell" .. (swapped == 1 and "" or "s") .. " in place of the old one" .. (swapped == 1 and "" or "s") .. ".")
+    elseif verbose then Print("action bars: nothing to change (every spell on them is already its newest rank). /lazy rankup debug shows what I see.") end
 end
-addon.RankUpRun = Run
+addon.RankUpRun = function() Run(true) end
+
+-- /lazy rankup debug: what the bars and the spellbook look like to this addon (a popup you can copy)
+local function Debug()
+    local L = {}
+    L[#L + 1] = string.format("api: GetNumSpellTabs=%s GetSpellBookItemName=%s GetSpellBookItemInfo=%s C_SpellBook=%s", tostring(GetNumSpellTabs ~= nil),
+        tostring(GetSpellBookItemName ~= nil), tostring(GetSpellBookItemInfo ~= nil), tostring(C_SpellBook ~= nil))
+    L[#L + 1] = string.format("api: GetActionInfo=%s PickupSpell=%s PlaceAction=%s C_Spell.GetSpellSubtext=%s GetSpellSubtext=%s", tostring(GetActionInfo ~= nil),
+        tostring(PickupSpell ~= nil), tostring(PlaceAction ~= nil), tostring(C_Spell and C_Spell.GetSpellSubtext ~= nil), tostring(GetSpellSubtext ~= nil))
+    L[#L + 1] = "enabled: " .. tostring(Enabled()) .. "  combat: " .. tostring(InCombatLockdown()) .. "  cursor: " .. tostring(GetCursorInfo and GetCursorInfo() or nil)
+    local best = KnownBest()
+    local n = 0
+    for _ in pairs(best) do n = n + 1 end
+    L[#L + 1] = "spellbook: " .. n .. " different spells read"
+    local shown = 0
+    for slot = 1, 180 do
+        local kind, id = GetActionInfo and GetActionInfo(slot)
+        if kind == "spell" and id then
+            local name = SpellName(id)
+            local b = name and best[name]
+            shown = shown + 1
+            if shown <= 40 then
+                L[#L + 1] = string.format("slot %d: %s id %s rank %s | book: %s", slot, tostring(name), tostring(id), tostring(SpellRank(id)),
+                    b and ("id " .. tostring(b.id) .. " rank " .. tostring(b.rank) .. (b.id ~= id and b.rank > SpellRank(id) and "  -> WOULD SWAP" or "")) or "not found in the spellbook")
+            end
+        end
+    end
+    L[#L + 1] = "spells on the bars: " .. shown
+    if addon.ShowTextPopup then addon.ShowTextPopup("Spell rank debug", table.concat(L, "\n")) else Print(table.concat(L, "\n")) end
+end
+
+local prevCmd = addon.HandleExtraCommand
+function addon:HandleExtraCommand(cmd, rest)
+    if (cmd or ""):lower() == "rankup" then
+        local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
+        if a == "debug" then Debug() else Run(true) end
+        return true
+    end
+    if prevCmd then return prevCmd(self, cmd, rest) end
+end
 
 local function Soon()
     if not Enabled() then return end

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.4
+- **Fix: options that could only be switched off.** Eleven checkboxes (quest sounds, quest announce, the three quest map switches, quest link tooltips, hand-in ping, quest item reminder, nameplate quest icons, interrupt marker, newest spell rank) stored the wrong value when ticked, so once off they stayed off. The bag settings for auto sort, quest border and item level had the same fault. All work both ways now.
+- **Spell rank swap says why.** The Fix my bars now button and the new /lazy rankup report why nothing changed (switched off, in combat, carrying something, nothing to change). /lazy rankup debug opens a popup with what the action bars and the spellbook look like.
+
 ## 0.17.3
 - **Fix: bag error.** Since 0.17.1 the bag auto sort hit a Lua error after every bag change. Fixed.
 - **Arrow stays in your zone.** The kill or collect spot the arrow picks is in the zone you are in (or right next to you). Cross a zone border and it chooses again.

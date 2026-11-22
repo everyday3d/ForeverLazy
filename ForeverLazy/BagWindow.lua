@@ -226,11 +226,11 @@ local function BuildNow()
         b.update()
     end
     Row(1, function() return "Auto sort: " .. ((DB().bagsAutoSort ~= false) and "on" or "off") end,
-        function() DB().bagsAutoSort = (DB().bagsAutoSort == false) and nil or false end)
+        function() if DB().bagsAutoSort == false then DB().bagsAutoSort = nil else DB().bagsAutoSort = false end end)
     Row(2, function() return "Border colours: " .. BORDER_NAMES[BorderMin()] end,
         function() local v = BorderMin() + 1; if v > 3 then v = -1 end; DB().bagsBorderMin = v end)
     Row(3, function() return "Quest item border: " .. ((DB().bagsQuestBorder ~= false) and "gold" or "off") end,
-        function() DB().bagsQuestBorder = (DB().bagsQuestBorder == false) and nil or false end)
+        function() if DB().bagsQuestBorder == false then DB().bagsQuestBorder = nil else DB().bagsQuestBorder = false end end)
     Row(4, function()
         local v = DB().bagsReplace
         return "Replace game bags: " .. (v == true and "always" or v == false and "never" or "auto")
@@ -243,7 +243,7 @@ local function BuildNow()
     Row(6, function() return "Background: " .. math.floor(((DB().bagsAlpha or 0.92) * 100) + 0.5) .. "%" end,
         function() local v = (DB().bagsAlpha or 0.92); v = (v >= 0.99) and 0.4 or (v < 0.6 and 0.7 or (v < 0.9 and 0.92 or 1)); DB().bagsAlpha = v; frame:SetBackdropColor(0.04, 0.04, 0.06, v) end)
     Row(7, function() return "Item level on gear: " .. ((DB().bagsItemLevel ~= false) and "on" or "off") end,
-        function() DB().bagsItemLevel = (DB().bagsItemLevel == false) and nil or false end)
+        function() if DB().bagsItemLevel == false then DB().bagsItemLevel = nil else DB().bagsItemLevel = false end end)
     Row(8, function() return "Layout: " .. (ByCat() and "by category" or "bag order") end,
         function() DB().bagsByCategory = ByCat() and false or nil end)
     panel:SetSize(210, 8 + 8 * 26 + 26)

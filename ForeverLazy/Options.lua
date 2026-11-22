@@ -8,6 +8,8 @@ local built = false
 local refreshers = {}
 
 local function DB() return addon.GetDB() end
+-- a switch that is ON by default is stored as nil (on) or false (off). NOTE: 'v and nil or false' is always false, so it can never turn a switch back on.
+local function OffFlag(v) if v then return nil end return false end
 local function Changed() addon:ApplyAll() end
 
 local function Refresh() for _, r in ipairs(refreshers) do r() end end
@@ -236,9 +238,9 @@ local function BuildControls(parent)
     Label(content, "All from the game, nothing to install. When a quest is ready to hand in you hear the voice (Alliance Peasant 'Job's done!', Horde Peon 'Work complete!'). When you have all the items or kills a quest step needs you hear a different sound, an effect.")
     y = y - 22
     Check(content, "Play sounds when a quest step is done and when a quest is ready to hand in", 16,
-        function() return DB().questSound ~= false end, function(v) DB().questSound = v and nil or false end)
+        function() return DB().questSound ~= false end, function(v) DB().questSound = OffFlag(v) end)
     Check(content, "Tell my party in party chat when I complete a quest (not for every step)", 16,
-        function() return DB().questAnnounce ~= false end, function(v) DB().questAnnounce = v and nil or false end)
+        function() return DB().questAnnounce ~= false end, function(v) DB().questAnnounce = OffFlag(v) end)
     Label(content, "|cffffd100A quest step is done|r (all its items or kills): a sound effect")
     y = y - 22
     Button(content, "Hear it", 16, 90, function() if addon.QuestSoundTryStep then addon.QuestSoundTryStep() end end, false)
@@ -253,13 +255,13 @@ local function BuildControls(parent)
     y = y - 22
     Check(content, "Show quest objectives on the map and minimap", 16,
         function() return DB().questMap ~= false and DB().questMapObjectives ~= false end,
-        function(v) DB().questMapObjectives = v and nil or false; if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+        function(v) DB().questMapObjectives = OffFlag(v); if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
     Check(content, "Draw coloured areas where the quest mobs are (world map)", 16,
         function() return DB().questMap ~= false and DB().questMapAreas ~= false end,
-        function(v) DB().questMapAreas = v and nil or false; if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+        function(v) DB().questMapAreas = OffFlag(v); if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
     Check(content, "Show quest givers (!) and hand-ins (?) on the map", 16,
         function() return DB().questMap ~= false and DB().questMapGivers ~= false end,
-        function(v) DB().questMapGivers = v and nil or false; if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+        function(v) DB().questMapGivers = OffFlag(v); if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
     Slider(content, "Hide quests to pick up more levels above me than", 0, 10, 1, "%d",
         function() return tonumber(DB().questMapGiverAbove) or 10 end,
         function(v) DB().questMapGiverAbove = v; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
@@ -273,25 +275,25 @@ local function BuildControls(parent)
     Label(content, "Hover a quest link in chat for who gives it, who takes it, its level, its chain and why you cannot take it. Find any quest by name, or see what you have finished in each zone.")
     y = y - 22
     Check(content, "Quest link tooltips in chat", 16,
-        function() return DB().questLinkTooltips ~= false end, function(v) DB().questLinkTooltips = v and nil or false end)
+        function() return DB().questLinkTooltips ~= false end, function(v) DB().questLinkTooltips = OffFlag(v) end)
     Check(content, "Ping when I walk up to someone I can hand a quest in to", 16,
-        function() return DB().handInPing ~= false end, function(v) DB().handInPing = v and nil or false end)
+        function() return DB().handInPing ~= false end, function(v) DB().handInPing = OffFlag(v) end)
     Button(content, "Find a quest", 16, 120, function() if addon.QuestSearchOpen then addon.QuestSearchOpen() end end, false)
     Button(content, "Quest history", 146, 120, function() if addon.QuestHistoryOpen then addon.QuestHistoryOpen() end end, true)
 
     Header(content, "Quest items")
     Check(content, "Remind me to use a quest item when I am at the spot (a button with the item appears)", 16,
-        function() return DB().questItemReminder ~= false end, function(v) DB().questItemReminder = v and nil or false end)
+        function() return DB().questItemReminder ~= false end, function(v) DB().questItemReminder = OffFlag(v) end)
 
     Header(content, "Nameplates")
     Check(content, "Quest icons on nameplates (sword, loot bag, gold !)", 16,
-        function() return DB().questPlates ~= false end, function(v) DB().questPlates = v and nil or false; if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
+        function() return DB().questPlates ~= false end, function(v) DB().questPlates = OffFlag(v); if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
     Check(content, "Interrupt marker when a mob casts (green: my interrupt is ready, red: on cooldown, grey: I have none)", 16,
-        function() return DB().nameplateCasts ~= false end, function(v) DB().nameplateCasts = v and nil or false end)
+        function() return DB().nameplateCasts ~= false end, function(v) DB().nameplateCasts = OffFlag(v) end)
 
     Header(content, "Action bars")
     Check(content, "Newest spell rank on my action bars (swapped in when I learn it)", 16,
-        function() return DB().rankUp ~= false end, function(v) DB().rankUp = v and nil or false end)
+        function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
     Button(content, "Fix my bars now", 16, 130, function() if addon.RankUpRun then addon.RankUpRun() end end, true)
 
     Header(content, "Chat")

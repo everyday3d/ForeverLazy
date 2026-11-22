@@ -273,6 +273,11 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.17.4", {
+        "OPTIONS FIXED! Eleven checkboxes (quest sounds, the quest map switches, nameplate icons, the interrupt marker, the spell rank swap and more) could only turn OFF, never back ON. Now they work both ways. OHHHH!",
+        "The bag settings for auto sort, quest border and item level had the same bug. Fixed too.",
+        "SPELL RANK SWAP talks now: Fix my bars now, or /lazy rankup, tells you why nothing changed. /lazy rankup debug shows what the bars look like.",
+    } },
     { "0.17.3", {
         "BAG BUG FIXED! An error popped up after every bag change since 0.17.1 (the auto sort). GONE!",
         "PLAN SPAM FIXED! A group plan is only sent, and only announced, when it actually changes.",

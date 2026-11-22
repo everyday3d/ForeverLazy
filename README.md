@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.17.3-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.17.4-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -19,6 +19,11 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 <p align="center"><i>Brought to you by Sam Skinison and Tank Hanks.</i></p>
 
 ---
+
+## What's new in 0.17.4: OPTIONS THAT WORK BOTH WAYS!! OHHHH!
+
+- **FIXED!!** Eleven option checkboxes could only turn OFF and never back ON. Not anymore! Bag settings too.
+- **THE SPELL RANK SWAP TALKS!** The Fix my bars now button and /lazy rankup tell you why nothing changed. /lazy rankup debug shows the bars.
 
 ## What's new in 0.17.3: BUGS GET SQUASHED!! OHHHH!
 
