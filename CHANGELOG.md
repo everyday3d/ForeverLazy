@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.6
+- **Hunt panel.** A small panel with one button per mob your quests need. Click one to target it and mark it with a skull. When you follow someone's shared plan it names the mobs for their current stop. It has an X to close it. /lazy hunt on|off.
+- **Arrow: closest first.** The arrow goes to the nearest of your next stops in the zone, and a finished quest that is about to turn grey is handed in first. Options has a Closest first checkbox.
+- **Plan sharing.** A plan only counts as new when its places change, so you are not asked to accept a new one after every kill. Shared plans carry their quest ids.
+- **Bag window off by default.** The game has its own one-bag view. Turning ours off turns the game's Combine Bags on. The free slot count uses the game's own number, and /lazy bags debug shows what the game's bags are doing.
+- **Minimap button** sits on the outer edge of any size or shape of minimap.
+- **Trainer visits** only come due at even levels.
+- **Craft planner** panel is off by default (a checkbox turns it on).
+- **What's new window** that pops up after an update fades away after 5 seconds.
+
 ## 0.17.5
 - **Free slots on top.** In the sectioned bag window the Free row comes first.
 - **Fix: pet test.** /lazy pet test left the pet reminder on for good when you were not a hunter. It switches off when the test ends.

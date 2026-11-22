@@ -288,6 +288,8 @@ local function BuildControls(parent)
     Header(content, "Nameplates")
     Check(content, "Quest icons on nameplates (sword, loot bag, gold !)", 16,
         function() return DB().questPlates ~= false end, function(v) DB().questPlates = OffFlag(v); if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
+    Check(content, "Hunt panel: buttons for the mobs my quests need, click one to target it", 16,
+        function() return DB().huntPanel ~= false end, function(v) DB().huntPanel = OffFlag(v); if addon.HuntPanelRefresh then addon.HuntPanelRefresh() end end)
     Check(content, "Interrupt marker when a mob casts (green: my interrupt is ready, red: on cooldown, grey: I have none)", 16,
         function() return DB().nameplateCasts ~= false end, function(v) DB().nameplateCasts = OffFlag(v) end)
 
@@ -500,6 +502,8 @@ local function BuildControls(parent)
         function() return DB().autopilot == true end, function(v) DB().autopilot = v end)
     Check(content, "For kills and items, point the arrow at the nearest spot where they are (and move on when I have cleared it)", 16,
         function() return DB().arrowSpots ~= false end, function(v) DB().arrowSpots = v end)
+    Check(content, "Closest first: the arrow goes to the nearest of my next stops in this zone, not strictly plan order", 16,
+        function() return DB().arrowNearest ~= false end, function(v) DB().arrowNearest = OffFlag(v) end)
     Check(content, "Count quests I have not taken yet that are right here (within about 600 yards)", 16,
         function() return DB().planNearby ~= false end, function(v) DB().planNearby = v end)
     Check(content, "Show the step window by itself while a plan is running (what to do, step by step)", 16,
@@ -590,6 +594,8 @@ local function BuildControls(parent)
         function() return DB().zonePrompt ~= false end, function(v) DB().zonePrompt = v end)
     Check(content, "Share boat docks I teach with my guild and group (hidden addon messages, nothing shows in chat)", 16,
         function() return DB().community == true end, function(v) DB().community = v end)
+    Check(content, "Craft planner: a panel beside the profession window (off by default)", 16,
+        function() return DB().craftPanel == true end, function(v) DB().craftPanel = v or nil; if addon.CraftPanelRefresh then addon.CraftPanelRefresh() end end)
     Check(content, "When I open a profession window, tell me the best next craft", 16,
         function() return DB().craftHint ~= false end, function(v) DB().craftHint = v end)
     Check(content, "Show a button for quest items I need to use", 16,

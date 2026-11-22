@@ -273,6 +273,13 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.17.6", {
+        "HUNT PANEL! A little panel with a button for every mob your quests need. Click one to target it and put a skull on it. Follow a friend's plan and it names the mobs for their stop too. Close it with the X.",
+        "The ARROW goes to the CLOSEST stop in your zone, and hands in quests that are about to turn grey first.",
+        "PLAN SHARING calms down: no more asking you to accept a new plan after every kill, and shared plans carry their quest ids.",
+        "The BAG WINDOW is off by default (the game has its own one-bag view). Turning ours off turns the game's Combine Bags on. Free slots count is the game's own number.",
+        "The minimap button sits on the outer edge of any minimap, trainer visits only at even levels, the craft planner is off by default, and the what's-new window fades after 5 seconds.",
+    } },
     { "0.17.5", {
         "FREE SLOTS ON TOP! The bag window shows your empty slots first, so you can drop things in right away.",
         "/lazy pet test no longer leaves the pet reminder stuck on when you are not a hunter.",
@@ -456,7 +463,8 @@ local NEW = {
 }
 
 local newWin
-local function ShowNew(current, newer, who)
+-- autoFade: the window that comes up by itself after an update fades away after 5 seconds (staying put while the mouse is on it)
+local function ShowNew(current, newer, who, autoFade)
     newWin = newWin or (function()
         local f = CreateFrame("Frame", "ForeverLazy_New", UIParent)
         f:SetSize(420, 380)
@@ -508,9 +516,22 @@ local function ShowNew(current, newer, who)
         local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText("Close")
         close:SetScript("OnClick", function() f:Hide() end)
+        f:SetScript("OnUpdate", function(self, dt)
+            if not self.fadeLeft then return end
+            if self:IsMouseOver() then self.fadeLeft = 5; self:SetAlpha(1); return end       -- reading it: it stays
+            self.fadeLeft = self.fadeLeft - dt
+            if self.fadeLeft <= 0 then
+                self.fadeLeft = nil; self:Hide(); self:SetAlpha(1)
+            elseif self.fadeLeft < 1 then
+                self:SetAlpha(self.fadeLeft)                                                 -- the last second fades out
+            end
+        end)
+        f:SetScript("OnHide", function(self) self.fadeLeft = nil; self:SetAlpha(1) end)
         f:Hide()
         return f
     end)()
+    newWin.fadeLeft = nil
+    newWin:SetAlpha(1)
     local lines = {}
     for _, v in ipairs(NEW) do
         lines[#lines + 1] = "|cffffd100" .. v[1] .. "|r"
@@ -532,6 +553,7 @@ local function ShowNew(current, newer, who)
     newWin.content:SetHeight(newWin.text:GetStringHeight() + 10)
     if newWin.scroll.SetVerticalScroll then newWin.scroll:SetVerticalScroll(0) end
     newWin:Show()
+    if autoFade and not newer then newWin.fadeLeft = 5 end
 end
 function addon.ShowWhatsNew() ShowNew(Version(), addon.newerVersion, addon.newerFrom) end
 
@@ -552,7 +574,7 @@ ev:SetScript("OnEvent", function(self)
             Print("a quick tour of the buttons: /lazy tour")
         end
         if root.seenVersion and root.seenVersion ~= current and root.welcomed then
-            ShowNew(current)
+            ShowNew(current, nil, nil, true)
         end
         root.seenVersion = current
     end)

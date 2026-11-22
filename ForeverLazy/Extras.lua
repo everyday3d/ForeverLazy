@@ -584,6 +584,75 @@ function addon.ArrowTarget()
     local wp = BaseArrowTarget()
     local db = DB()
     local skipped
+    -- the closest stop first: of the next few stops that are in this zone, the arrow goes to the nearest one (it sticks with its
+    -- choice until another is a lot closer, so it does not flip back and forth)
+    if wp and db and db.arrowNearest ~= false and db.waypoints and wp == db.waypoints[1] and #db.waypoints > 1 and hbd then
+        local okN, pick = pcall(function()
+            local px, py, pinst = hbd:GetPlayerWorldPosition()
+            if not px then return nil end
+            local zone = hbd:GetPlayerZone()
+            local function dist(w)
+                local t = w
+                if w.quests then
+                    local okS, s = pcall(ObjectiveSpot, w)
+                    if okS and s then t = s end
+                end
+                if not (t.x and t.y) or t.instance ~= pinst then return nil end
+                return math.sqrt((t.x - px) ^ 2 + (t.y - py) ^ 2)
+            end
+            -- a finished quest that is about to turn grey (its hand-in would soon give no XP) goes first: the nearest such hand-in
+            local pl = UnitLevel("player") or 1
+            local green = (GetQuestGreenRange and tonumber(GetQuestGreenRange("player"))) or 8
+            local function AboutToGrey(w)
+                if not w.quests then return false end
+                for _, q in ipairs(w.quests) do
+                    if q.id and (q.label or ""):find("^Turn in:") and C_QuestLog and C_QuestLog.GetLogIndexForQuestID then
+                        local okI, idx = pcall(C_QuestLog.GetLogIndexForQuestID, q.id)
+                        local okQ, qi = false, nil
+                        if okI and idx and idx > 0 then okQ, qi = pcall(C_QuestLog.GetInfo, idx) end
+                        local lvl = okQ and type(qi) == "table" and tonumber(qi.level)
+                        if lvl and lvl > 0 then
+                            local diff = pl - lvl
+                            if diff >= green - 2 and diff < green then return true end
+                        end
+                    end
+                end
+                return false
+            end
+            local urgent, ud
+            for i = 1, math.min(#db.waypoints, 15) do
+                local w = db.waypoints[i]
+                if not (w.quests and w.uiMapId and zone and w.uiMapId ~= zone) and AboutToGrey(w) then
+                    local d = dist(w)
+                    if d and (not ud or d < ud) then urgent, ud = w, d end
+                end
+            end
+            if urgent then addon.arrowNearestPick = urgent; return urgent end
+            local best, bd
+            for i = 1, math.min(#db.waypoints, 8) do
+                local w = db.waypoints[i]
+                local inZone = not (w.quests and w.uiMapId and zone and w.uiMapId ~= zone)
+                if inZone then
+                    local d = dist(w)
+                    if d and (not bd or d < bd) then best, bd = w, d end
+                end
+            end
+            if not best then return nil end
+            local keep = addon.arrowNearestPick
+            if keep and keep ~= best then
+                for i = 1, math.min(#db.waypoints, 8) do
+                    if db.waypoints[i] == keep then
+                        local kd = dist(keep)
+                        if kd and bd > kd * 0.7 then best = keep end
+                        break
+                    end
+                end
+            end
+            addon.arrowNearestPick = best
+            return best
+        end)
+        if okN and pick then wp, skipped = pick, (pick ~= db.waypoints[1]) end
+    end
     -- a quest stop in another zone stays off the arrow until I am in that zone: the arrow goes to the next stop that is here,
     -- or nowhere (false) when none is
     if wp and wp.quests and wp.uiMapId and db and db.waypoints and wp == db.waypoints[1] and db.arrowSameZone ~= false then

@@ -1043,7 +1043,25 @@ local function PositionMinimapButton()
     if not mmb then return end
     local a = math.rad(db.minimapAngle or 200)
     mmb:ClearAllPoints()
-    mmb:SetPoint("CENTER", Minimap, "CENTER", math.cos(a) * 80, math.sin(a) * 80)
+    -- sit on the OUTER edge of the minimap whatever its size or shape (resized, scaled or square minimaps)
+    local w, h = Minimap:GetWidth(), Minimap:GetHeight()
+    if not w or w < 10 then w = 140 end
+    if not h or h < 10 then h = w end
+    local rx, ry = w / 2 + 5, h / 2 + 5
+    local c, s = math.cos(a), math.sin(a)
+    local x, y
+    local square = false
+    if GetMinimapShape then
+        local ok, shape = pcall(GetMinimapShape)
+        square = ok and shape and shape ~= "ROUND"
+    end
+    if square then                                  -- push out to the square's edge instead of a circle
+        local m = math.max(math.abs(c) / rx, math.abs(s) / ry)
+        x, y = c / m, s / m
+    else
+        x, y = c * rx, s * ry
+    end
+    mmb:SetPoint("CENTER", Minimap, "CENTER", x, y)
 end
 
 local MODES = { "both", "quest", "friend", "off" }

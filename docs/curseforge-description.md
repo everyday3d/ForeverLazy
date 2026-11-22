@@ -15,12 +15,13 @@
 - **Level a whole zone** with `/lazy level`: what to get, from whom, where to kill or collect, and what to hand in.
 - **Autopilot** for vendor and trainer stops. The plan follows you across zones, boats, trams and flights.
 - **Dungeon help:** walk into a dungeon and it shows what your quests need in there.
+- **A Hunt panel** with a button for every mob your quests need: click one to target it and put a skull on it.
 - **Your own quest tracker** that can replace WoW's, with plan order, XP, live objectives and who to turn in to.
 
 ### THE QUEST MAP
 Skulls where you kill it, diamonds where it drops, a yellow **!** for quests to pick up and a yellow **?** for hand-ins, plus coloured areas so you can SEE where to go. Click a pin and the arrow goes THERE. Works on OpenMap's big map too.
 
-### ONE BAG TO RULE THEM ALL
+### A BETTER BAG (off by default: turn on "Replace game bags" in the options, or open it any time with /lazy bags)
 - All your bags in ONE window, with search, quality borders, item levels, free slots and money.
 - Real sections that only appear when you carry something for them: Travel, Quest, Equipment, Food and drink, Potions, Trade goods and more. Your Hearthstone sits at the very top.
 - **The bank opens side by side with your bags,** so moving things across is easy.

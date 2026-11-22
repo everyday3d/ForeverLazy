@@ -76,7 +76,9 @@ local function ReadTrainer()
 end
 
 local function TrainerDue()
+    -- new class skills only come at EVEN levels (4, 6, 8...): an odd level counts as the even level below it
     local lvl = UnitLevel("player") or 1
+    lvl = lvl - lvl % 2
     if lvl < 4 then return false end
     local root = addon.GetRoot()
     root.trained = root.trained or {}
@@ -88,12 +90,14 @@ local function TrainerDue()
             return (GetMoney and GetMoney() or 0) >= (info.minCost or 0)
         end
         -- nothing to learn at the last visit: due only once I have reached the level the next skills need
-        if info.nextLevel then return lvl >= info.nextLevel and (info.level or 0) < info.nextLevel end
+        if info.nextLevel then
+            local last = (info.level or 0); last = last - last % 2
+            return lvl >= info.nextLevel and last < info.nextLevel
+        end
         -- the window did not say, so fall back on every even level
     end
-    local even = lvl - lvl % 2
-    if even < 4 then return false end
-    return (root.trained[key] or 0) < even
+    local seen = root.trained[key] or 0
+    return seen - seen % 2 < lvl
 end
 
 local trainEv = CreateFrame("Frame")

@@ -6,7 +6,7 @@
 -- It takes over the bag keys and buttons when Bagnon is NOT running (or when you say so). With Bagnon running it stays out of the way
 -- and opens only with  /lazy bags.
 --   /lazy bags                 open or close the window
---   /lazy bags replace on|off  take over the bag keys and buttons (default: only when Bagnon is not loaded)
+--   /lazy bags replace on|off  take over the bag keys and buttons (default: off, the game already has a one-bag view; /lazy bags opens this window anyway)
 --   /lazy bags cols <n>        slots per row     /lazy bags scale <n>     size     /lazy bags reset   move it back
 local ADDON, ns = ...
 local addon = ns.addon
@@ -232,11 +232,10 @@ local function BuildNow()
     Row(3, function() return "Quest item border: " .. ((DB().bagsQuestBorder ~= false) and "gold" or "off") end,
         function() if DB().bagsQuestBorder == false then DB().bagsQuestBorder = nil else DB().bagsQuestBorder = false end end)
     Row(4, function()
-        local v = DB().bagsReplace
-        return "Replace game bags: " .. (v == true and "always" or v == false and "never" or "auto")
+        return "Replace game bags: " .. (DB().bagsReplace == true and "on" or "off")
     end, function()
-        local v = DB().bagsReplace
-        if v == nil then DB().bagsReplace = true elseif v == true then DB().bagsReplace = false else DB().bagsReplace = nil end
+        if DB().bagsReplace == true then DB().bagsReplace = nil else DB().bagsReplace = true end
+        if addon.BagSyncWrappers then addon.BagSyncWrappers(true) end
     end)
     Row(5, function() return "Item size: " .. SZ end,
         function() local v = (DB().bagsItemSize or 37) + 5; if v > 47 then v = 27 end; DB().bagsItemSize = v end)
@@ -250,7 +249,7 @@ local function BuildNow()
     local note = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     note:SetPoint("BOTTOM", 0, 6)
     note:SetWidth(190)
-    note:SetText("auto = only when Bagnon is switched off")
+    note:SetText("off = the game's own bags (/lazy bags opens this window)")
     frame.gear = Button("...", 24, function()
         if panel:IsShown() then panel:Hide() else for _, r in ipairs(rows) do r.update() end; panel:Show() end
     end, "Settings: auto sort, border colours, replacing the game's bags")
@@ -708,6 +707,7 @@ Refresh = function(contentOnly)
     frame.place:SetText(placeName)
 
     local slotsTotal, free = 0, 0
+    local apiFree, apiOk = 0, true          -- the game's own count of free slots, used for the number shown
     if mine and (view.place == "bags" or (view.place == "bank" and atBank)) then
         -- live, secure buttons
         for i = 1, #offButtons do offButtons[i]:Hide() end
@@ -728,6 +728,15 @@ Refresh = function(contentOnly)
         local entries = {}
         for _, bag in ipairs(bags) do
             local n = NumSlots(bag)
+            local nf
+            if C_Container and C_Container.GetContainerNumFreeSlots then
+                local okF, f = pcall(C_Container.GetContainerNumFreeSlots, bag)
+                if okF and type(f) == "number" then nf = f end
+            elseif GetContainerNumFreeSlots then
+                local okF, f = pcall(GetContainerNumFreeSlots, bag)
+                if okF and type(f) == "number" then nf = f end
+            end
+            if nf then apiFree = apiFree + nf else apiOk = false end
             local bf = BagFrame(bag, frame.body)
             for slot = 1, n do
                 idx = idx + 1
@@ -757,7 +766,7 @@ Refresh = function(contentOnly)
                     UpdateButton(b, bag, slot)
                 end
                 slotsTotal = slotsTotal + 1
-                if not info then free = free + 1 end
+                if not (info and (info.iconFileID or info.itemID or info.hyperlink)) then free = free + 1 end
             end
             -- buttons left over from a bigger bag
             if canLayout then
@@ -793,6 +802,8 @@ Refresh = function(contentOnly)
         end
         if canLayout then layoutNeeded = false end
         frame.body:SetSize(cols * (SZ + GAP), math.max(bodyHeight or 0, SZ))
+        -- the game's count when it gave one for every bag (it also covers slots the buttons do not show)
+        if apiOk and slotsTotal > 0 then free = math.min(apiFree, slotsTotal) end
         frame.free:SetText(string.format("%d / %d free", free, slotsTotal))
         frame.sort:Show()
     else
@@ -879,9 +890,8 @@ end
 local function Takeover()
     local db = DB()
     if not db then return false end
-    if db.bagsReplace == true then return true end
-    if db.bagsReplace == false then return false end
-    return not BagnonRunning()
+    -- off unless you turn it on: the game already has a one-bag view of its own
+    return db.bagsReplace == true
 end
 
 -- the game's own bag functions: when we are in charge they open our window instead
@@ -913,7 +923,34 @@ local function InitWrappers()
     Wrap("CloseBackpack", function() main.Close() end)
     Wrap("CloseBag", function() main.Close() end)
 end
-InitWrappers()
+-- The game's bag functions are only replaced while Replace game bags is ON. When it is off nothing of the game's is touched
+-- (so its own one-bag system works as it always does); turning it off puts the originals back.
+-- when ours is off the game's own Combine Bags (one bag with everything) should be on; turn it on for the player
+local function EnableGameCombine()
+    if InCombatLockdown() then return end
+    local okG, cur = pcall(GetCVar, "combinedBags")
+    if not okG or cur == nil then return end                        -- this client has no such setting
+    if cur == "1" or cur == 1 or cur == true then return end
+    if pcall(SetCVar, "combinedBags", "1") then Print("the game's Combine Bags is on now (one bag with everything), since the Forever Lazy bag window is off") end
+end
+
+local function SyncWrappers(justSwitchedOff)
+    local want = Takeover()
+    if not want and (justSwitchedOff or (DB() and not DB().combineBagsSet)) then
+        if DB() then DB().combineBagsSet = true end                  -- at login only once; after that only when I switch ours off
+        EnableGameCombine()
+    end
+    if want and not wrapped then
+        InitWrappers()
+    elseif not want and wrapped then
+        for name, o in pairs(orig) do _G[name] = o; orig[name] = nil end
+        wrapped = false
+        pcall(function() main.Close(); bankWin.Close() end)
+        if BankFrame then BankFrame:SetAlpha(1) end
+    end
+end
+addon.BagSyncWrappers = SyncWrappers
+SyncWrappers()
 
 --------------------------------------------------------------------------------
 -- Events
@@ -956,7 +993,8 @@ for _, e in ipairs({ "BAG_UPDATE", "BAG_UPDATE_DELAYED", "ITEM_LOCK_CHANGED", "B
 end
 ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
-        Print(Takeover() and "bag window is in charge of the bag keys (B)" or "bag window: Bagnon is running, so the game's bags are untouched (open ours with /lazy bags)")
+        SyncWrappers()
+        if Takeover() then Print("bag window is in charge of the bag keys (B)") end
     elseif event == "BANKFRAME_OPENED" then
         atBank = true
         if Takeover() then
@@ -997,8 +1035,35 @@ function addon:HandleExtraCommand(cmd, rest)
         local db = DB()
         if a == "" then Toggle()
         elseif a == "replace" then
-            if b == "on" then db.bagsReplace = true elseif b == "off" then db.bagsReplace = false else db.bagsReplace = nil end
-            Print("bag window takes over the bag keys: " .. (Takeover() and "YES" or "no") .. (db.bagsReplace == nil and "  (automatic: only when Bagnon is not loaded)" or ""))
+            if b == "on" then db.bagsReplace = true else db.bagsReplace = nil end
+            SyncWrappers(true)
+            Print("bag window takes over the bag keys: " .. (Takeover() and "YES" or "no") .. (Takeover() and "" or "  (off by default: /lazy bags replace on)"))
+        elseif a == "debug" then
+            -- what is going on with the game's own bags, as a popup you can copy
+            local L = {}
+            L[#L + 1] = "replace setting: " .. tostring(db.bagsReplace) .. "  takeover: " .. tostring(Takeover()) .. "  wrapped: " .. tostring(wrapped)
+            for _, n in ipairs({ "ToggleAllBags", "ToggleBackpack", "ToggleBag", "OpenAllBags", "OpenBackpack", "OpenBag", "CloseAllBags" }) do
+                local ok, info = pcall(function()
+                    local f = _G[n]
+                    if type(f) ~= "function" then return "missing" end
+                    return (issecurevariable and issecurevariable(n)) and "game's own (secure)" or "REPLACED by an addon"
+                end)
+                L[#L + 1] = n .. ": " .. tostring(ok and info or "?")
+            end
+            local cf = {}
+            for i = 1, 13 do
+                local f = _G["ContainerFrame" .. i]
+                if f then cf[#cf + 1] = i .. (f:IsShown() and "=open" or "=closed") end
+            end
+            L[#L + 1] = "ContainerFrames: " .. (#cf > 0 and table.concat(cf, " ") or "none found")
+            L[#L + 1] = "ContainerFrameCombinedBags: " .. tostring(_G.ContainerFrameCombinedBags ~= nil and (_G.ContainerFrameCombinedBags:IsShown() and "open" or "closed") or "not in this client")
+            local nb, ns = 0, 0
+            for bg = 0, 4 do
+                local okN, cnt = pcall(function() return (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerNumSlots(bg)) or (GetContainerNumSlots and GetContainerNumSlots(bg)) or 0 end)
+                if okN and type(cnt) == "number" and cnt > 0 then nb = nb + 1; ns = ns + cnt end
+            end
+            L[#L + 1] = "bags carried: " .. nb .. " (slots " .. ns .. ")"
+            if addon.ShowTextPopup then addon.ShowTextPopup("Bag debug", table.concat(L, "\n")) else Print(table.concat(L, "\n")) end
         elseif a == "cols" and tonumber(b) then
             db.bagsCols = math.max(4, math.min(24, tonumber(b)))
             main.NeedLayout(); bankWin.NeedLayout()

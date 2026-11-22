@@ -647,6 +647,8 @@ local function BuildCraftPanel(frame)
     craftPanel = p
 end
 
+addon.CraftPanelRefresh = function() if not (DB() and DB().craftPanel == true) and craftPanel then craftPanel:Hide() end end
+
 local craftWarned = {}
 local function CraftWarn(key, text)
     if craftWarned[key] then return end
@@ -655,6 +657,7 @@ local function CraftWarn(key, text)
 end
 
 local function ShowCraft(names)
+    if not (DB() and DB().craftPanel == true) then return end          -- the craft planner is off unless I turn it on
     if not On() then CraftWarn("ui", "the buttons in the game windows are switched off (Options > Buttons in the game windows)"); return end
     if not addon.ModuleOn("crafting") then CraftWarn("module", "the Crafting module is switched off (Options > Modules)"); return end
     local f, name = FirstFrame(names)
@@ -672,6 +675,10 @@ craftWatch:SetScript("OnUpdate", function(_, dt)
     craftAcc = craftAcc + dt
     if craftAcc < 0.5 then return end
     craftAcc = 0
+    if not (DB() and DB().craftPanel == true) then
+        if craftPanel and craftPanel:IsShown() then craftPanel:Hide() end
+        return
+    end
     for _, name in ipairs({ "ProfessionsFrame", "TradeSkillFrame", "CraftFrame" }) do
         local f = _G[name]
         if f and f.IsShown and f:IsShown() then

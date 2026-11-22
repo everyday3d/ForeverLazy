@@ -25,14 +25,39 @@ local function Finished(o)
     return type(o.numRequired) == "number" and o.numRequired > 0 and type(o.numFulfilled) == "number" and o.numFulfilled >= o.numRequired
 end
 
+-- the mobs to hunt, for the Hunt panel: { name =, kind = "kill"|"loot", progress = "3/8" or nil, quest = title }
+local hunt = {}
+
 local function Rebuild()
     dirty = false
     needs = {}
+    hunt = {}
+    local huntSeen = {}
+    local offMap = false          -- the quest being read is for a map I am not in (the panel skips it)
+    local function AddHunt(id, kind, title, objs)
+        if offMap then return end
+        local name = id and data.Field("npcs", id, "name")
+        if type(name) ~= "string" or name == "" then return end
+        if huntSeen[name] then return end
+        local progress
+        if kind == "kill" and type(objs) == "table" then
+            local lname = name:lower()
+            for _, o in ipairs(objs) do
+                if o.type == "monster" and not Finished(o) and tostring(o.text or ""):lower():find(lname, 1, true) then
+                    progress = tostring(o.text):match("(%d+/%d+)")
+                    break
+                end
+            end
+        end
+        huntSeen[name] = true
+        hunt[#hunt + 1] = { name = name, kind = kind, progress = progress, quest = title }
+    end
     openKillText, doneKillText = "", ""
     if not (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo and C_QuestLog.GetQuestObjectives) then return end
     for i = 1, (C_QuestLog.GetNumQuestLogEntries() or 0) do
         local ok, info = pcall(C_QuestLog.GetInfo, i)
         local complete = false
+        offMap = ok and type(info) == "table" and info.isOnMap == false
         if ok and type(info) == "table" and info.questID and C_QuestLog.IsComplete then
             local okC, c = pcall(C_QuestLog.IsComplete, info.questID)
             complete = okC and c and true or false
@@ -59,9 +84,10 @@ local function Rebuild()
                         for _, e in ipairs(obj[g] or {}) do
                             local ref = e[1]
                             if type(ref) == "table" then
-                                for _, r in ipairs(ref) do needs[r] = needs[r] or "kill" end
+                                for _, r in ipairs(ref) do needs[r] = needs[r] or "kill"; AddHunt(r, "kill", info.title, objs) end
                             elseif ref then
                                 needs[ref] = needs[ref] or "kill"
+                                AddHunt(ref, "kill", info.title, objs)
                             end
                         end
                     end
@@ -78,7 +104,14 @@ local function Rebuild()
                             end
                         end
                         if type(d) == "table" then
-                            for _, n in pairs(d) do if type(n) == "number" then needs[n] = needs[n] or "loot" end end
+                            local count = 0
+                            for _, n in pairs(d) do if type(n) == "number" then count = count + 1 end end
+                            for _, n in pairs(d) do
+                                if type(n) == "number" then
+                                    needs[n] = needs[n] or "loot"
+                                    if count <= 5 then AddHunt(n, "loot", info.title, objs) end   -- a crowd of droppers would bury the panel
+                                end
+                            end
                         end
                     end
                 end
@@ -278,6 +311,37 @@ ev:SetScript("OnEvent", function(_, event, unit)
         end
     end
 end)
+
+-- for the Hunt panel: the mobs my open quests need (kills first), only from quests on the map I am in when the game says so
+function addon.HuntList()
+    if dirty then Rebuild() end
+    return hunt
+end
+-- mobs named by quests (ids), whether or not I have them: used for a plan someone shared with me
+function addon.HuntFromQuests(ids)
+    local out, seen = {}, {}
+    for _, qid in ipairs(ids or {}) do
+        local obj = data.Field("quests", qid, "objectives")
+        local title = data.Field("quests", qid, "name") or ("quest " .. qid)
+        if type(obj) == "table" then
+            for _, g in ipairs({ 1, 5 }) do
+                for _, e in ipairs(obj[g] or {}) do
+                    local ref = e[1]
+                    local list = type(ref) == "table" and ref or { ref }
+                    for _, id in ipairs(list) do
+                        local name = id and data.Field("npcs", id, "name")
+                        if type(name) == "string" and name ~= "" and not seen[name] then
+                            seen[name] = true
+                            out[#out + 1] = { name = name, kind = "kill", quest = title }
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return out
+end
+addon.QuestPlatesRefresh = addon.QuestPlatesRefresh or function() dirty = true; UpdateAll() end
 
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)

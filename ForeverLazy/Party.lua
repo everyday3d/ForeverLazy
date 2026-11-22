@@ -143,13 +143,19 @@ local function SharePlan(silent)
     local stops = {}
     for _, w in ipairs(DB().waypoints) do
         if w.label and w.uiMapId and w.zx and w.zy and #stops < 15 then
-            stops[#stops + 1] = { label = w.label, map = w.uiMapId, zx = w.zx, zy = w.zy, detail = w.detail }
+            -- the quests of a kill or collect stop go along, so the other player's Hunt panel can name the mobs
+            local qids = {}
+            for _, q in ipairs(w.quests or {}) do
+                local lbl = q.label or ""
+                if type(q.id) == "number" and #qids < 8 and not (lbl:find("^Turn in:") or lbl:find("^Pick up:") or lbl:find("^Class quest:")) then qids[#qids + 1] = q.id end
+            end
+            stops[#stops + 1] = { label = w.label, map = w.uiMapId, zx = w.zx, zy = w.zy, detail = w.detail, q = #qids > 0 and qids or nil }
         end
     end
     if #stops == 0 then Print("you have no plan to share. /lazy plan builds one"); return end
     -- the same plan to the same group is not sent again (the leader's plan is re-checked often; that was spamming everybody)
     local parts = { tostring(GetNumGroupMembers and GetNumGroupMembers() or 0) }
-    for _, s in ipairs(stops) do parts[#parts + 1] = string.format("%s|%s|%.4f|%.4f", s.label, tostring(s.map), s.zx, s.zy) end
+    for _, s in ipairs(stops) do parts[#parts + 1] = string.format("%s|%.2f|%.2f", tostring(s.map), s.zx, s.zy) end   -- places only: a changing label (kill counts) is not a new plan
     local sig = table.concat(parts, ";")
     if silent and sig == addon.lastPlanSent then return end
     addon.lastPlanSent = sig
@@ -168,14 +174,20 @@ function addon:OnPartyPlan(prefix, message, distribution, sender)
     for _, s in ipairs(t.stops) do
         if type(s) == "table" and type(s.map) == "number" and type(s.zx) == "number" and type(s.zy) == "number"
             and s.zx >= 0 and s.zx <= 1 and s.zy >= 0 and s.zy <= 1 and #clean < 15 then
+            local qids
+            if type(s.q) == "table" then
+                qids = {}
+                for _, id in ipairs(s.q) do if type(id) == "number" and id > 0 and id < 1000000 and #qids < 8 then qids[#qids + 1] = id end end
+                if #qids == 0 then qids = nil end
+            end
             clean[#clean + 1] = { label = tostring(s.label or "Stop"):sub(1, 70), map = s.map, zx = s.zx, zy = s.zy,
-                                  detail = s.detail and tostring(s.detail):sub(1, 120) or nil }
+                                  detail = s.detail and tostring(s.detail):sub(1, 120) or nil, q = qids }
         end
     end
     if #clean == 0 then return end
     -- the same plan again: nothing to say
     local parts = {}
-    for _, s in ipairs(clean) do parts[#parts + 1] = string.format("%s|%s|%.4f|%.4f", s.label, tostring(s.map), s.zx, s.zy) end
+    for _, s in ipairs(clean) do parts[#parts + 1] = string.format("%s|%.2f|%.2f", tostring(s.map), s.zx, s.zy) end
     local sig = table.concat(parts, ";")
     addon.planSigSeen = addon.planSigSeen or {}
     if addon.planSigSeen[who] == sig then return end
@@ -186,6 +198,10 @@ function addon:OnPartyPlan(prefix, message, distribution, sender)
         AcceptPlan()                    -- duo mode: the leader's plan is mine
         return
     end
+    -- say it once in a while, not for every small change of the same sender's plan
+    addon.planToldAt = addon.planToldAt or {}
+    if addon.planToldAt[who] and GetTime() - addon.planToldAt[who] < 600 then return end
+    addon.planToldAt[who] = GetTime()
     Print(string.format("%s shared a plan with %d stops (first: %s). /lazy acceptplan to follow it.", who, #clean, clean[1].label))
 end
 addon:RegisterComm(PLAN_PREFIX, "OnPartyPlan")
@@ -199,14 +215,20 @@ AcceptPlan = function()
         local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(s.zx, s.zy, s.map)
         if wx then
             list[#list + 1] = { name = i .. ". " .. s.label, label = s.label, instance = inst, x = wx, y = wy,
-                                uiMapId = s.map, zx = s.zx, zy = s.zy, detail = s.detail }
+                                uiMapId = s.map, zx = s.zx, zy = s.zy, detail = s.detail, huntQuests = s.q }
         end
     end
     if #list == 0 then Print("could not place that plan on your map"); return end
     DB().waypoints = list
+    addon.planFrom = who
+    addon.planFromSet = {}
+    for _, w in ipairs(list) do addon.planFromSet[w] = true end
+    if addon.HuntPanelRefresh then addon.HuntPanelRefresh() end
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
     received[who] = nil
+    addon.planToldAt = addon.planToldAt or {}
+    addon.planToldAt[who] = GetTime()                -- I said yes: do not ask again for their next small change
     Print(string.format("following %s's plan: %d stops. First: %s", who, #list, list[1].name))
 end
 
