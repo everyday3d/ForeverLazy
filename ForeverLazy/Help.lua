@@ -273,6 +273,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.17.7", {
+        "Party announcements show [Forever Lazy] in YELLOW for everyone running the addon.",
+    } },
     { "0.17.6", {
         "HUNT PANEL! A little panel with a button for every mob your quests need. Click one to target it and put a skull on it. Follow a friend's plan and it names the mobs for their stop too. Close it with the X.",
         "The ARROW goes to the CLOSEST stop in your zone, and hands in quests that are about to turn grey first.",

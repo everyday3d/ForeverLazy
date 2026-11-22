@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.17.6-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.17.7-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -20,7 +20,11 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.17.6: THE HUNT PANEL!! OHHHH!
+## What's new in 0.17.7
+
+- **Yellow party tag.** [Forever Lazy] in party announcements shows in yellow.
+
+## Earlier: 0.17.6: THE HUNT PANEL!! OHHHH!
 
 - **HUNT PANEL!** A button for every mob your quests need. Click one to target it and put a skull on it.
 - **THE ARROW GOES TO THE CLOSEST STOP,** and hands in quests about to turn grey first.

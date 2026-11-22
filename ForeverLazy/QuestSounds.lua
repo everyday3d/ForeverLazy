@@ -202,5 +202,21 @@ function addon:HandleExtraCommand(cmd, rest)
     if prev then return prev(self, cmd, rest) end
 end
 
+-- Party announcements start with "[Forever Lazy]": show that tag in yellow in the chat of everyone who runs the addon
+-- (the text itself is sent plain, so people without the addon see it normally)
+do
+    local TAG = "[Forever Lazy]"
+    local function Tint(_, _, msg, ...)
+        if type(msg) == "string" and not (issecretvalue and issecretvalue(msg)) and msg:sub(1, #TAG) == TAG then
+            return false, "|cffffd100" .. TAG .. "|r" .. msg:sub(#TAG + 1), ...
+        end
+        return false
+    end
+    if ChatFrame_AddMessageEventFilter then
+        for _, e in ipairs({ "CHAT_MSG_PARTY", "CHAT_MSG_PARTY_LEADER", "CHAT_MSG_RAID", "CHAT_MSG_RAID_LEADER", "CHAT_MSG_INSTANCE_CHAT", "CHAT_MSG_INSTANCE_CHAT_LEADER" }) do
+            pcall(ChatFrame_AddMessageEventFilter, e, Tint)
+        end
+    end
+end
 -- reached the end of the file without an error (used by /lazy check)
 do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["QuestSounds.lua"] = true end end

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.17.7
+- **Yellow party tag.** The [Forever Lazy] tag in party announcements shows in yellow for everyone running the addon.
+
 ## 0.17.6
 - **Hunt panel.** A small panel with one button per mob your quests need. Click one to target it and mark it with a skull. When you follow someone's shared plan it names the mobs for their current stop. It has an X to close it. /lazy hunt on|off.
 - **Arrow: closest first.** The arrow goes to the nearest of your next stops in the zone, and a finished quest that is about to turn grey is handed in first. Options has a Closest first checkbox.
