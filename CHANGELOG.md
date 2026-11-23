@@ -8,7 +8,6 @@ This release rolls up everything since 0.17.7.
 - **Arriving at a stop that was not first in the plan never cleared it.** Since closest-first, the arrow could point at a later stop; now arriving at it clears that stop.
 - **A skipped quest could still become the arrow target** when the plan ran out of stops, or when the quest was the one selected in the quest log. A skipped quest is never an arrow target now.
 - **Picking a quest to do next did nothing** when it had no stop in the plan (skipped, put off, or in another zone). The plan is rebuilt so it gets one.
-- **Shift-click on a tracker quest** pasted the quest link even with no chat box open. It now moves the plan to the quest, and pastes the link only while a chat box is open.
 
 ### New
 - **Close hand-ins first.** A finished quest you can hand in nearby goes to the front of the plan (within about 600 yards) and the arrow goes to it first (within about 450 yards). Hand-ins back in town stay where they were.
