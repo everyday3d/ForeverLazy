@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.curseforge.com/projects/1823585"><img alt="Download on CurseForge" src="https://img.shields.io/badge/download-on%20CurseForge-f16436?style=for-the-badge&logo=curseforge&logoColor=white"></a>
+  <a href="https://www.curseforge.com/wow/addons/foreverlazy"><img alt="Download on CurseForge" src="https://img.shields.io/badge/download-on%20CurseForge-f16436?style=for-the-badge&logo=curseforge&logoColor=white"></a>
 </p>
 
 <h2 align="center">STOP ALT-TABBING TO GUIDES!!<br>PRESS ONE BUTTON AND GO!!!</h2>
@@ -22,7 +22,7 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 <p align="center"><i>Brought to you by Sam Skinison and Tank Hanks.</i></p>
 
-<p align="center">Get it on <a href="https://www.curseforge.com/projects/1823585">CurseForge</a>, or grab the zip from the <a href="https://github.com/everyday3d/ForeverLazy/releases/latest">latest release</a>.</p>
+<p align="center">Get it on <a href="https://www.curseforge.com/wow/addons/foreverlazy">CurseForge</a>, or grab the zip from the <a href="https://github.com/everyday3d/ForeverLazy/releases/latest">latest release</a>.</p>
 
 ---
 
