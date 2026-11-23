@@ -55,6 +55,7 @@ local SECTION_MODULE = {
     ["Hunter pet"] = "pet",
     ["Ore and herb nodes"] = "gather",
     ["Library books"] = "books",
+    ["Gear"] = "gear",
 }
 local function SectionModuleOff(s)
     local m = SECTION_MODULE[s.title]
@@ -283,6 +284,18 @@ local function BuildControls(parent)
         function() return DB().bagsReplace == true end, function(v) DB().bagsReplace = v or nil; if addon.BagSyncWrappers then addon.BagSyncWrappers(true) end end)
     Check(content, "Damage meter (in a chat tab called Meter)", 16,
         function() return DB().meterOn == true end, function(v) if addon.MeterSet then addon.MeterSet(v) end end)
+    Check(content, "Quest item sparkles: the game's own sparkle on quest items you can loot", 16,
+        function() return DB().questSparkles ~= false end, function(v) DB().questSparkles = OffFlag(v); if addon.QuestSparklesRefresh then addon.QuestSparklesRefresh() end end)
+    Check(content, "Colour action buttons: red out of range, blue no mana, grey cannot use", 16,
+        function() return DB().rangeColor ~= false end, function(v) DB().rangeColor = OffFlag(v); if addon.RangeColorRefresh then addon.RangeColorRefresh() end end)
+    Check(content, "Put the newest spell rank on my action bars when I learn it", 16,
+        function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
+    Check(content, "Gear advisor: upgrade line in tooltips, a green ^ on upgrades in bags and at vendors", 16,
+        function() return DB().gearAdvisor ~= false end, function(v) DB().gearAdvisor = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
+    Check(content, "Gear bar: a button that equips an upgrade from my bags", 16,
+        function() return DB().gearBar ~= false end, function(v) DB().gearBar = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
+    Check(content, "Tell me in chat when I loot or buy an upgrade", 16,
+        function() return DB().gearNote == true end, function(v) DB().gearNote = v or nil end)
     Check(content, "The arrow goes to the closest stop first", 16,
         function() return DB().arrowNearest ~= false end, function(v) DB().arrowNearest = OffFlag(v) end)
     Check(content, "The arrow says why it points where it does", 16,
@@ -302,6 +315,9 @@ local function BuildControls(parent)
     Button(content, "What's new", 156, 110, function() if addon.ShowWhatsNew then addon.ShowWhatsNew() end end, false)
     Button(content, "Export settings", 276, 130, function() if addon.ExportSettings then addon.ExportSettings() end end, false)
     Button(content, "Import settings", 416, 130, function() if addon.ImportSettings then addon.ImportSettings() end end, true)
+    Button(content, "All commands", 16, 130, function() if addon.CommandsReport then addon.CommandsReport() end end, false)
+    Button(content, "Bug report", 156, 110, function() if addon.BugReport then addon.BugReport() end end, false)
+    Button(content, "Game functions", 276, 130, function() if addon.ApisReport then addon.ApisReport() end end, true)
 
     Header(content, "Quest sounds")
     Label(content, "Sounds from the game, nothing to install. A quest ready to hand in plays a voice (Peasant 'Job's done!' for the Alliance, Peon 'Work complete!' for the Horde). A finished quest step plays an effect.")
@@ -354,6 +370,30 @@ local function BuildControls(parent)
     Check(content, "Quest item bar: a button for a quest item when I am at the spot", 16,
         function() return DB().questItemReminder == true end, function(v) DB().questItemReminder = v or nil end)
 
+    Header(content, "Gear")
+    local gearNow = Label(content, "")
+    refreshers[#refreshers + 1] = function()
+        local s = addon.GearSpec and addon.GearSpec()
+        if s then
+            gearNow:SetText(string.format("Scored as: |cffffd100%s|r (%s)%s. Stat order: %s.", s.name, s.kind, s.forced and ", set by hand" or ", from your talents", table.concat(s.priority, " > ")))
+        end
+    end
+    y = y - 22
+    Label(content, "Which gear is an upgrade for your class and spec. It shows in tooltips, in the bag window and at vendors, and in the gear bar.")
+    y = y - 22
+    Check(content, "Gear advisor: upgrade line in tooltips", 16,
+        function() return DB().gearAdvisor ~= false end, function(v) DB().gearAdvisor = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
+    Check(content, "A green ^ on upgrades in the bag window and at vendors", 16,
+        function() return DB().gearArrows ~= false end, function(v) DB().gearArrows = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
+    Check(content, "Gear bar: a button that equips an upgrade from my bags", 16,
+        function() return DB().gearBar ~= false end, function(v) DB().gearBar = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
+    Check(content, "Tell me in chat when I loot or buy an upgrade", 16,
+        function() return DB().gearNote == true end, function(v) DB().gearNote = v or nil end)
+    Radio(content, "Score gear as:", "rewardRole", {
+        { "auto", "My class and talents (automatic)" }, { "str_melee", "Strength melee" }, { "agi_melee", "Agility melee" },
+        { "hunter", "Hunter" }, { "caster", "Caster" }, { "healer", "Healer" }, { "tank", "Tank" } })
+    Button(content, "Show the stats it reads from my gear", 16, 250, function() addon:HandleExtraCommand("gear", "stats") end, true)
+
     Header(content, "Nameplates")
     Check(content, "Quest icons on nameplates (sword, loot bag, gold !)", 16,
         function() return DB().questPlates ~= false end, function(v) DB().questPlates = OffFlag(v); if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
@@ -366,6 +406,8 @@ local function BuildControls(parent)
     Check(content, "Swap in the newest spell rank on my action bars when I learn it", 16,
         function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
     Button(content, "Fix my bars now", 16, 130, function() if addon.RankUpRun then addon.RankUpRun() end end, true)
+    Label(content, "Want a low rank on purpose? /lazy rankup keep <spell name> leaves that spell alone. /lazy rankup keep lists them, /lazy rankup unkeep <spell name> undoes it.")
+    y = y - 26
 
     Header(content, "Chat")
     Label(content, "Chat tweaks, a little like Prat. All off until you turn them on, and changes show on new lines. Undoing input box on top, hidden buttons or no fading needs a /reload.")
@@ -666,9 +708,6 @@ local function BuildControls(parent)
         function() return DB().chainHint ~= false end, function(v) DB().chainHint = v end)
     Check(content, "Mark the best quest reward (likely upgrade or best price)", 16,
         function() return DB().rewardPick ~= false end, function(v) DB().rewardPick = v end)
-    Radio(content, "Pick rewards for my:", "rewardRole", {
-        { "auto", "Class and talents (automatic)" }, { "str_melee", "Strength melee" }, { "agi_melee", "Agility melee" },
-        { "hunter", "Hunter" }, { "caster", "Caster" }, { "healer", "Healer" }, { "tank", "Tank" } })
     Check(content, "Leave group quests out of my plan while I am solo", 16,
         function() return DB().planSkipGroup ~= false end, function(v) DB().planSkipGroup = v end)
     Check(content, "Favour quests I share with someone in my group", 16,

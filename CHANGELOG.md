@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.20.0
+### Fixed
+- **The spell rank swap never started.** The file stopped on an event the Forever client does not know, so nothing watched for a new spell, and `/lazy check` reported it. Events are registered one by one now, and the swap also uses the newer function for picking a spell up (and names the one that is missing if there is a problem).
+- **/lazy check** now lists the new files and every file reaches its own end marker.
+
+### New
+- **Gear advisor.** Hover any item you could wear and a green line says whether it is an upgrade for your class and spec. Upgrades in your bags get a green ^ in the bag window and at vendors, and a button on the gear bar that equips them when you click it. An optional chat note tells you when you loot or buy one. Stats are scored with each spec's stat order from the WoW Forever priority lists (hit counts only up to the hit cap). `/lazy gear` shows what you are scored as, `/lazy gear stats` shows what it reads from your gear, `/lazy gear list` lists the upgrades in your bags. It has its own group in the options and a module switch.
+- **Quest item sparkles.** The game's own loot sparkle on quest items stays switched on, even after a graphics preset. Credit to Forever Loot Sparkles by Ashtar Senior (GPL-3.0). `/lazy sparkles on|off`.
+- **Range colours.** Action buttons turn red out of range, blue without mana and grey when unusable. Adapted from tullaRange by Tuller (MIT). `/lazy range on|off`. Both of these step aside when the original addon is installed.
+- **Keep a low rank on purpose.** `/lazy rankup keep <spell>` leaves one spell on the rank you put there, `rankup unkeep <spell>` undoes it, and the swap has a checkbox in the options.
+- **Bug report.** `/lazy report` opens a window with the version, game build, your settings, the plan and arrow, other addons that matter, and the last errors from Forever Lazy, ready to copy. Nothing is sent anywhere. `/lazy apis` lists the game functions the newer features need and whether this client has them. `/lazy commands` lists every command in groups. All three are buttons in the options too.
+
+### Changed
+- **Under the hood:** the 3,500 line Extras.lua is split into five files (the plan menus, the step window, the plan detail, the sharing and import tools, and what is left). Nothing is meant to change for you.
+- **The arrow is cheaper.** Its target is kept for a fraction of a second and thrown away the moment the plan or a setting changes.
+- **The gear advisor says so** when the game language is not English and item stats cannot be read from the tooltip.
+- **The tour and the options text** know about the damage meter, range colours, sparkles and the new bug report buttons.
+- **The quest reward star** uses the same gear scoring as the advisor, so it knows your spec, two-handers against two weapons, and the hit cap.
+- The credits in `media/CREDITS.txt` now name Forever Loot Sparkles and tullaRange, with tullaRange's licence notice.
+
 ## 0.19.1
 ### Fixed
 - **Quest titles in the wrong capitals.** Seven quests showed in Title Case ("Look To The Stars"). They are spelled like the game now: "Look to the Stars" (four quests), "Plea to the Alliance", "Your Place in the World" and "Aid for the Refugees".

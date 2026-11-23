@@ -19,7 +19,7 @@ end
 -- The tour
 --------------------------------------------------------------------------------
 local STEPS = {
-    { text = "|cffffd100Welcome to Forever Lazy.|r This is a quick tour (10 short steps). It shows where the buttons are, so you never need to type a command. Press Next.",
+    { text = "|cffffd100Welcome to Forever Lazy.|r This is a quick tour (11 short steps). It shows where the buttons are, so you never need to type a command. Press Next.",
       target = nil },
     { text = "|cffffd100The minimap button.|r Left-click: do the next best thing (Lazy Mode). Right-click: the menu with everything. Shift-click: the options.",
       target = function() return _G.ForeverLazy_MinimapButton end },
@@ -33,8 +33,10 @@ local STEPS = {
       target = function() local q = _G.QuestLogFrame; return q and q:IsShown() and q or nil end },
     { text = "|cffffd100The hunt panel.|r When your quests need certain mobs, a small panel lists them. Click one to target it and put a skull on it. Close it with the X; the options bring it back.",
       target = function() local p = _G.ForeverLazy_HuntPanel; return p and p:IsShown() and p or nil end },
-    { text = "|cffffd100Extras that are off until you want them.|r The craft planner (a plan beside your profession window), our own bag window and the quest item bar are all in the options. Tick the ones you like.",
+    { text = "|cffffd100Extras that are off until you want them.|r The craft planner (a plan beside your profession window), our own bag window, the quest item bar and the damage meter tab are all in the options, along with range colours and quest item sparkles. Tick the ones you like. /lazy commands lists every command and /lazy report makes a bug report.",
       target = nil },
+    { text = "|cffffd100Gear.|r Hover any item you could wear: a green Upgrade line says how much better it is for your class and spec. Upgrades in your bags get a button on the gear bar (click it to equip) and a green ^ in the bag window. /lazy gear says what you are scored as.",
+      target = function() local b = _G.ForeverLazyGearBar; return b and b:IsShown() and b or nil end },
     { text = "|cffffd100The options.|r /lazy opens them. At the top: Start here (Just point me, Leveler, Duo, Everything) and the extras you can tick on or off. It shows only the basics; press Show all options for the rest. Switching a module off hides its options.",
       target = nil, onShow = function() if addon.OpenOptions then addon:OpenOptions() end end },
     { text = "|cffffd100That is it.|r Lazy Mode (/lazy now, or left-click the minimap button) is the one to remember. /lazy tour shows this again, and /lazy check says if everything is working.",
@@ -277,6 +279,14 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.20.0", {
+        "GEAR ADVISOR! Hover an item and a green line says if it is an upgrade for your class and spec (stat priorities from the WoW Forever lists). Upgrades in your bags get a green ^ in the bag window and a button on the gear bar: click it to equip. /lazy gear shows what you are scored as, /lazy gear stats shows what it reads from your gear.",
+        "QUEST ITEM SPARKLES: the game's own sparkle on quest items you can loot stays on, even after a graphics preset (credit: Forever Loot Sparkles by Ashtar Senior).",
+        "RANGE COLOURS: action buttons turn red out of range, blue without mana, grey when unusable (credit: tullaRange by Tuller). Both step aside if those addons are installed.",
+        "The quest reward star uses the same gear scoring now.",
+        "The SPELL RANK SWAP works now (it stopped on an event this game does not know). /lazy rankup keep <spell> keeps a low rank on purpose.",
+        "Something wrong? /lazy report makes a bug report you can copy (nothing is sent), /lazy commands lists every command, /lazy apis checks the game functions the new features need.",
+    } },
     { "0.19.1", {
         "FRESH QUEST DATA from Questie 12.13.0 (QuestieDB 1.1.5): new quests and objects, moved creature spawns, and updated quest flags (repeatable and daily quests).",
         "Seven quest titles that showed in Title Case (Look To The Stars) are spelled like the game now (Look to the Stars).",

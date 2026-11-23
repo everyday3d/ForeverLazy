@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Forever Lazy
 ## Notes: Never think about where to go next. Arrows, an XP-weighted quest route planner, quest-chain guides, class quests, dungeons and library books for WoW Forever.
-## Version: 0.19.1
+## Version: 0.20.0
 ## Author: everyday3d
 ## License: GPL-3.0-or-later
 ## X-Website: https://github.com/everyday3d/ForeverLazy
@@ -23,6 +23,10 @@ ForeverLazy.lua
 Report.lua
 Options.lua
 Extras.lua
+ExtrasTools.lua
+PlanDetail.lua
+StepWindow.lua
+PlanMenus.lua
 Books.lua
 Pet.lua
 Flight.lua
@@ -76,6 +80,11 @@ BagWindow.lua
 RankUp.lua
 NameplateCasts.lua
 QuestItems.lua
+QuestSparkles.lua
+Gear.lua
+GearAdvisor.lua
+Diagnostics.lua
+RangeColor.lua
 Version.lua
 Go.lua
 LazyMode.lua

@@ -16,3 +16,19 @@ Quest, NPC, object, item and drop data, and the group message format, come from 
 Forever Lazy is built on HereBeDragons, AceComm, AceSerializer, CallbackHandler, LibDeflate and LibStub, which keep their own licences (see their folders under libs).
 Flight path information comes from the wowforever.be flight path guide: https://wowforever.be/guides/flight-paths/
 Forever Lazy is not affiliated with Blizzard Entertainment or the Questie team.
+
+Quest item sparkles and range colouring
+---------------------------------------
+Quest item sparkles keeps the game's loot sparkle on, the way Forever Loot Sparkles by Ashtar Senior does (GPL-3.0-or-later): https://www.curseforge.com/wow/addons/forever-loot-sparkles
+Range colouring is adapted from tullaRange by Tuller (MIT licence): https://github.com/tullamods/tullaRange
+tullaRange licence notice:
+  Copyright (c) 2010 Jason Greer
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+  to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+If either addon is installed too, it does its job and Forever Lazy stays out of the way.

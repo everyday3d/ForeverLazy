@@ -24,6 +24,7 @@ addon.MODULES = {
     { "travel",   "Hearthstone and flight points" },
     { "party",    "Group features (shared quests, share plan, duo mode)" },
     { "quests",   "Quest helpers (item button, chain, reward pick, farm)" },
+    { "gear",     "Gear advisor (upgrades in tooltips and bags, the gear bar)" },
     { "crafting", "Crafting (what to craft next, materials, bank)" },
     { "gather",   "Gathering routes and fishing spots" },
     { "pet",      "Hunter pet reminder" },
@@ -47,6 +48,7 @@ local COMMANDS = {
     travel = { "hearth", "home", "fp", "flightpoint", "flightpoints" },
     party = { "party", "shareplan", "acceptplan", "duo" },
     quests = { "chain", "farm" },
+    gear = { "gear" },
     crafting = { "craft", "crafting" },
     gather = { "gather", "herb", "herbs", "ore", "fish", "fishing", "nodes", "node" },
     pet = { "pet" },
@@ -97,6 +99,7 @@ function addon.ModulesChanged()
     end
     if not addon.ModuleOn("plan") and _G.ForeverLazy_PlanWindow then _G.ForeverLazy_PlanWindow:Hide() end
     if addon.RefreshQuestItems then pcall(addon.RefreshQuestItems) end
+    if addon.GearAdvisorRefresh then pcall(addon.GearAdvisorRefresh) end
     if addon.DrawRouteLines then pcall(addon.DrawRouteLines) end
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
@@ -108,8 +111,8 @@ end
 --------------------------------------------------------------------------------
 local PRESETS = {
     minimal = { "lazymode", "plan", "services" },
-    leveler = { "lazymode", "plan", "follow", "books", "classq", "dungeons", "bag", "zones", "services", "boats", "go", "travel", "quests", "gather", "pet", "flight" },
-    duo     = { "lazymode", "plan", "follow", "party", "classq", "dungeons", "bag", "zones", "services", "boats", "go", "travel", "quests", "gather", "pet", "flight" },
+    leveler = { "lazymode", "plan", "follow", "books", "classq", "dungeons", "bag", "zones", "services", "boats", "go", "travel", "quests", "gear", "gather", "pet", "flight" },
+    duo     = { "lazymode", "plan", "follow", "party", "classq", "dungeons", "bag", "zones", "services", "boats", "go", "travel", "quests", "gear", "gather", "pet", "flight" },
 }
 
 function addon.ApplyPreset(name)
@@ -166,7 +169,7 @@ function addon.CheckInstall()
         { "levelling guide (Guide.lua)", addon.ToggleGuide }, { "damage meter (Meter.lua)", addon.MeterSet }, { "XP hot spots", addon.XPHotSpots }, { "arrow choice", addon.ArrowTarget },
         { "menu and buttons (UI.lua)", addon.ShowMenu }, { "tour and settings sharing (Help.lua)", addon.StartTour },
     }
-    local FILES = { "Data.lua", "ForeverLazy.lua", "Report.lua", "Options.lua", "Extras.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
+    local FILES = { "Data.lua", "ForeverLazy.lua", "Report.lua", "Options.lua", "Extras.lua", "ExtrasTools.lua", "PlanDetail.lua", "StepWindow.lua", "PlanMenus.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
         "ClassQuests.lua", "Boats.lua", "Services.lua", "FlightData.lua", "Travel.lua", "Party.lua", "Quests.lua", "PlanWindow.lua", "Journey.lua",
         "Community.lua", "Crafting.lua", "Inventory.lua", "Hive.lua", "Live.lua", "Gather.lua", "Nodes.lua", "Protect.lua", "GuardPoi.lua", "PlanGuard.lua", "Tracker.lua", "Autopilot.lua", "Couch.lua", "TalentGuide.lua", "Talents.lua", "MobLevels.lua", "Learn.lua", "DataExport.lua", "Availability.lua", "Townsfolk.lua", "Independence.lua", "QuestTooltips.lua", "PartyProgress.lua", "QuestieLink.lua", "QuestMap.lua", "QuestSounds.lua", "QuestInfo.lua", "QuestSearch.lua", "QuestHistory.lua", "HandInPing.lua", "NewZones.lua", "ChatTweaks.lua", "QuestPlates.lua", "BagWindow.lua", "RankUp.lua", "NameplateCasts.lua", "QuestItems.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Coach.lua", "Meter.lua", "Modules.lua" }
     for _, f in ipairs(FILES) do

@@ -491,6 +491,7 @@ local function UpdateButton(b, bag, slot)
         end
     end
     b.flLevel:SetText(lvlText)
+    if addon.GearMark then pcall(addon.GearMark, b, info and info.hyperlink) end          -- a green ^ on an upgrade (GearAdvisor.lua)
     if r then b.flLevel:SetTextColor(r, g, bl) else b.flLevel:SetTextColor(1, 1, 1) end
     if b.flCool and C_Container and C_Container.GetContainerItemCooldown then
         local ok, s, d = pcall(C_Container.GetContainerItemCooldown, bag, slot)

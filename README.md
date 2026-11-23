@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.19.1-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.20.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,13 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.19.1
+## What's new in 0.20.0
+
+- **Gear advisor.** Hover an item and a green line says if it is an upgrade for your class and spec. A green ^ in bags and at vendors, and a gear bar that equips it when you click.
+- **Quest item sparkles and range colours,** adapted from Forever Loot Sparkles and tullaRange (with credit).
+- **Fixes and tools:** the spell rank swap works, `/lazy report` makes a bug report you can copy, `/lazy commands` lists every command.
+
+## Earlier: 0.19.1
 
 - **Fresh quest data** from Questie 12.13.0 (QuestieDB 1.1.5), and seven quest titles spelled the way the game spells them.
 
