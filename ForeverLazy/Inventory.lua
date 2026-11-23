@@ -3,6 +3,7 @@
 --   /lazy has <part of an item name>      list what each character has of matching items
 -- Bank and mail are remembered from the last time you opened them.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -348,7 +349,7 @@ local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     if (cmd or ""):lower() == "has" then
         local want = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
-        if want == "" then Print("/lazy has <part of an item name>, for example /lazy has cured light hide"); return true end
+        if want == "" then Print(L("/lazy has <part of an item name>, for example /lazy has cured light hide")); return true end
         local inv = Store()
         Me()
         local found = 0
@@ -372,7 +373,7 @@ function addon:HandleExtraCommand(cmd, rest)
                 end
             end
         end
-        if found == 0 then Print("none of your characters has anything like that (open your bank and mailbox once on each character so I can see them)") end
+        if found == 0 then Print(L("none of your characters has anything like that (open your bank and mailbox once on each character so I can see them)")) end
         return true
     end
     if prev then return prev(self, cmd, rest) end

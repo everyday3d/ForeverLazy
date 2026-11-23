@@ -4,6 +4,7 @@
 --   new skills at the trainer -> the same, with a button that sets the arrow on your trainer
 --   /lazy talents            where my points are, and how many are left
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -168,13 +169,13 @@ local function Toast(title, body, buttonText, onClick)
         f.go = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
         f.go:SetSize(150, 22); f.go:SetPoint("BOTTOMLEFT", 20, 10)
         f.later = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        f.later:SetSize(90, 22); f.later:SetPoint("LEFT", f.go, "RIGHT", 8, 0); f.later:SetText("Later")
+        f.later:SetSize(90, 22); f.later:SetPoint("LEFT", f.go, "RIGHT", 8, 0); f.later:SetText(L("Later"))
         f.later:SetScript("OnClick", function() f:Hide() end)
         f.guide = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        f.guide:SetSize(100, 22); f.guide:SetPoint("LEFT", f.later, "RIGHT", 8, 0); f.guide:SetText("Guide link")
+        f.guide:SetSize(100, 22); f.guide:SetPoint("LEFT", f.later, "RIGHT", 8, 0); f.guide:SetText(L("Guide link"))
         f.guide:SetScript("OnClick", function()
             local g = GuideFor()
-            if g then ShowLink(g.url, g.source) else Print("no levelling guide for your class yet") end
+            if g then ShowLink(g.url, g.source) else Print(L("no levelling guide for your class yet")) end
         end)
         f:Hide()
         toast = f
@@ -223,7 +224,7 @@ local function CheckTrainer()
         Toast("New skills", "Your class trainer has new skills for you at level " .. lvl .. ".", "Show me the trainer", function()
             local r = api.FindService and api.FindService("classtrainer")
             if r then addon:AddWaypointZone(r.spawn.uiMapId, r.spawn.zx, r.spawn.zy, "Trainer: " .. tostring(r.name or "class trainer"))
-            else Print("I could not find your class trainer on this continent (needs Questie)") end
+            else Print(L("I could not find your class trainer on this continent (needs Questie)")) end
         end)
         if db.couchSpeak and addon.CouchSpeak then addon.CouchSpeak("Your class trainer has new skills for you.") end
     end
@@ -252,15 +253,15 @@ local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     if (cmd or ""):lower() == "talents" or (cmd or ""):lower() == "talent" then
         local n = Unspent()
-        Print(string.format("talent points to spend: %d", n))
-        for _, t in ipairs(Trees()) do Print(string.format("  %s: %d point%s", t.name, t.points, t.points == 1 and "" or "s")) end
+        Print(string.format(L("talent points to spend: %d"), n))
+        for _, t in ipairs(Trees()) do Print(string.format(L("  %s: %d point%s"), t.name, t.points, t.points == 1 and "" or "s")) end
         local g = GuideFor()
         if g then
-            Print("the levelling guide highlights these for your points (" .. tostring(g.source) .. "):")
+            Print(L("the levelling guide highlights these for your points (") .. tostring(g.source) .. "):")
             for _, t in ipairs(g.todo) do
-                Print(string.format("  to take: %s (%s)%s", t.name, g.trees[t.tab] and g.trees[t.tab].name or "?", t.can and "" or " - not open yet"))
+                Print(string.format(L("  to take: %s (%s)%s"), t.name, g.trees[t.tab] and g.trees[t.tab].name or "?", t.can and "" or " - not open yet"))
             end
-            for _, name in ipairs(g.have) do Print("  taken: " .. name) end
+            for _, name in ipairs(g.have) do Print(L("  taken: ") .. name) end
             if (rest or ""):lower():find("guide") then ShowLink(g.url, g.source) end
         end
         if n > 0 then CheckPoints(true) elseif not g then OpenTalents() end

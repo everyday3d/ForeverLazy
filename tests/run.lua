@@ -13,6 +13,7 @@ UISpecialFrames = {}
 local db = { waypoints = {}, planSkip = {} }
 local addon = { Print = noop, GetDB = function() return db end, RefreshPins = noop, RefreshOptions = noop }
 local ns = { addon = addon, api = { hbd = { GetPlayerWorldPosition = function() return 0, 0, 1 end } } }
+ns.L = function(t) return t end
 
 local chunk = assert(loadfile(root .. "/ForeverLazy/PlanGuard.lua"))
 chunk("ForeverLazy", ns)

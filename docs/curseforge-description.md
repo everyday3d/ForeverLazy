@@ -55,6 +55,7 @@ Handy commands: `/lazy` (options), `/lazy plan` (build a plan), `/lazy level` (p
 ## Good to know
 - Free and open source (GPL-3.0).
 - Settings live in the Options window, which opens on a **Start here** page (Just point me, Leveler, Duo, Everything) and shows only the basics until you ask for more. You rarely have to type a command.
+- Want it in your language? Every text can be translated: see [docs/LOCALIZATION.md](https://github.com/everyday3d/ForeverLazy/blob/main/docs/LOCALIZATION.md). `/lazy l10n` shows the state.
 - Something wrong? /lazy report makes a bug report you can copy, and /lazy commands lists every command.
 - Bugs and ideas: https://github.com/everyday3d/ForeverLazy
 

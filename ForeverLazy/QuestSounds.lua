@@ -3,6 +3,7 @@
 --   all the items or kills a quest step needs are done: a different sound, an effect
 --   /lazy sound on|off|try|next|next done     (also in the options, under Quest sounds)
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -49,8 +50,8 @@ local function PlayDone(force)
     pcall(PlaySound, DoneSound()[2], "Master")
 end
 
-function addon.QuestSoundTryStep() PlayStep(true); Print("step done sound: " .. StepVoice()[1]) end
-function addon.QuestSoundTryDone() PlayDone(true); Print("ready to hand in sound: " .. DoneSound()[1]) end
+function addon.QuestSoundTryStep() PlayStep(true); Print(L("step done sound: ") .. StepVoice()[1]) end
+function addon.QuestSoundTryDone() PlayDone(true); Print(L("ready to hand in sound: ") .. DoneSound()[1]) end
 
 local function Next(list, key, current)
     local db = DB()
@@ -185,7 +186,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         local db = DB()
         if a == "off" then db.questAnnounce = false elseif a == "on" then db.questAnnounce = nil end
-        Print("telling my party when I complete a quest: " .. (db.questAnnounce == false and "OFF" or "on") .. "  (/lazy announce on|off)")
+        Print(L("telling my party when I complete a quest: ") .. (db.questAnnounce == false and "OFF" or "on") .. L("  (/lazy announce on|off)"))
         return true
     end
     if (cmd or ""):lower() == "sound" then
@@ -196,7 +197,7 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "next" or a == "next step" then addon.QuestSoundNextStep(); return true
         elseif a == "next done" then addon.QuestSoundNextDone(); return true
         elseif a == "try" or a == "" then addon.QuestSoundTryStep(); C_Timer.After(1.4, addon.QuestSoundTryDone); return true end
-        Print("quest sounds: " .. (db.questSound == false and "OFF" or "on") .. " (step done: " .. StepVoice()[1] .. ", ready to hand in: " .. DoneSound()[1] .. ")")
+        Print(L("quest sounds: ") .. (db.questSound == false and "OFF" or "on") .. L(" (step done: ") .. StepVoice()[1] .. L(", ready to hand in: ") .. DoneSound()[1] .. ")")
         return true
     end
     if prev then return prev(self, cmd, rest) end

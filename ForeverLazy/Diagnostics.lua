@@ -4,6 +4,7 @@
 --   /lazy commands   every command, in groups
 -- Lua errors that mention Forever Lazy are remembered (the last 10) and go into the report. Nothing is sent anywhere.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -90,7 +91,7 @@ function addon.ApisReport()
     lines[#lines + 1] = "Loot sparkle setting right now: " .. tostring(sparkle)
     lines[#lines + 1] = ""
     lines[#lines + 1] = missing == 0 and "Everything the newer features need is here." or (missing .. " function(s) missing: a feature that needs one of them will not work, or will use a fallback.")
-    addon.ReportWindow("Forever Lazy: game functions", lines)
+    addon.ReportWindow(L("Forever Lazy: game functions"), lines)
 end
 
 --------------------------------------------------------------------------------
@@ -160,7 +161,7 @@ function addon.BugReport()
     end
     Add("")
     Add("Nothing here is sent anywhere. Copy it (Ctrl+A, Ctrl+C) and paste it when you report a problem.")
-    addon.ReportWindow("Forever Lazy: bug report", lines)
+    addon.ReportWindow(L("Forever Lazy: bug report"), lines)
 end
 
 --------------------------------------------------------------------------------
@@ -176,7 +177,8 @@ local COMMANDS = {
         { "/lazy check", "Is everything loaded and working" },
         { "/lazy report", "A bug report you can copy" },
         { "/lazy apis", "Which game functions the newer features need" },
-        { "/lazy commands", "This list" } } },
+        { "/lazy commands", "This list" },
+        { "/lazy l10n, l10n use <code>, l10n missing", "Languages: what is translated, pick one, list what needs translating" } } },
     { "Finding things", {
         { "/lazy go <place>", "Plan and follow a whole trip" },
         { "/lazy inn, repair, flight, bank, ah, mailbox, stable", "The nearest one" },
@@ -214,12 +216,66 @@ function addon.CommandsReport()
         for _, c in ipairs(group[2]) do lines[#lines + 1] = string.format("   %-52s %s", c[1], c[2]) end
         lines[#lines + 1] = ""
     end
-    addon.ReportWindow("Forever Lazy: commands", lines)
+    addon.ReportWindow(L("Forever Lazy: commands"), lines)
+end
+
+--------------------------------------------------------------------------------
+-- /lazy l10n: languages
+--------------------------------------------------------------------------------
+local function Languages()
+    local list = { "auto", "enUS" }
+    local have = {}
+    for code in pairs(ns.locales or {}) do have[#have + 1] = code end
+    table.sort(have)
+    for _, c in ipairs(have) do if c ~= "enUS" then list[#list + 1] = c end end
+    return list
+end
+addon.LanguageList = Languages
+
+function addon.LanguageName()
+    local db = DB()
+    local set = db and db.language
+    local loc = ns.CurrentLocale and ns.CurrentLocale() or "enUS"
+    if not set or set == "auto" then return "Automatic (" .. loc .. ")" end
+    return set
+end
+
+function addon.LanguageCycle()
+    local db = DB()
+    local list = Languages()
+    local cur = db.language or "auto"
+    local idx = 1
+    for i, c in ipairs(list) do if c == cur then idx = i end end
+    db.language = list[(idx % #list) + 1]
+    if db.language == "auto" then db.language = nil end
+    ns.localeOverride = db.language
+    if addon.RefreshOptions then addon.RefreshOptions() end
+end
+
+function addon.LanguageReport(which)
+    local loc, have, miss = ns.LocaleStats()
+    if which == "missing" then
+        local list = ns.LocaleMissing()
+        local lines = { "Texts asked for in " .. loc .. " that have no translation yet (" .. #list .. "). Paste the ones you translate into Locales/" .. loc .. ".lua:", "" }
+        for _, text in ipairs(list) do lines[#lines + 1] = string.format("    [%q] = \"\",", text) end
+        addon.ReportWindow(L("Forever Lazy: texts to translate"), lines)
+        return
+    end
+    local installed = {}
+    for code, t in pairs(ns.locales or {}) do local n = 0; for _ in pairs(t) do n = n + 1 end; installed[#installed + 1] = code .. " (" .. n .. " texts)" end
+    table.sort(installed)
+    Print(string.format(L("language: %s. %d texts translated for it, %d asked for without a translation so far. Translations installed: %s."),
+        addon.LanguageName(), have, miss, #installed > 0 and table.concat(installed, ", ") or "none yet"))
+    Print(L("  /lazy l10n use <code>|auto picks a language, /lazy l10n missing lists what still needs a translation (see docs/LOCALIZATION.md)"))
 end
 
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("PLAYER_LOGIN")
-ev:SetScript("OnEvent", function() pcall(HookErrors) end)
+ev:SetScript("OnEvent", function()
+    pcall(HookErrors)
+    local db = DB()
+    if db and ns.localeOverride == nil then ns.localeOverride = db.language end
+end)
 
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
@@ -227,8 +283,21 @@ function addon:HandleExtraCommand(cmd, rest)
     if c == "report" then addon.BugReport(); return true end
     if c == "apis" then addon.ApisReport(); return true end
     if c == "commands" or c == "cmds" then addon.CommandsReport(); return true end
+    if c == "l10n" or c == "language" then
+        local a = ((rest or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+        local verb, arg = a:match("^(%a+)%s*(.*)$")
+        if verb == "missing" then addon.LanguageReport("missing")
+        elseif verb == "use" and arg ~= "" then
+            local db = DB()
+            db.language = (arg:lower() == "auto") and nil or arg
+            ns.localeOverride = db.language
+            Print(L("language: ") .. addon.LanguageName() .. L(" (some texts are drawn once, /reload shows the rest)"))
+            if addon.RefreshOptions then addon.RefreshOptions() end
+        else addon.LanguageReport() end
+        return true
+    end
     if prev then return prev(self, cmd, rest) end
 end
 
 -- reached the end of the file without an error (used by /lazy check)
-do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Diagnostics.lua"] = true end end
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Diagnostics.lua"] = true; ns2.addon.loaded["Locale.lua"] = ns2.loadedFiles and ns2.loadedFiles["Locale.lua"] or nil end end

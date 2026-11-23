@@ -5,6 +5,7 @@
 -- put in the tooltip; it only adds its own at the end.
 --   /lazy tooltips on | off | auto     auto (the default) = on only when Questie is not installed
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local data = ns.data
 local Print = addon.Print
@@ -340,7 +341,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if a == "on" then db.questTooltips = true
         elseif a == "off" then db.questTooltips = false
         elseif a == "auto" then db.questTooltips = nil end
-        Print("quest tooltips on creatures, objects and items: " .. (Enabled() and "ON" or "off") ..
+        Print(L("quest tooltips on creatures, objects and items: ") .. (Enabled() and "ON" or "off") ..
             (db.questTooltips == nil and (QuestieAddonLoaded() and " (auto: off while Questie is running)" or " (auto: on, Questie is not running)") or ""))
         return true
     end

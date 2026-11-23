@@ -8,6 +8,7 @@
 --   5. nothing to do in this zone        -> the next stop of my journey
 -- Modules that are switched off are skipped. With "keep going" on, it picks the next thing by itself when I arrive.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -183,22 +184,22 @@ local function Now()
     local d = Decide()
     if d.flightTrip then
         if addon.GoWithFlight(d.flightTrip[1], d.flightTrip[2], d.flightTrip[3], d.flightTrip[4]) then return end
-        Print("lazy mode: next stop of your plan: " .. d.flightTrip[4])
+        Print(L("lazy mode: next stop of your plan: ") .. d.flightTrip[4])
         return
     end
     if d.map and d.trip and addon.GoTo and addon.ModuleOn("go") then
-        Print("lazy mode: " .. d.say)
+        Print(L("lazy mode: ") .. d.say)
         addon.GoTo(d.map, d.zx, d.zy, d.trip)       -- far away: plan the whole trip
     elseif d.map then
         Waypoint(d.map, d.zx, d.zy, d.label, d.reason)
-        Print("lazy mode: " .. d.say)
+        Print(L("lazy mode: ") .. d.say)
     elseif d.follow then
         -- the plan's own first stop is already the arrow: make sure it shows
-        Print("lazy mode: " .. d.say)
+        Print(L("lazy mode: ") .. d.say)
         local w = DB().waypoints[1]
         if w and w.detail == nil and addon.WaypointDetail then w.detail = nil end
     else
-        Print("lazy mode: " .. d.say)
+        Print(L("lazy mode: ") .. d.say)
     end
 end
 addon.LazyNow = Now

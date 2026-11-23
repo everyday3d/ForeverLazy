@@ -4,6 +4,7 @@
 --   /lazy fish                 nearest fishing pools and wreckage; /lazy fish 2 for the next one
 -- The arrow goes to the first spot and moves on as you arrive. Names are matched on part of the node's name.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -30,11 +31,11 @@ local function WithIndex(cb)
     local QDB = api.GetQuestie()
     if not (api.QuestieReady and api.QuestieReady() and QDB and QDB.ObjectPointers and C_Timer) then
         waiting = {}
-        Print("needs Questie loaded and ready")
+        Print(L("needs Questie loaded and ready"))
         return
     end
     scanning = true
-    Print("reading Questie's object list, one moment...")
+    Print(L("reading Questie's object list, one moment..."))
     local ids = {}
     for id in pairs(QDB.ObjectPointers) do ids[#ids + 1] = id end
     local list, i = {}, 1
@@ -136,18 +137,18 @@ local function Gather(arg)
             if n.src and n.src.kind == "node" and n.src.name then want = n.src.name:lower(); break end
         end
         if not want or want == "" then
-            Print("which node? For example /lazy herb peacebloom or /lazy ore tin. After /lazy craft, /lazy gather finds the nodes you are missing.")
+            Print(L("which node? For example /lazy herb peacebloom or /lazy ore tin. After /lazy craft, /lazy gather finds the nodes you are missing."))
             return
         end
     end
     WithIndex(function()
         local matches = MatchIds(function(n) return n:find(want, 1, true) ~= nil end)
-        if #matches == 0 then Print("no node named like '" .. want .. "' in Questie's data"); return end
+        if #matches == 0 then Print(L("no node named like '") .. want .. L("' in Questie's data")); return end
         local spots = Spots(matches)
-        if #spots == 0 then Print("none of those on this continent that I know of"); return end
+        if #spots == 0 then Print(L("none of those on this continent that I know of")); return end
         local route = Route(spots, 12)
         Place(route, "Gather " .. (route[1].name or want))
-        Print(string.format("gathering route: %d stop%s for %s, the first about %d yards away (%s %.0f, %.0f)", #route,
+        Print(string.format(L("gathering route: %d stop%s for %s, the first about %d yards away (%s %.0f, %.0f)"), #route,
             #route == 1 and "" or "s", route[1].name, route[1].d, MapName(route[1].spawn.uiMapId),
             route[1].spawn.zx * 100, route[1].spawn.zy * 100))
     end)
@@ -160,7 +161,7 @@ local function Fish(n)
             for _, p in ipairs(FISH) do if name:find(p, 1, true) then return true end end
         end)
         local spots = Spots(matches)
-        if #spots == 0 then Print("no fishing spots known on this continent"); return end
+        if #spots == 0 then Print(L("no fishing spots known on this continent")); return end
         -- the same pool listed twice is one
         local list = {}
         for _, s in ipairs(spots) do
@@ -172,7 +173,7 @@ local function Fish(n)
         local pick = math.min(math.max(tonumber(n) or 1, 1), #list)
         for i = 1, math.min(3, #list) do
             local s = list[i]
-            Print(string.format("%s%d. %s - %s %.0f, %.0f (about %d yards)", i == pick and "> " or "  ", i, s.name,
+            Print(string.format(L("%s%d. %s - %s %.0f, %.0f (about %d yards)"), i == pick and "> " or "  ", i, s.name,
                 MapName(s.spawn.uiMapId), s.spawn.zx * 100, s.spawn.zy * 100, s.d))
         end
         Place({ list[pick] }, "Fish here")

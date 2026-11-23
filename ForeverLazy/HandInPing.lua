@@ -2,6 +2,7 @@
 -- where you stand, once for each visit.
 --   /lazy ping on|off
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local data = ns.data
@@ -81,7 +82,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         local db = DB()
         if a == "off" then db.handInPing = false elseif a == "on" then db.handInPing = nil end
-        Print("hand-in ping: " .. (db.handInPing == false and "OFF" or "on") .. "  (/lazy ping on|off)")
+        Print(L("hand-in ping: ") .. (db.handInPing == false and "OFF" or "on") .. L("  (/lazy ping on|off)"))
         return true
     end
     if prev then return prev(self, cmd, rest) end

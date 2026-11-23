@@ -4,6 +4,7 @@
 --   /lazy acceptplan       follow a plan someone sent you
 -- Everything goes over this addon's own messages to your party or raid. Players without the addon see nothing.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -97,7 +98,7 @@ local function QuestName(id)
 end
 
 local function ShowParty()
-    if not Channel() then Print("you are not in a group"); return end
+    if not Channel() then Print(L("you are not in a group")); return end
     SendMyQuests()                      -- they will answer, and I send mine so they can compare too
     local any = false
     local mine = {}
@@ -109,7 +110,7 @@ local function ShowParty()
             if mine[id] then both[#both + 1] = QuestName(id) else they[#they + 1] = id end
         end
         table.sort(both)
-        Print(string.format("%s: %d quest%s in common%s", who, #both, #both == 1 and "" or "s",
+        Print(string.format(L("%s: %d quest%s in common%s"), who, #both, #both == 1 and "" or "s",
             #both > 0 and (" - " .. table.concat(both, ", ", 1, math.min(#both, 6))) or ""))
         -- quests they have that I could pick up
         local QDB = api.GetQuestie()
@@ -123,11 +124,11 @@ local function ShowParty()
         end
         if #could > 0 then
             table.sort(could)
-            Print(string.format("  %s has %d you could take: %s", who, #could, table.concat(could, ", ", 1, math.min(#could, 5))))
+            Print(string.format(L("  %s has %d you could take: %s"), who, #could, table.concat(could, ", ", 1, math.min(#could, 5))))
         end
     end
     if not any then
-        Print("nobody in your group has sent their quests yet (they need this addon). I asked, try again in a few seconds.")
+        Print(L("nobody in your group has sent their quests yet (they need this addon). I asked, try again in a few seconds."))
     end
 end
 
@@ -139,7 +140,7 @@ local AcceptPlan          -- defined below
 
 local function SharePlan(silent)
     local ch = Channel()
-    if not ch then Print("you are not in a group"); return end
+    if not ch then Print(L("you are not in a group")); return end
     local stops = {}
     for _, w in ipairs(DB().waypoints) do
         if w.label and w.uiMapId and w.zx and w.zy and #stops < 15 then
@@ -152,7 +153,7 @@ local function SharePlan(silent)
             stops[#stops + 1] = { label = w.label, map = w.uiMapId, zx = w.zx, zy = w.zy, detail = w.detail, q = #qids > 0 and qids or nil }
         end
     end
-    if #stops == 0 then Print("you have no plan to share. /lazy plan builds one"); return end
+    if #stops == 0 then Print(L("you have no plan to share. /lazy plan builds one")); return end
     -- the same plan to the same group is not sent again (the leader's plan is re-checked often; that was spamming everybody)
     local parts = { tostring(GetNumGroupMembers and GetNumGroupMembers() or 0) }
     for _, s in ipairs(stops) do parts[#parts + 1] = string.format("%s|%.2f|%.2f", tostring(s.map), s.zx, s.zy) end   -- places only: a changing label (kill counts) is not a new plan
@@ -160,7 +161,7 @@ local function SharePlan(silent)
     if silent and sig == addon.lastPlanSent then return end
     addon.lastPlanSent = sig
     addon:SendCommMessage(PLAN_PREFIX, addon:Serialize({ stops = stops, lead = addon.DuoRole() == "lead" }), ch)
-    if not silent then Print(string.format("sent your plan (%d stops) to the group. Players with the addon can follow it with /lazy acceptplan", #stops)) end
+    if not silent then Print(string.format(L("sent your plan (%d stops) to the group. Players with the addon can follow it with /lazy acceptplan"), #stops)) end
 end
 
 function addon:OnPartyPlan(prefix, message, distribution, sender)
@@ -202,14 +203,14 @@ function addon:OnPartyPlan(prefix, message, distribution, sender)
     addon.planToldAt = addon.planToldAt or {}
     if addon.planToldAt[who] and GetTime() - addon.planToldAt[who] < 600 then return end
     addon.planToldAt[who] = GetTime()
-    Print(string.format("%s shared a plan with %d stops (first: %s). /lazy acceptplan to follow it.", who, #clean, clean[1].label))
+    Print(string.format(L("%s shared a plan with %d stops (first: %s). /lazy acceptplan to follow it."), who, #clean, clean[1].label))
 end
 addon:RegisterComm(PLAN_PREFIX, "OnPartyPlan")
 
 AcceptPlan = function()
     local who, stops
     for w, s in pairs(received) do who, stops = w, s end     -- the latest one is enough
-    if not stops then Print("nobody has shared a plan with you"); return end
+    if not stops then Print(L("nobody has shared a plan with you")); return end
     local list = {}
     for i, s in ipairs(stops) do
         local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(s.zx, s.zy, s.map)
@@ -218,7 +219,7 @@ AcceptPlan = function()
                                 uiMapId = s.map, zx = s.zx, zy = s.zy, detail = s.detail, huntQuests = s.q }
         end
     end
-    if #list == 0 then Print("could not place that plan on your map"); return end
+    if #list == 0 then Print(L("could not place that plan on your map")); return end
     DB().waypoints = list
     addon.planFrom = who
     addon.planFromSet = {}
@@ -229,7 +230,7 @@ AcceptPlan = function()
     received[who] = nil
     addon.planToldAt = addon.planToldAt or {}
     addon.planToldAt[who] = GetTime()                -- I said yes: do not ask again for their next small change
-    Print(string.format("following %s's plan: %d stops. First: %s", who, #list, list[1].name))
+    Print(string.format(L("following %s's plan: %d stops. First: %s"), who, #list, ns.LocalizeLabel(list[1].name)))
 end
 
 --------------------------------------------------------------------------------
@@ -295,16 +296,16 @@ function addon:HandleExtraCommand(cmd, rest)
             db.duo = nil
             db.duoAuto = false
             addon.duoPlanAt = nil
-            Print("duo mode off (it will not start by itself again; /lazy duo on turns it back on)")
+            Print(L("duo mode off (it will not start by itself again; /lazy duo on turns it back on)"))
         elseif arg == "" or arg == "on" or arg == "lead" or arg == "follow" or arg == "leader" then
             if arg == "" and addon.DuoRole() then
                 local role = addon.DuoRole()
-                Print("duo mode is on" .. (addon.AutoDuoPartner() and " (started automatically)" or "") .. (role and (": you " .. (role == "lead" and "lead, your plan goes to the group" or "follow the party leader's plan")) or ", it works once you are in a group") .. ". /lazy duo off")
+                Print(L("duo mode is on") .. (addon.AutoDuoPartner() and " (started automatically)" or "") .. (role and (": you " .. (role == "lead" and "lead, your plan goes to the group" or "follow the party leader's plan")) or ", it works once you are in a group") .. L(". /lazy duo off"))
             else
                 db.duo = true
                 db.duoAuto = nil
                 addon.duoPlanAt = nil
-                Print("duo mode on. The party leader makes the plan and the others follow it. Shared quests count extra.")
+                Print(L("duo mode on. The party leader makes the plan and the others follow it. Shared quests count extra."))
                 if addon.DuoRole() == "lead" and Channel() then pcall(SharePlan, true) end
             end
         end
@@ -324,7 +325,7 @@ roster:SetScript("OnEvent", function()
         if partner and not DB().duo and announcedWith ~= partner then
             announcedWith = partner
             local role = addon.DuoRole()
-            Print(string.format("duo mode started with %s (you %s). /lazy duo off stops it.", partner,
+            Print(string.format(L("duo mode started with %s (you %s). /lazy duo off stops it."), partner,
                 role == "lead" and "lead: your plan goes to them" or "follow their plan"))
         elseif not partner then
             announcedWith = nil

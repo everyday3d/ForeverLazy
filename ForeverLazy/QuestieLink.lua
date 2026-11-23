@@ -8,6 +8,7 @@
 --   /lazy questie            status: who we have heard from, what we sent
 --   /lazy questie off|on     stop or resume (default: on)
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local data = ns.data
 local DS = ns.dataset
@@ -502,17 +503,17 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         local db = DB()
         if a == "off" then db.questieLink = false elseif a == "on" then db.questieLink = nil end
-        Print("talking to Questie users in your group: " .. (db.questieLink == false and "OFF" or "on"))
-        Print(string.format("  heard %d messages (%d unreadable). Sending my own progress: %s (%d packets sent)",
+        Print(L("talking to Questie users in your group: ") .. (db.questieLink == false and "OFF" or "on"))
+        Print(string.format(L("  heard %d messages (%d unreadable). Sending my own progress: %s (%d packets sent)"),
             heard.packets, heard.bad, QuestieAddonLoaded() and "no, Questie is running here and does it" or (CanSend() and "yes" or "not in a group"), sentCount))
         local any = false
         for who, rec in pairs(remote) do
             any = true
             local n = 0
             for _ in pairs(rec.quests) do n = n + 1 end
-            Print(string.format("  %s: %d quests", who, n))
+            Print(string.format(L("  %s: %d quests"), who, n))
         end
-        if not any then Print("  nobody running Questie has sent anything yet") end
+        if not any then Print(L("  nobody running Questie has sent anything yet")) end
         return true
     end
     if prev then return prev(self, cmd, rest) end

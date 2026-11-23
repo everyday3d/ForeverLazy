@@ -1,6 +1,7 @@
 -- Version note: when someone in your group or guild runs a newer Forever Lazy, you get one line and a What's new button.
 -- Only the version number travels, as a hidden addon message to your group.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -60,7 +61,7 @@ function addon:OnVersion(prefix, message, distribution, sender)
         end
         if not warned[message] then
             warned[message] = true
-            Print(string.format("%s runs a newer Forever Lazy (%s, you have %s). Click the button at the top of the screen, or /lazy new, for what's new and where to get it.", who, message, MyVersion()))
+            Print(string.format(L("%s runs a newer Forever Lazy (%s, you have %s). Click the button at the top of the screen, or /lazy new, for what's new and where to get it."), who, message, MyVersion()))
         end
     end
 end

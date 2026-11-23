@@ -1,6 +1,7 @@
 -- Waypoint sharing, the import / export window, the minimap right-click menu and the self-test.
 -- Split out of Extras.lua; it needs nothing from there.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local hbd = api.hbd
@@ -16,11 +17,11 @@ local SHARE_PREFIX = "FLWP"
 
 function addon:ShareWaypoint()
     local wp = DB().waypoints[1]
-    if not wp then Print("no active waypoint to share"); return end
-    if not IsInGroup() then Print("you are not in a party"); return end
+    if not wp then Print(L("no active waypoint to share")); return end
+    if not IsInGroup() then Print(L("you are not in a party")); return end
     local data = self:Serialize({ name = wp.name, uiMapId = wp.uiMapId, zx = wp.zx, zy = wp.zy })
     self:SendCommMessage(SHARE_PREFIX, data, IsInRaid() and "RAID" or "PARTY")
-    Print("sent waypoint to the group: " .. wp.name)
+    Print(L("sent waypoint to the group: ") .. wp.name)
 end
 
 function addon:OnSharedWaypoint(prefix, message, distribution, sender)
@@ -71,7 +72,7 @@ local function MakeIO()
     f.action = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     f.action:SetSize(110, 24); f.action:SetPoint("BOTTOMLEFT", 14, 12)
     local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText("Close")
+    close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText(L("Close"))
     close:SetScript("OnClick", function() f:Hide() end)
     f:Hide()
     return f
@@ -91,19 +92,19 @@ function addon:OpenIO(mode)
     io = io or MakeIO()
     io:Show()
     if mode == "export" then
-        io.title:SetText("Export waypoints")
-        io.hint:SetText("Select all (Ctrl+A) and copy (Ctrl+C). One waypoint per line.")
+        io.title:SetText(L("Export waypoints"))
+        io.hint:SetText(L("Select all (Ctrl+A) and copy (Ctrl+C). One waypoint per line."))
         io.edit:SetText(ExportText())
         io.edit:HighlightText()
         io.edit:SetFocus()
-        io.action:SetText("Select all")
+        io.action:SetText(L("Select all"))
         io.action:SetScript("OnClick", function() io.edit:SetFocus(); io.edit:HighlightText() end)
     else
-        io.title:SetText("Import waypoints")
-        io.hint:SetText("Paste lines like:  mapId,x,y,name   (x and y between 0 and 1)")
+        io.title:SetText(L("Import waypoints"))
+        io.hint:SetText(L("Paste lines like:  mapId,x,y,name   (x and y between 0 and 1)"))
         io.edit:SetText("")
         io.edit:SetFocus()
-        io.action:SetText("Import")
+        io.action:SetText(L("Import"))
         io.action:SetScript("OnClick", function()
             local found = {}
             for line in (io.edit:GetText() or ""):gmatch("[^\r\n]+") do
@@ -116,7 +117,7 @@ function addon:OpenIO(mode)
                 local f = found[i]
                 addon:AddWaypointZone(f[1], f[2], f[3], f[4])
             end
-            Print(string.format("imported %d waypoints", #found))
+            Print(string.format(L("imported %d waypoints"), #found))
             io:Hide()
         end)
     end

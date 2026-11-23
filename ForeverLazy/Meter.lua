@@ -9,6 +9,7 @@
 --   /lazy meter debug              what the meter API gave back (for bug reports)
 -- In combat the game hides the numbers from addons, so the tab keeps the last picture until the fight is over.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -189,7 +190,7 @@ local function ShowRowTooltip(owner, link)
     GameTooltip:AddDoubleLine(r.label or "Total", string.format("%s  (%.1f%% of the group)", Short(r.amount), pct), 1, 0.82, 0, 1, 1, 1)
     if r.per and r.per > 0 then GameTooltip:AddDoubleLine("Per second", Short(r.per), 1, 0.82, 0, 1, 1, 1) end
     if inCombat then
-        GameTooltip:AddLine("The moves are hidden while you fight", 0.6, 0.6, 0.6)
+        GameTooltip:AddLine(L("The moves are hidden while you fight"), 0.6, 0.6, 0.6)
     else
         local DM = _G.C_DamageMeter
         local ok, src = false, nil
@@ -208,7 +209,7 @@ local function ShowRowTooltip(owner, link)
             if list then
                 table.sort(list, function(a, b) return (a.totalAmount or 0) > (b.totalAmount or 0) end)
                 GameTooltip:AddLine(" ")
-                GameTooltip:AddLine("Moves used", 0.7, 0.85, 1)
+                GameTooltip:AddLine(L("Moves used"), 0.7, 0.85, 1)
                 for i = 1, math.min(12, #list) do
                     local sp = list[i]
                     local amt = tonumber(sp.totalAmount) or 0
@@ -219,7 +220,7 @@ local function ShowRowTooltip(owner, link)
                 if #list > 12 then GameTooltip:AddLine(string.format("... and %d more", #list - 12), 0.5, 0.5, 0.5) end
             end
         else
-            GameTooltip:AddLine("No move list for this one", 0.6, 0.6, 0.6)
+            GameTooltip:AddLine(L("No move list for this one"), 0.6, 0.6, 0.6)
         end
     end
     GameTooltip:Show()
@@ -404,7 +405,7 @@ ev:SetScript("OnEvent", function(_, event)
             if key and key ~= lastInstanceKey and lastInstanceKey ~= nil and db.meterAutoReset ~= false and db.meterOn == true
                 and C_DamageMeter and C_DamageMeter.ResetAllCombatSessions and not (InCombatLockdown and InCombatLockdown()) then
                 pcall(C_DamageMeter.ResetAllCombatSessions)
-                Print("meter: new " .. tostring(name) .. ", so the meter starts fresh (/lazy meter autoreset off to keep old numbers)")
+                Print(L("meter: new ") .. tostring(name) .. L(", so the meter starts fresh (/lazy meter autoreset off to keep old numbers)"))
             end
             if key then lastInstanceKey = key elseif lastInstanceKey == nil then lastInstanceKey = "" end
             if db.meterOn == true and C_Timer then C_Timer.After(2, function() pcall(Refresh) end) end
@@ -441,31 +442,31 @@ function addon.MeterSet(on)
     db.meterOn = on and true or false
     if on then
         local f = EnsureFrame()
-        Print(usingTab and "the damage meter is on: look for the Meter tab in your chat window"
-            or "the damage meter is on, in a small window (a chat tab could not be made" .. (problems.tab and (": " .. problems.tab) or "") .. ")")
+        Print(usingTab and L("the damage meter is on: look for the Meter tab in your chat window")
+            or L("the damage meter is on, in a small window (a chat tab could not be made") .. (problems.tab and (": " .. problems.tab) or "") .. ")")
         Refresh()
     else
         if frame and not usingTab then frame:Hide() end
         if frame and usingTab and frame.Clear then frame:Clear(); frame:AddMessage("|cff888888Forever Lazy meter is off (/lazy meter)|r", 1, 1, 1) end
-        Print("the damage meter is off")
+        Print(L("the damage meter is off"))
     end
     if addon.RefreshOptions then addon.RefreshOptions() end
 end
 
 local function Debug()
     local DM = _G.C_DamageMeter
-    Print("meter debug: C_DamageMeter " .. (DM and "present" or "MISSING") .. ", tab frame " .. (FindTab() and "found" or "not found")
-        .. ", drawing in " .. (frame and (usingTab and "a chat tab" or "the fallback window") or "nothing yet"))
-    if problems.tab then Print("  tab problem: " .. problems.tab) end
+    Print(L("meter debug: C_DamageMeter ") .. (DM and "present" or "MISSING") .. L(", tab frame ") .. (FindTab() and "found" or "not found")
+        .. L(", drawing in ") .. (frame and (usingTab and "a chat tab" or "the fallback window") or "nothing yet"))
+    if problems.tab then Print(L("  tab problem: ") .. problems.tab) end
     local s, err = GetSession()
-    if not s then Print("  session: " .. tostring(err)); return end
+    if not s then Print(L("  session: ") .. tostring(err)); return end
     local list = s.combatSources
-    Print(string.format("  session: %d sources, total %s, max %s, duration %s", type(list) == "table" and #list or -1,
+    Print(string.format(L("  session: %d sources, total %s, max %s, duration %s"), type(list) == "table" and #list or -1,
         IsSecret(s.totalAmount) and "hidden" or tostring(s.totalAmount), IsSecret(s.maxAmount) and "hidden" or tostring(s.maxAmount),
         IsSecret(s.durationSeconds) and "hidden" or tostring(s.durationSeconds)))
     if type(list) == "table" and list[1] then
         local a = list[1]
-        Print(string.format("  first source: name %s, total %s, per second %s, class %s", IsSecret(a.name) and "hidden" or tostring(a.name),
+        Print(string.format(L("  first source: name %s, total %s, per second %s, class %s"), IsSecret(a.name) and "hidden" or tostring(a.name),
             IsSecret(a.totalAmount) and "hidden" or tostring(a.totalAmount), IsSecret(a.amountPerSecond) and "hidden" or tostring(a.amountPerSecond),
             tostring(a.classFilename)))
     end
@@ -482,18 +483,18 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a:match("^autoreset") then
             local v = a:match("^autoreset%s+(%a+)")
             if v == "off" then db.meterAutoReset = false elseif v == "on" then db.meterAutoReset = nil end
-            Print("meter: a new dungeon or raid " .. ((db.meterAutoReset == false) and "keeps the old numbers" or "starts the meter fresh") .. " (/lazy meter autoreset on|off)")
+            Print(L("meter: a new dungeon or raid ") .. ((db.meterAutoReset == false) and "keeps the old numbers" or "starts the meter fresh") .. L(" (/lazy meter autoreset on|off)"))
         elseif a == "reset" then
-            if C_DamageMeter and C_DamageMeter.ResetAllCombatSessions then pcall(C_DamageMeter.ResetAllCombatSessions); lastLines = nil; Print("the game's damage meter data was cleared"); Refresh()
-            else Print("this client has no damage meter to reset") end
+            if C_DamageMeter and C_DamageMeter.ResetAllCombatSessions then pcall(C_DamageMeter.ResetAllCombatSessions); lastLines = nil; Print(L("the game's damage meter data was cleared")); Refresh()
+            else Print(L("this client has no damage meter to reset")) end
         elseif a == "current" or a == "overall" then
-            db.meterSegment = a; Print("meter: showing " .. (a == "overall" and "everything since the last reset" or "the current fight")); Refresh()
+            db.meterSegment = a; Print(L("meter: showing ") .. (a == "overall" and "everything since the last reset" or "the current fight")); Refresh()
         elseif METRICS[a] then
-            db.meterMetric = a; Print("meter: showing " .. METRICS[a].label:lower()); Refresh()
+            db.meterMetric = a; Print(L("meter: showing ") .. METRICS[a].label:lower()); Refresh()
         elseif a:match("^rows%s*(%d+)$") then
-            db.meterRows = tonumber(a:match("^rows%s*(%d+)$")); Print("meter: listing " .. db.meterRows .. " players"); Refresh()
+            db.meterRows = tonumber(a:match("^rows%s*(%d+)$")); Print(L("meter: listing ") .. db.meterRows .. L(" players")); Refresh()
         else
-            Print("/lazy meter on|off|reset|debug, dps|damage|healing|hps|taken|interrupts|dispels|deaths, current|overall, rows <n>")
+            Print(L("/lazy meter on|off|reset|debug, dps|damage|healing|hps|taken|interrupts|dispels|deaths, current|overall, rows <n>"))
         end
         if addon.RefreshOptions then addon.RefreshOptions() end
         return true

@@ -3,6 +3,7 @@
 --   /lazy nextzone go [n] put a waypoint on suggestion n (default 1)
 -- The level ranges and quest hub positions are from memory, so treat them as a guide.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 local api = ns.api
@@ -115,12 +116,12 @@ local function Show(level, header)
     local here = CurrentZoneName()
     suggestions = Suggest(level, here)
     if #suggestions == 0 then
-        Print("no zone suggestions for your level")
+        Print(L("no zone suggestions for your level"))
         return
     end
     Print(header)
     for i, s in ipairs(suggestions) do Print(Describe(i, s)) end
-    Print("/lazy nextzone go  puts a waypoint on the first one")
+    Print(L("/lazy nextzone go  puts a waypoint on the first one"))
 end
 
 local lastHint
@@ -155,7 +156,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if go then
             if #suggestions == 0 then suggestions = Suggest(UnitLevel("player"), (CurrentZoneName())) end
             local s = suggestions[tonumber(go) or 1]
-            if not s then Print("no such suggestion, try /lazy nextzone first"); return true end
+            if not s then Print(L("no such suggestion, try /lazy nextzone first")); return true end
             DB().waypoints = {}
             addon:AddWaypointZone(s.mapId, s.zx, s.zy, s.zone[1] .. " (level " .. s.zone[2] .. "-" .. s.zone[3] .. ")")
         else

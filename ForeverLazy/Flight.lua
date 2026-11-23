@@ -4,6 +4,7 @@
 -- (and show the time on the flight map when you hover a destination).
 --   /lazy flight   lists the flight times learned so far
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -104,7 +105,7 @@ local function Finish()
         rec.n = math.min(rec.n + 1, 5)
     else
         t[key] = { avg = dur, n = 1 }
-        Print(string.format("learned the flight time %s to %s: %s", Short(r.origin), Short(r.dest), Fmt(dur)))
+        Print(string.format(L("learned the flight time %s to %s: %s"), Short(r.origin), Short(r.dest), Fmt(dur)))
     end
 end
 
@@ -156,9 +157,9 @@ function addon:HandleExtraCommand(cmd, rest)
         for k, v in pairs(Times()) do list[#list + 1] = { k = k, v = v } end
         table.sort(list, function(a, b) return a.k < b.k end)
         if #list == 0 then
-            Print("no flight times learned yet. They are measured the first time you fly each route.")
+            Print(L("no flight times learned yet. They are measured the first time you fly each route."))
         else
-            Print(#list .. " flight times learned:")
+            Print(#list .. L(" flight times learned:"))
             for _, e in ipairs(list) do
                 local o, d = e.k:match("^(.-)%->(.*)$")
                 Print(string.format("  %s to %s: %s", Short(o), Short(d), Fmt(e.v.avg)))

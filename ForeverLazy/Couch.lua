@@ -9,6 +9,7 @@
 --   /lazy couch on|off     /lazy couch say (repeat the step)
 -- The pieces can also be switched on one by one in Options.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -198,11 +199,11 @@ function addon.CouchSet(on)
     if addon.ToggleSteps and db.couch then addon.ToggleSteps(true) end
     if addon.RefreshOptions then addon.RefreshOptions() end
     if on then
-        Print("couch mode on: big text, quests accept and hand in by themselves (hold Shift to do it by hand), steps read aloud. " ..
-            "Rewards are not picked for you: the best one is starred.")
+        Print(L("couch mode on: big text, quests accept and hand in by themselves (hold Shift to do it by hand), steps read aloud. ") ..
+            L("Rewards are not picked for you: the best one is starred."))
         lastKey = nil
     else
-        Print("couch mode off")
+        Print(L("couch mode off"))
     end
 end
 

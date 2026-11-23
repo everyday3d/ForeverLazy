@@ -6,6 +6,7 @@ local said = {}
 local db = {}
 local addon = { Print = function(m) said[#said + 1] = m end, GetDB = function() return db end }
 local ns = { addon = addon }
+ns.L = function(t) return t end
 
 -- the game, as the Forever client shows it: a spellbook that lists every rank, bars that hold spell ids
 local spells = {

@@ -4,6 +4,7 @@
 --   /lazy moblevels <zone>     that zone        /lazy moblevels <mob>   that mob wherever it was seen
 --   /lazy moblevels clear      forget it all
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -74,7 +75,7 @@ end
 
 local function ZoneReport(zone, mobs)
     local lo, hi, count, skull = Range(mobs)
-    Print(string.format("%s: levels %s, %d kind%s of mob seen%s", zone, Span(lo, hi), count, count == 1 and "" or "s",
+    Print(string.format(L("%s: levels %s, %d kind%s of mob seen%s"), zone, Span(lo, hi), count, count == 1 and "" or "s",
         skull and " (and some ?? level ones)" or ""))
     local list = {}
     for name, r in pairs(mobs) do list[#list + 1] = { name = name, r = r } end
@@ -98,17 +99,17 @@ function addon.MobLevels(arg)
     local low = arg:lower()
     if low == "clear" or low == "reset" then
         wipe(st)
-        Print("mob levels forgotten")
+        Print(L("mob levels forgotten"))
         return
     end
     if low == "all" then
         local names = {}
         for z in pairs(st) do names[#names + 1] = z end
         table.sort(names)
-        if #names == 0 then Print("no mobs seen yet. Target or mouse over some and they are noted.") return end
+        if #names == 0 then Print(L("no mobs seen yet. Target or mouse over some and they are noted.")) return end
         for _, z in ipairs(names) do
             local lo, hi, count = Range(st[z])
-            Print(string.format("%s: levels %s (%d mobs)", z, Span(lo, hi), count))
+            Print(string.format(L("%s: levels %s (%d mobs)"), z, Span(lo, hi), count))
         end
         return
     end
@@ -117,7 +118,7 @@ function addon.MobLevels(arg)
         if zone and st[zone] and next(st[zone]) then
             ZoneReport(zone, st[zone])
         else
-            Print("nothing seen in " .. tostring(zone or "this zone") .. " yet. Target or mouse over a hostile mob and it is noted.")
+            Print(L("nothing seen in ") .. tostring(zone or "this zone") .. L(" yet. Target or mouse over a hostile mob and it is noted."))
         end
         return
     end
@@ -132,12 +133,12 @@ function addon.MobLevels(arg)
             if name:lower():find(low, 1, true) then
                 found = found + 1
                 if found <= 12 then
-                    Print(string.format("%s: level %s in %s%s", name, r.min and Span(r.min, r.max) or "??", z, r.skull and " (also ??)" or ""))
+                    Print(string.format(L("%s: level %s in %s%s"), name, r.min and Span(r.min, r.max) or "??", z, r.skull and " (also ??)" or ""))
                 end
             end
         end
     end
-    if found == 0 then Print("nothing seen called '" .. arg .. "'. Try /lazy moblevels all") end
+    if found == 0 then Print(L("nothing seen called '") .. arg .. L("'. Try /lazy moblevels all")) end
 end
 
 local prev = addon.HandleExtraCommand

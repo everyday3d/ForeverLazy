@@ -4,6 +4,7 @@
 --   /lazy class go [n]     waypoint on the giver
 -- Everything comes from Questie's database (quests that need your class).
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -186,35 +187,35 @@ local shown = {}
 local function Show()
     if not list then
         Scan()
-        Print("looking up your class quests, try again in a moment")
+        Print(L("looking up your class quests, try again in a moment"))
         return
     end
     shown = {}
     local now, soon = Quests(true), Quests(false)
     if #now == 0 then
-        Print("no class quests open to you right now")
+        Print(L("no class quests open to you right now"))
     else
-        Print("class quests you can take now:")
+        Print(L("class quests you can take now:"))
         for _, q in ipairs(now) do
             shown[#shown + 1] = q
-            Print(string.format("  %d. %s (level %d) - %s", #shown, q.name, q.level or 0, Where(q)))
+            Print(string.format(L("  %d. %s (level %d) - %s"), #shown, q.name, q.level or 0, Where(q)))
         end
     end
     if #soon > 0 then
-        Print("coming in the next few levels:")
+        Print(L("coming in the next few levels:"))
         for i, q in ipairs(soon) do
             if i > 6 then break end
             shown[#shown + 1] = q
-            Print(string.format("  %d. %s (from level %d) - %s", #shown, q.name, q.need, Where(q)))
+            Print(string.format(L("  %d. %s (from level %d) - %s"), #shown, q.name, q.need, Where(q)))
         end
     end
-    if #shown > 0 then Print("/lazy class go 1  puts a waypoint on the first giver") end
+    if #shown > 0 then Print(L("/lazy class go 1  puts a waypoint on the first giver")) end
 end
 
 local function Go(arg)
     if #shown == 0 then Show() end
     local q = shown[tonumber(arg) or 1]
-    if not q then Print("no such class quest, try /lazy class first"); return end
+    if not q then Print(L("no such class quest, try /lazy class first")); return end
     local s = Nearest(q.spawns)
     if not s then return end
     addon:AddWaypointZone(s.uiMapId, s.zx, s.zy, "Class quest: " .. q.name)
@@ -242,9 +243,9 @@ local function Announce(silent)
     if silent or db.classAlert == false then return end
     for i, q in ipairs(fresh) do
         if i > 3 then break end
-        Print(string.format("new class quest: %s (level %d) - %s", q.name, q.level or 0, Where(q)))
+        Print(string.format(L("new class quest: %s (level %d) - %s"), q.name, q.level or 0, Where(q)))
     end
-    if #fresh > 0 then Print("/lazy class lists them, /lazy class go puts a waypoint on the giver") end
+    if #fresh > 0 then Print(L("/lazy class lists them, /lazy class go puts a waypoint on the giver")) end
 end
 
 OnReady = function()
@@ -375,7 +376,7 @@ local function ShowToast(zoneId, needs)
         f.body = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         f.body:SetPoint("TOP", f.title, "BOTTOM", 0, -8); f.body:SetWidth(396); f.body:SetJustifyH("LEFT")
         local show = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        show:SetSize(130, 22); show:SetPoint("BOTTOMLEFT", 16, 12); show:SetText("Show me")
+        show:SetSize(130, 22); show:SetPoint("BOTTOMLEFT", 16, 12); show:SetText(L("Show me"))
         show:SetScript("OnClick", function()
             f:Hide()
             local n = f.needs and f.needs[1]
@@ -386,7 +387,7 @@ local function ShowToast(zoneId, needs)
             end
         end)
         local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        close:SetSize(90, 22); close:SetPoint("LEFT", show, "RIGHT", 8, 0); close:SetText("Close")
+        close:SetSize(90, 22); close:SetPoint("LEFT", show, "RIGHT", 8, 0); close:SetText(L("Close"))
         close:SetScript("OnClick", function() f:Hide() end)
         f:Hide()
         toast = f
@@ -423,11 +424,11 @@ end
 
 -- /lazy class here: exactly what my class quests need in this zone, any time
 function addon.ClassHere()
-    if not list then Scan(); Print("looking up your class quests, try again in a moment"); return end
+    if not list then Scan(); Print(L("looking up your class quests, try again in a moment")); return end
     local zoneId = hbd:GetPlayerZone()
-    if not zoneId then Print("can't tell which zone you are in"); return end
+    if not zoneId then Print(L("can't tell which zone you are in")); return end
     local needs = HereNeeds(zoneId)
-    if #needs == 0 then Print("your class quests need nothing in " .. MapName(zoneId)); return end
+    if #needs == 0 then Print(L("your class quests need nothing in ") .. MapName(zoneId)); return end
     ShowToast(zoneId, needs)
 end
 
@@ -514,7 +515,7 @@ local function ClassEntries()
 end
 
 function addon.ClassWindow()
-    if not list then Scan(); Print("looking up your class quests, try again in a moment"); return end
+    if not list then Scan(); Print(L("looking up your class quests, try again in a moment")); return end
     if not cwin then
         local f = CreateFrame("Frame", "ForeverLazy_ClassWindow", UIParent)
         f:SetSize(520, 460)
@@ -527,7 +528,7 @@ function addon.ClassWindow()
         bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
         f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
         f.title:SetPoint("TOPLEFT", 16, -14)
-        f.title:SetText("Your class quests")
+        f.title:SetText(L("Your class quests"))
         f.empty = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
         f.empty:SetPoint("TOPLEFT", 16, -56); f.empty:SetWidth(480); f.empty:SetJustifyH("LEFT")
         local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
@@ -566,7 +567,7 @@ function addon.ClassWindow()
         r.body:SetWidth(440); r.body:SetText(e.body); r.body:Show()
         y = y + r.body:GetStringHeight() + 6
         r.btn:ClearAllPoints(); r.btn:SetPoint("TOPLEFT", cwin.content, "TOPLEFT", 8, -y)
-        r.btn:SetText("Show me")
+        r.btn:SetText(L("Show me"))
         r.btn:SetScript("OnClick", function()
             cwin:Hide()
             if e.spawn and e.spawn.uiMapId then

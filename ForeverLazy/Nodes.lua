@@ -6,6 +6,7 @@
 --   /lazy nodes            what I know          /lazy nodes farm [ore|herb|name]   arrow to the nearest
 --   /lazy nodes pins on|off                      /lazy nodes clear                   forget them all
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -97,7 +98,7 @@ local function Record(kind, name)
         hit = { k = kind, name = name or (kind == "ore" and "Ore" or "Herb"), i = inst, x = px, y = py,
                 m = map, zx = zx, zy = zy, c = 1, t = time and time() or 0 }
         list[#list + 1] = hit
-        Print(string.format("noted %s on the map (%d found so far)", hit.name, #list))
+        Print(string.format(L("noted %s on the map (%d found so far)"), hit.name, #list))
     end
     lastHit[hit] = GetTime()
     if C_Timer then C_Timer.After(1, RefreshPins) else RefreshPins() end
@@ -163,9 +164,9 @@ local function PinEnter(self)
     GameTooltip:AddLine(n.name or "Node", 1, 0.82, 0)
     GameTooltip:AddLine(string.format("Found %d time%s, last %s", n.c or 1, (n.c or 1) == 1 and "" or "s", Ago(n.t)), 1, 1, 1)
     if addon.NodeResting and addon.NodeResting(n) then
-        GameTooltip:AddLine("Faded: you just took it, or it was not there. Probably respawning.", 0.7, 0.7, 0.7, true)
+        GameTooltip:AddLine(L("Faded: you just took it, or it was not there. Probably respawning."), 0.7, 0.7, 0.7, true)
     end
-    GameTooltip:AddLine("Forever Lazy", 0.5, 0.5, 0.5)
+    GameTooltip:AddLine(L("Forever Lazy"), 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end
 local function PinLeave(self)
@@ -475,7 +476,7 @@ end
 local function Summary()
     local list = Nodes()
     if #list == 0 then
-        Print("no nodes saved yet. Mine or pick something and I will mark it (nodes: " .. ((DB().nodePins == false) and "pins off" or "pins on") .. ")")
+        Print(L("no nodes saved yet. Mine or pick something and I will mark it (nodes: ") .. ((DB().nodePins == false) and "pins off" or "pins on") .. ")")
         return
     end
     local byName, order = {}, {}
@@ -485,10 +486,10 @@ local function Summary()
         e.c = e.c + 1
     end
     table.sort(order, function(a, b) return a.c > b.c end)
-    Print(string.format("%d saved node%s:", #list, #list == 1 and "" or "s"))
-    for i = 1, math.min(8, #order) do Print(string.format("  %s: %d spot%s", order[i].name, order[i].c, order[i].c == 1 and "" or "s")) end
-    if #order > 8 then Print(string.format("  ...and %d other kinds", #order - 8)) end
-    Print("/lazy nodes farm points the arrow at the nearest; /lazy nodes pins on|off; /lazy nodes clear")
+    Print(string.format(L("%d saved node%s:"), #list, #list == 1 and "" or "s"))
+    for i = 1, math.min(8, #order) do Print(string.format(L("  %s: %d spot%s"), order[i].name, order[i].c, order[i].c == 1 and "" or "s")) end
+    if #order > 8 then Print(string.format(L("  ...and %d other kinds"), #order - 8)) end
+    Print(L("/lazy nodes farm points the arrow at the nearest; /lazy nodes pins on|off; /lazy nodes clear"))
 end
 
 local prev = addon.HandleExtraCommand
@@ -511,36 +512,36 @@ function addon:HandleExtraCommand(cmd, rest)
             RefreshPins()
             local t = addon.NearestNode()
             if t then
-                Print(string.format("the arrow walks me to saved nodes (%s). First: %s", f, t.name))
+                Print(string.format(L("the arrow walks me to saved nodes (%s). First: %s"), f, t.name))
             else
-                Print("the arrow is set to saved nodes (" .. f .. "), but I have none to point at here yet. Go find some!")
+                Print(L("the arrow is set to saved nodes (") .. f .. L("), but I have none to point at here yet. Go find some!"))
             end
         elseif sub == "debug" then
             local tr = TrackingNow()
-            Print(string.format("tracking seen: ore=%s herb=%s; fade-when-tracked=%s; saved nodes=%d",
+            Print(string.format(L("tracking seen: ore=%s herb=%s; fade-when-tracked=%s; saved nodes=%d"),
                 tostring(tr.ore or false), tostring(tr.herb or false), tostring(db.nodeFadeTracked ~= false), #Nodes()))
             if C_Minimap and C_Minimap.GetNumTrackingTypes and C_Minimap.GetTrackingInfo then
                 for i = 1, C_Minimap.GetNumTrackingTypes() do
                     local ok, a, b, c = pcall(C_Minimap.GetTrackingInfo, i)
-                    if type(a) == "table" then Print(string.format("  %d: %s active=%s", i, tostring(a.name), tostring(a.active)))
-                    else Print(string.format("  %d: %s active=%s", i, tostring(a), tostring(c))) end
+                    if type(a) == "table" then Print(string.format(L("  %d: %s active=%s"), i, tostring(a.name), tostring(a.active)))
+                    else Print(string.format(L("  %d: %s active=%s"), i, tostring(a), tostring(c))) end
                 end
             else
-                Print("  this client has no C_Minimap tracking list I can read")
+                Print(L("  this client has no C_Minimap tracking list I can read"))
             end
-            Print("  Find Minerals is '" .. tostring(SpellNameOf(2580)) .. "', Find Herbs is '" .. tostring(SpellNameOf(2383)) .. "'")
+            Print(L("  Find Minerals is '") .. tostring(SpellNameOf(2580)) .. L("', Find Herbs is '") .. tostring(SpellNameOf(2383)) .. "'")
         elseif sub == "pins" then
             db.nodePins = not (more == "off" or more == "no")
             RefreshPins()
-            Print("node pins on the map: " .. (db.nodePins == false and "off" or "on"))
+            Print(L("node pins on the map: ") .. (db.nodePins == false and "off" or "on"))
         elseif sub == "clear" then
             if more == "yes" then
                 db.nodes = {}
                 cache = nil
                 RefreshPins()
-                Print("forgot all saved nodes")
+                Print(L("forgot all saved nodes"))
             else
-                Print(string.format("this forgets all %d saved nodes. Type /lazy nodes clear yes to do it.", #Nodes()))
+                Print(string.format(L("this forgets all %d saved nodes. Type /lazy nodes clear yes to do it."), #Nodes()))
             end
         else
             -- anything else is a name to look for: /lazy nodes silver

@@ -2,6 +2,7 @@
 -- Switch it off in Forever Lazy's options ("Newest spell rank on my action bars").
 -- Bars cannot be changed in combat, so a spell learned mid-fight is swapped when the fight ends.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -91,18 +92,18 @@ local function Run(verbose)
     verbose = verbose == true                      -- only the button and the command say anything when nothing changes
     pending = false
     if running or not Enabled() then
-        if verbose then Print("action bars: " .. (running and "already busy" or "switched off in the options")) end
+        if verbose then Print(L("action bars: ") .. (running and "already busy" or "switched off in the options")) end
         return
     end
-    if InCombatLockdown() then pending = true; if verbose then Print("action bars: in combat, I will do it when the fight ends") end; return end
-    if GetCursorInfo and GetCursorInfo() then pending = true; if verbose then Print("action bars: you are carrying something, put it down first") end; return end
+    if InCombatLockdown() then pending = true; if verbose then Print(L("action bars: in combat, I will do it when the fight ends")) end; return end
+    if GetCursorInfo and GetCursorInfo() then pending = true; if verbose then Print(L("action bars: you are carrying something, put it down first")) end; return end
     if not (GetActionInfo and CanPickup() and PlaceAction) then
         if verbose then
             local gone = {}
             if not GetActionInfo then gone[#gone + 1] = "GetActionInfo" end
             if not CanPickup() then gone[#gone + 1] = "PickupSpell (or C_Spell.PickupSpell)" end
             if not PlaceAction then gone[#gone + 1] = "PlaceAction" end
-            Print("action bars: this client is missing " .. table.concat(gone, ", "))
+            Print(L("action bars: this client is missing ") .. table.concat(gone, ", "))
         end
         return
     end
@@ -127,23 +128,23 @@ local function Run(verbose)
         end
     end
     running = false
-    if swapped > 0 then Print("action bars: put the newest rank of " .. swapped .. " spell" .. (swapped == 1 and "" or "s") .. " in place of the old one" .. (swapped == 1 and "" or "s") .. ".")
-    elseif verbose then Print("action bars: nothing to change (every spell on them is already its newest rank). /lazy rankup debug shows what I see.") end
+    if swapped > 0 then Print(L("action bars: put the newest rank of ") .. swapped .. L(" spell") .. (swapped == 1 and "" or "s") .. L(" in place of the old one") .. (swapped == 1 and "" or "s") .. ".")
+    elseif verbose then Print(L("action bars: nothing to change (every spell on them is already its newest rank). /lazy rankup debug shows what I see.")) end
 end
 addon.RankUpRun = function() Run(true) end
 
 -- /lazy rankup debug: what the bars and the spellbook look like to this addon (a popup you can copy)
 local function Debug()
-    local L = {}
-    L[#L + 1] = string.format("api: GetNumSpellTabs=%s GetSpellBookItemName=%s GetSpellBookItemInfo=%s C_SpellBook=%s", tostring(GetNumSpellTabs ~= nil),
+    local dbg = {}
+    dbg[#dbg + 1] = string.format("api: GetNumSpellTabs=%s GetSpellBookItemName=%s GetSpellBookItemInfo=%s C_SpellBook=%s", tostring(GetNumSpellTabs ~= nil),
         tostring(GetSpellBookItemName ~= nil), tostring(GetSpellBookItemInfo ~= nil), tostring(C_SpellBook ~= nil))
-    L[#L + 1] = string.format("api: GetActionInfo=%s PickupSpell/C_Spell.PickupSpell=%s PlaceAction=%s C_Spell.GetSpellSubtext=%s GetSpellSubtext=%s", tostring(GetActionInfo ~= nil),
+    dbg[#dbg + 1] = string.format("api: GetActionInfo=%s PickupSpell/C_Spell.PickupSpell=%s PlaceAction=%s C_Spell.GetSpellSubtext=%s GetSpellSubtext=%s", tostring(GetActionInfo ~= nil),
         tostring(CanPickup()), tostring(PlaceAction ~= nil), tostring(C_Spell and C_Spell.GetSpellSubtext ~= nil), tostring(GetSpellSubtext ~= nil))
-    L[#L + 1] = "enabled: " .. tostring(Enabled()) .. "  combat: " .. tostring(InCombatLockdown()) .. "  cursor: " .. tostring(GetCursorInfo and GetCursorInfo() or nil)
+    dbg[#dbg + 1] = "enabled: " .. tostring(Enabled()) .. "  combat: " .. tostring(InCombatLockdown()) .. "  cursor: " .. tostring(GetCursorInfo and GetCursorInfo() or nil)
     local best = KnownBest()
     local n = 0
     for _ in pairs(best) do n = n + 1 end
-    L[#L + 1] = "spellbook: " .. n .. " different spells read"
+    dbg[#dbg + 1] = "spellbook: " .. n .. " different spells read"
     local shown = 0
     local kinds = {}
     for slot = 1, 180 do
@@ -157,17 +158,17 @@ local function Debug()
             local kept = name and Kept(name)
             if kept then b = nil end
             if shown <= 40 then
-                L[#L + 1] = string.format("slot %d: %s id %s rank %s | book: %s", slot, tostring(name), tostring(id), tostring(SpellRank(id)),
+                dbg[#dbg + 1] = string.format("slot %d: %s id %s rank %s | book: %s", slot, tostring(name), tostring(id), tostring(SpellRank(id)),
                     b and ("id " .. tostring(b.id) .. " rank " .. tostring(b.rank) .. (b.id ~= id and b.rank > SpellRank(id) and "  -> WOULD SWAP" or "")) or (kept and "kept as it is (you chose to keep this rank)" or "not found in the spellbook"))
             end
         end
     end
-    L[#L + 1] = "spells on the bars: " .. shown
+    dbg[#dbg + 1] = "spells on the bars: " .. shown
     local other = {}
     for k, n in pairs(kinds) do other[#other + 1] = k .. " x" .. n end
     table.sort(other)
-    L[#L + 1] = "other things on the bars: " .. (#other > 0 and table.concat(other, ", ") or "none")
-    if addon.ShowTextPopup then addon.ShowTextPopup("Spell rank debug", table.concat(L, "\n")) else Print(table.concat(L, "\n")) end
+    dbg[#dbg + 1] = "other things on the bars: " .. (#other > 0 and table.concat(other, ", ") or "none")
+    if addon.ShowTextPopup then addon.ShowTextPopup(L("Spell rank debug"), table.concat(dbg, "\n")) else Print(table.concat(dbg, "\n")) end
 end
 
 local prevCmd = addon.HandleExtraCommand
@@ -182,16 +183,16 @@ function addon:HandleExtraCommand(cmd, rest)
             local name = SpellFromText(raw:match("^%a+%s+(.*)$"))
             db.rankKeep = db.rankKeep or {}
             db.rankKeep[name:lower()] = true
-            Print("action bars: " .. name .. " keeps whatever rank you put on the bar. /lazy rankup unkeep " .. name .. " undoes it.")
+            Print(L("action bars: ") .. name .. L(" keeps whatever rank you put on the bar. /lazy rankup unkeep ") .. name .. L(" undoes it."))
         elseif verb == "unkeep" and arg ~= "" then
             local name = SpellFromText(raw:match("^%a+%s+(.*)$"))
             if db.rankKeep then db.rankKeep[name:lower()] = nil end
-            Print("action bars: " .. name .. " gets its newest rank again.")
+            Print(L("action bars: ") .. name .. L(" gets its newest rank again."))
         elseif a == "keep" or a == "list" then
             local names = {}
             for n in pairs(db.rankKeep or {}) do names[#names + 1] = n end
             table.sort(names)
-            Print("action bars: ranks kept as they are: " .. (#names > 0 and table.concat(names, ", ") or "none") .. ". /lazy rankup keep <spell> adds one.")
+            Print(L("action bars: ranks kept as they are: ") .. (#names > 0 and table.concat(names, ", ") or "none") .. L(". /lazy rankup keep <spell> adds one."))
         else Run(true) end
         return true
     end

@@ -9,6 +9,7 @@
 --   /lazy chat copy            put the text of the chat window you are using in a window you can copy from
 -- Messages are changed on their way into the window, never the game's own chat data. Some changes need a /reload to undo.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -198,7 +199,7 @@ local function CopyBox(url)
         bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
         f.t = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         f.t:SetPoint("TOPLEFT", 12, -10)
-        f.t:SetText("Press Ctrl+C to copy the link, then Escape")
+        f.t:SetText(L("Press Ctrl+C to copy the link, then Escape"))
         f.e = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
         f.e:SetSize(430, 24); f.e:SetPoint("TOPLEFT", 16, -34); f.e:SetAutoFocus(true)
         f.e:SetScript("OnEscapePressed", function() f:Hide() end)
@@ -354,7 +355,7 @@ local function CopyButton(frame)
     b:SetAlpha(0.25)
     b:SetScript("OnEnter", function(self)
         self:SetAlpha(1)
-        GameTooltip:SetOwner(self, "ANCHOR_LEFT"); GameTooltip:AddLine("Copy this chat window"); GameTooltip:Show()
+        GameTooltip:SetOwner(self, "ANCHOR_LEFT"); GameTooltip:AddLine(L("Copy this chat window")); GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function(self) self:SetAlpha(0.25); GameTooltip:Hide() end)
     b:SetScript("OnClick", function() addon.ChatCopy(frame) end)
@@ -482,7 +483,7 @@ function addon.ChatPreset()
                          "chatHideButtons", "chatSticky", "chatHistory", "chatResize" }) do db[k] = true end
     addon.ChatApply()
     if addon.RefreshOptions then addon.RefreshOptions() end
-    Print("chat: the usual set is on (timestamps, class colours, levels, short channels, keywords, copyable links, no fading, no side buttons, sticky channels, long history). Input box on top, tab fading, font and an extra whisper sound are in the options.")
+    Print(L("chat: the usual set is on (timestamps, class colours, levels, short channels, keywords, copyable links, no fading, no side buttons, sticky channels, long history). Input box on top, tab fading, font and an extra whisper sound are in the options."))
 end
 
 --------------------------------------------------------------------------------
@@ -499,13 +500,13 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "words" then
             db.chatWords = b
             db.chatWordsOn = true
-            Print("chat keywords: " .. (b ~= "" and b or "(only your own name)"))
+            Print(L("chat keywords: ") .. (b ~= "" and b or "(only your own name)"))
             return true
         end
         local function s(k) return db[k] == true and "on" or "off" end
-        Print(string.format("chat: timestamps %s, class colours %s, levels %s, short channels %s, keywords %s, copy links %s, input on top %s, no fade %s, sticky %s",
+        Print(string.format(L("chat: timestamps %s, class colours %s, levels %s, short channels %s, keywords %s, copy links %s, input on top %s, no fade %s, sticky %s"),
             s("chatTime"), s("chatClassColor"), s("chatLevels"), s("chatShortChannels"), s("chatWordsOn"), s("chatLinks"), s("chatEditTop"), s("chatNoFade"), s("chatSticky")))
-        Print("  /lazy chat preset   /lazy chat words a, b, c   /lazy chat copy   (all of it is in the options under Chat)")
+        Print(L("  /lazy chat preset   /lazy chat words a, b, c   /lazy chat copy   (all of it is in the options under Chat)"))
         return true
     end
     if prev then return prev(self, cmd, rest) end

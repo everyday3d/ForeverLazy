@@ -7,6 +7,7 @@
 --   opening a vendor lists the protected items in my bags,
 --   and if one is sold anyway it is bought straight back from the vendor's buyback list.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -43,8 +44,8 @@ addon.IsKeptItem = function(name) return On() and IsKept(name) end
 local function Mark(tt, name)
     if not (On() and name and IsKept(name)) then return end
     tt:AddLine(" ")
-    tt:AddLine("|TInterface\\DialogFrame\\DialogAlertIcon:20:20|t |cffff2020DO NOT SELL|r |TInterface\\DialogFrame\\DialogAlertIcon:20:20|t", 1, 1, 1)
-    tt:AddLine("Protected by Forever Lazy: a vendor sale gets bought back", 1, 0.8, 0.2, true)
+    tt:AddLine(L("|TInterface\\DialogFrame\\DialogAlertIcon:20:20|t |cffff2020DO NOT SELL|r |TInterface\\DialogFrame\\DialogAlertIcon:20:20|t"), 1, 1, 1)
+    tt:AddLine(L("Protected by Forever Lazy: a vendor sale gets bought back"), 1, 0.8, 0.2, true)
     if tt.Show then tt:Show() end
 end
 
@@ -142,13 +143,13 @@ local function CheckBuyback()
                 tried[key] = GetTime()
                 local ok = pcall(BuybackItem, i)
                 if ok then
-                    Print("|cffff6060" .. name .. " was sold, but it is protected: buying it back|r")
+                    Print(L("|cffff6060") .. name .. L(" was sold, but it is protected: buying it back|r"))
                     local f = Alert("PROTECTED ITEM: " .. name, 1, 0.3, 0.2)
-                    f.sub:SetText("It was sold by mistake. Buying it back now.")
+                    f.sub:SetText(L("It was sold by mistake. Buying it back now."))
                 else
-                    Print("|cffff6060" .. name .. " was sold and I could not buy it back. Do it from the Buyback tab.|r")
+                    Print(L("|cffff6060") .. name .. L(" was sold and I could not buy it back. Do it from the Buyback tab.|r"))
                     local f = Alert("YOU SOLD " .. name .. "!", 1, 0.1, 0.1)
-                    f.sub:SetText("It is protected. Buy it back from the Buyback tab.")
+                    f.sub:SetText(L("It is protected. Buy it back from the Buyback tab."))
                 end
                 return           -- the list shifts after a buyback; the next update checks the rest
             end
@@ -170,7 +171,7 @@ ev:SetScript("OnEvent", function(_, event)
         if #items > 0 then
             local seen, list = {}, {}
             for _, n in ipairs(items) do if not seen[n] then seen[n] = true; list[#list + 1] = n end end
-            Print("protected, don't sell: " .. table.concat(list, ", "))
+            Print(L("protected, don't sell: ") .. table.concat(list, ", "))
         end
     elseif event == "MERCHANT_UPDATE" then
         if merchantOpen then CheckBuyback() end
@@ -187,11 +188,11 @@ local function List()
     for n in pairs(Keep()) do names[#names + 1] = n end
     table.sort(names)
     if #names == 0 then
-        Print("nothing is protected. /lazy keep <item> protects one (shift-click it into the command)")
+        Print(L("nothing is protected. /lazy keep <item> protects one (shift-click it into the command)"))
         return
     end
-    Print("protected from vendors (" .. #names .. "): " .. table.concat(names, ", "))
-    Print("/lazy keep <item> adds, /lazy keep remove <item> removes")
+    Print(L("protected from vendors (") .. #names .. "): " .. table.concat(names, ", "))
+    Print(L("/lazy keep <item> adds, /lazy keep remove <item> removes"))
 end
 
 local prev = addon.HandleExtraCommand
@@ -203,13 +204,13 @@ function addon:HandleExtraCommand(cmd, rest)
             List()
         elseif verb and (verb:lower() == "remove" or verb:lower() == "delete" or verb:lower() == "off") then
             local n = NameOf(more)
-            if n and Keep()[n] then Keep()[n] = nil; Print("no longer protected: " .. n) else Print("that was not on the list") end
+            if n and Keep()[n] then Keep()[n] = nil; Print(L("no longer protected: ") .. n) else Print(L("that was not on the list")) end
         elseif text:lower() == "on" or text:lower() == "off" then
             DB().keepOn = (text:lower() == "on")
-            Print("item protection " .. (DB().keepOn and "on" or "off"))
+            Print(L("item protection ") .. (DB().keepOn and "on" or "off"))
         else
             local n = NameOf(text)
-            if n then Keep()[n] = true; Print("protected: " .. n) end
+            if n then Keep()[n] = true; Print(L("protected: ") .. n) end
         end
         return true
     end

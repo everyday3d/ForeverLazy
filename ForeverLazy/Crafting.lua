@@ -6,6 +6,7 @@
 --   /lazy craft bank                       arrow to the nearest banker (when materials are waiting in the bank)
 -- Recipes and their colours come from the game; vendors, drops and herb or ore spots come from Questie.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -462,7 +463,7 @@ end
 
 local function Go(n)
     local item = needs[tonumber(n) or 1]
-    if not item then Print("nothing missing to go to, or no plan yet: /lazy craft"); return end
+    if not item then Print(L("nothing missing to go to, or no plan yet: /lazy craft")); return end
     local s = item.src.spawn
     addon:AddWaypointZone(s.uiMapId, s.zx, s.zy, string.format("Get %s: %s", item.name or "material", item.src.name or item.src.kind))
     local w = DB().waypoints[1]
@@ -583,7 +584,7 @@ ev:SetScript("OnEvent", function(_, event)
             local pd = Section("crafting")[lastProfession]
             local r = pd and Pick(pd)
             if r then
-                Print(string.format("best next craft for %s: %s (%s). /lazy craft plans the whole stretch.", lastProfession, r.name, COLOR[r.kind] or r.kind))
+                Print(string.format(L("best next craft for %s: %s (%s). /lazy craft plans the whole stretch."), lastProfession, r.name, COLOR[r.kind] or r.kind))
             end
         end
     end)
@@ -629,7 +630,7 @@ function addon:HandleExtraCommand(cmd, rest)
             if r then
                 addon:AddWaypointZone(r.spawn.uiMapId, r.spawn.zx, r.spawn.zy, "Bank: " .. (r.name or "banker"))
             else
-                Print("I could not find a banker on this continent (needs Questie)")
+                Print(L("I could not find a banker on this continent (needs Questie)"))
             end
         else
             local goal = arg:match("(%d+)%s*$")

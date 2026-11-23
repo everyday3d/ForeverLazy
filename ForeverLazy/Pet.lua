@@ -3,6 +3,7 @@
 --   /lazy pet on|off   turn the reminder on or off
 --   /lazy pet test     show the reminder for a few seconds
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -132,11 +133,11 @@ local function Update()
 
     local name = UnitName("pet") or "your pet"
     if state == "missing" then
-        frame.title:SetText("|cffff5555No pet out|r")
-        frame.sub:SetText("Call your pet")
+        frame.title:SetText(L("|cffff5555No pet out|r"))
+        frame.sub:SetText(L("Call your pet"))
     elseif state == "dead" then
         frame.title:SetText("|cffff5555" .. name .. " is dead|r")
-        frame.sub:SetText("Revive Pet")
+        frame.sub:SetText(L("Revive Pet"))
     else
         local color = state == "unhappy" and "|cffff5555" or "|cffffd100"
         frame.title:SetText(string.format("%sFeed %s|r", color, name))
@@ -154,7 +155,7 @@ local function Update()
         if not (InCombatLockdown and InCombatLockdown()) then
             if state == "unhappy" or state == "content" then
                 local diet = Diet()
-                Print(string.format("%s needs feeding (%s)%s", name, state, diet and (" - eats " .. diet) or ""))
+                Print(string.format(L("%s needs feeding (%s)%s"), name, state, diet and (" - eats " .. diet) or ""))
             end
         end
         if db.petScream ~= false and (state == "unhappy" or state == "content") then pcall(Scream, name) end
@@ -193,7 +194,7 @@ local function AmmoCheck(test)
     local db = DB()
     if not db or db.ammoRemind == false then return end
     local a = AmmoInfo()
-    if test and not a then Print("no ranged weapon or ammo found on you, so there is nothing to count"); return end
+    if test and not a then Print(L("no ranged weapon or ammo found on you, so there is nothing to count")); return end
     if not a then return end
     local low = db.ammoLow or 200
     local state = (a.count <= 0 and "out") or (a.count <= low and "low") or "ok"
@@ -203,10 +204,10 @@ local function AmmoCheck(test)
     if test or state ~= lastAmmoState or now - lastAmmoNag > 120 then
         lastAmmoState, lastAmmoNag = state, now
         if state == "out" then
-            Print("OUT OF AMMO: your ammo slot is empty")
+            Print(L("OUT OF AMMO: your ammo slot is empty"))
             pcall(Scream, nil, "OUT OF AMMO!!!", "Buy " .. a.word .. " now")
         else
-            Print(string.format("low on ammo: %d %s left", a.count, a.word))
+            Print(string.format(L("low on ammo: %d %s left"), a.count, a.word))
             pcall(Scream, nil, "LOW ON AMMO", string.format("%d %s left", a.count, a.word))
         end
         PlaySound((_G.SOUNDKIT and _G.SOUNDKIT.RAID_WARNING) or 8959)
@@ -248,7 +249,7 @@ local function UpgradeCheck(test)
     if not db or db.ammoUpgrade == false then return end
     local a = AmmoInfo()
     if not a or not a.name or not a.subType then
-        if test then Print("ammo upgrade: no ammo in your ammo slot to compare") end
+        if test then Print(L("ammo upgrade: no ammo in your ammo slot to compare")) end
         return
     end
     local tiers = AMMO_TIERS[a.subType]
@@ -260,12 +261,12 @@ local function UpgradeCheck(test)
         if t[1] <= level then best = i end
     end
     if have == 0 then
-        if test then Print("ammo upgrade: I do not know the kind of ammo you are using (" .. tostring(a.name) .. ")") end
+        if test then Print(L("ammo upgrade: I do not know the kind of ammo you are using (") .. tostring(a.name) .. ")") end
         return
     end
     if have >= best then
         lastUpgradeKey = nil
-        if test then Print(string.format("ammo upgrade: %s is the best kind you can use at level %d", a.name, level)) end
+        if test then Print(string.format(L("ammo upgrade: %s is the best kind you can use at level %d"), a.name, level)) end
         return
     end
     if InCombatLockdown and InCombatLockdown() and not test then return end
@@ -277,7 +278,7 @@ local function UpgradeCheck(test)
         local carrying = CarryingAmmo(nextTier[2])
         local what = nextTier[2] .. "s"
         local advice = carrying and "you already carry some: put them in your ammo slot" or "buy some from a vendor"
-        Print(string.format("ammo upgrade: you can use %s now (level %d): %s.", what, nextTier[1], advice))
+        Print(string.format(L("ammo upgrade: you can use %s now (level %d): %s."), what, nextTier[1], advice))
         pcall(Scream, nil, "AMMO UPGRADE", string.format("%s (level %d): %s", what, nextTier[1], advice))
         PlaySound((_G.SOUNDKIT and _G.SOUNDKIT.RAID_WARNING) or 8959)
     end
@@ -319,21 +320,21 @@ function addon:HandleExtraCommand(cmd, rest)
     if cmd == "pet" then
         local db = DB()
         rest = (rest or ""):lower()
-        if rest == "on" then db.petRemind = true; Print("pet reminder on")
-        elseif rest == "off" then db.petRemind = false; Print("pet reminder off")
+        if rest == "on" then db.petRemind = true; Print(L("pet reminder on"))
+        elseif rest == "off" then db.petRemind = false; Print(L("pet reminder off"))
         elseif rest == "ammo" then
-            if not isHunter then Print("you are not a hunter"); return true end
+            if not isHunter then Print(L("you are not a hunter")); return true end
             AmmoCheck(true)
             UpgradeCheck(true)
         elseif rest == "test" then
             testUntil = GetTime() + 6
-            if not isHunter then Print("you are not a hunter - the reminder only runs for hunters, test shown anyway"); isHunter = true; fakeHunter = true end
+            if not isHunter then Print(L("you are not a hunter - the reminder only runs for hunters, test shown anyway")); isHunter = true; fakeHunter = true end
             Update()
         else
-            if not isHunter then Print("you are not a hunter, so there is no pet to watch"); return true end
-            Print(string.format("pet: %s, reminder %s", tostring(PetState() or "unknown"), db.petRemind == false and "off" or "on"))
+            if not isHunter then Print(L("you are not a hunter, so there is no pet to watch")); return true end
+            Print(string.format(L("pet: %s, reminder %s"), tostring(PetState() or "unknown"), db.petRemind == false and "off" or "on"))
             local diet = Diet()
-            if diet then Print("eats: " .. diet) end
+            if diet then Print(L("eats: ") .. diet) end
         end
         return true
     end

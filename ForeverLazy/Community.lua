@@ -4,6 +4,7 @@
 -- on where it is. It is OFF until you switch it on.
 --   /lazy net on | off | status
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -83,14 +84,14 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         if a == "on" then
             db.community = true
-            Print("sharing on: boat docks you teach go to your guild and group as hidden addon messages. Nothing shows in chat.")
+            Print(L("sharing on: boat docks you teach go to your guild and group as hidden addon messages. Nothing shows in chat."))
         elseif a == "off" then
             db.community = false
-            Print("sharing off")
+            Print(L("sharing off"))
         else
             local n = 0
             for _ in pairs(Reports()) do n = n + 1 end
-            Print(string.format("sharing is %s. %d dock%s reported by others so far. /lazy net on | off",
+            Print(string.format(L("sharing is %s. %d dock%s reported by others so far. /lazy net on | off"),
                 db.community and "on" or "off", n, n == 1 and "" or "s"))
         end
         return true

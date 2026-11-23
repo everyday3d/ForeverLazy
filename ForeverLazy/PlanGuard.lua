@@ -7,6 +7,7 @@
 -- The rules are written as plain functions of the plan and a few facts about my quests, so they can be tested outside the game
 -- (see tests/ in the repository).
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -63,10 +64,10 @@ function addon.ShowPlanLog()
         local bg = f:CreateTexture(nil, "BACKGROUND")
         bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
         local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
-        title:SetPoint("TOPLEFT", 16, -14); title:SetText("Plan log")
+        title:SetPoint("TOPLEFT", 16, -14); title:SetText(L("Plan log"))
         local sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         sub:SetPoint("TOPLEFT", 16, -44); sub:SetWidth(580); sub:SetJustifyH("LEFT")
-        sub:SetText("Newest first. Every change to the plan and why. Send this when a stop looks wrong.")
+        sub:SetText(L("Newest first. Every change to the plan and why. Send this when a stop looks wrong."))
         local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
         close:SetPoint("TOPRIGHT", 2, 2)
         local scroll = CreateFrame("ScrollFrame", "ForeverLazy_PlanLogScroll", f, "UIPanelScrollFrameTemplate")
@@ -215,9 +216,9 @@ function addon.PlanCheck(fix, verbose)
     for _, p in ipairs(problems) do if p.fix then fixed = fixed + 1 end end
     if verbose then
         if #problems == 0 then
-            Print("plan check: no problems (" .. #db.waypoints .. " stops looked at)")
+            Print(L("plan check: no problems (") .. #db.waypoints .. L(" stops looked at)"))
         else
-            for _, p in ipairs(problems) do Print("plan check: " .. p.text .. (p.fix and (fix and " (fixed)" or "") or " (not fixable here)")) end
+            for _, p in ipairs(problems) do Print(L("plan check: ") .. p.text .. (p.fix and (fix and " (fixed)" or "") or " (not fixable here)")) end
         end
     end
     if fix and fixed > 0 then
@@ -228,7 +229,7 @@ function addon.PlanCheck(fix, verbose)
         db.waypoints = out
         addon:RefreshPins()
         if addon.RefreshOptions then addon.RefreshOptions() end
-        if verbose then Print("plan check: " .. fixed .. " problem" .. (fixed == 1 and "" or "s") .. " fixed") end
+        if verbose then Print(L("plan check: ") .. fixed .. L(" problem") .. (fixed == 1 and "" or "s") .. L(" fixed")) end
     end
     return #problems, fixed
 end
@@ -305,14 +306,14 @@ local function ShowStuck(w)
         f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         f.sub:SetPoint("TOP", f.text, "BOTTOM", 0, -4); f.sub:SetWidth(396)
         f.skip = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        f.skip:SetSize(150, 22); f.skip:SetPoint("BOTTOMLEFT", 20, 10); f.skip:SetText("Skip this quest")
+        f.skip:SetSize(150, 22); f.skip:SetPoint("BOTTOMLEFT", 20, 10); f.skip:SetText(L("Skip this quest"))
         f.keep = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        f.keep:SetSize(130, 22); f.keep:SetPoint("LEFT", f.skip, "RIGHT", 8, 0); f.keep:SetText("Keep trying")
+        f.keep:SetSize(130, 22); f.keep:SetPoint("LEFT", f.skip, "RIGHT", 8, 0); f.keep:SetText(L("Keep trying"))
         f:Hide()
         toast = f
     end
     local q = w.quests and w.quests[1]
-    toast.text:SetText("Stuck here?")
+    toast.text:SetText(L("Stuck here?"))
     toast.sub:SetText(string.format("You have been at \"%s\" for a few minutes and nothing has moved. Skip it and carry on?", tostring((w.label or "this stop"):gsub("^Turn in: ", ""))))
     toast.skip:SetScript("OnClick", function()
         toast:Hide()
@@ -404,7 +405,7 @@ local function RealityCheck()
     addon.PlanLog("reality", string.format("after %d minutes: %d XP per hour earned, %d expected", math.floor(secs / 60), math.floor(actual + 0.5), math.floor(reality.est + 0.5)))
     if actual < reality.est * 0.5 then
         reality.told = true
-        Print(string.format("the plan is earning about %d XP per hour against the %d it promised. /lazy coach compares your other options, /lazy plan log shows what the plan has been doing.", math.floor(actual + 0.5), math.floor(reality.est + 0.5)))
+        Print(string.format(L("the plan is earning about %d XP per hour against the %d it promised. /lazy coach compares your other options, /lazy plan log shows what the plan has been doing."), math.floor(actual + 0.5), math.floor(reality.est + 0.5)))
     end
 end
 
@@ -523,7 +524,7 @@ function addon:HandleExtraCommand(cmd, rest)
     if (cmd or ""):lower() == "plan" then
         local arg = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         if arg == "log" then addon.ShowPlanLog(); return true end
-        if arg == "log clear" then DB().planLog = {}; Print("plan log cleared"); return true end
+        if arg == "log clear" then DB().planLog = {}; Print(L("plan log cleared")); return true end
         if arg == "check" then addon.PlanCheck(true, true); return true end
     end
     if prev then return prev(self, cmd, rest) end

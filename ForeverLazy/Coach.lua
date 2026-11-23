@@ -6,6 +6,7 @@
 --   /lazy coach      opens the window; each option has a button that sets it up for you
 -- It is advice from numbers, not a rule: every option says what it rests on.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -64,9 +65,9 @@ function addon.CoachOptions()
             act = function()
                 if zx and zoneId then
                     addon:AddWaypointZone(zoneId, zx, zy, "Grind: " .. g.name)
-                    Print("arrow set on where you killed " .. g.name .. " most")
+                    Print(L("arrow set on where you killed ") .. g.name .. L(" most"))
                 else
-                    Print("I have not seen where you killed " .. g.name .. " yet; look for it around here")
+                    Print(L("I have not seen where you killed ") .. g.name .. L(" yet; look for it around here"))
                 end
             end,
             actText = zx and "Take me there" or "Show me",
@@ -87,7 +88,7 @@ function addon.CoachOptions()
             rate = bestPace,
             detail = "your own pace there, measured while you played",
             act = function()
-                if hub and addon.GoTo then addon.GoTo(hub.map, hub.zx, hub.zy, hub.zone) else Print("open the guide (/lazy guide) to be taken there") end
+                if hub and addon.GoTo then addon.GoTo(hub.map, hub.zx, hub.zy, hub.zone) else Print(L("open the guide (/lazy guide) to be taken there")) end
             end,
             actText = "Take me there",
         }
@@ -198,7 +199,7 @@ local function Build()
     bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
     f.title:SetPoint("TOPLEFT", 16, -14)
-    f.title:SetText("The Coach")
+    f.title:SetText(L("The Coach"))
     f.head = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.head:SetPoint("TOPLEFT", 16, -46); f.head:SetWidth(468); f.head:SetJustifyH("LEFT")
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
@@ -210,13 +211,13 @@ local function Build()
     scroll:SetScrollChild(f.content)
     f.empty = f.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.empty:SetPoint("TOPLEFT", 0, 0); f.empty:SetWidth(430); f.empty:SetJustifyH("LEFT")
-    f.empty:SetText("I have nothing to compare yet. Turn the Hive on (Options > The Hive), play for a while, and come back: I need your pace, your kills and your quest times.")
+    f.empty:SetText(L("I have nothing to compare yet. Turn the Hive on (Options > The Hive), play for a while, and come back: I need your pace, your kills and your quest times."))
     local refresh = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    refresh:SetSize(100, 24); refresh:SetText("Refresh"); refresh:SetPoint("BOTTOMLEFT", 16, 14)
+    refresh:SetSize(100, 24); refresh:SetText(L("Refresh")); refresh:SetPoint("BOTTOMLEFT", 16, 14)
     refresh:SetScript("OnClick", Refresh)
     local note = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     note:SetPoint("LEFT", refresh, "RIGHT", 10, 0); note:SetWidth(330); note:SetJustifyH("LEFT")
-    note:SetText("Advice from measured numbers. Each line says what it rests on.")
+    note:SetText(L("Advice from measured numbers. Each line says what it rests on."))
     table.insert(UISpecialFrames, "ForeverLazy_Coach")
     f:SetScript("OnShow", Refresh)
     f:Hide()
@@ -235,9 +236,9 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         if a == "say" or a == "text" then
             local opts = addon.CoachOptions()
-            if not opts[1] then Print("coach: nothing to compare yet (turn the Hive on and play a while)"); return true end
+            if not opts[1] then Print(L("coach: nothing to compare yet (turn the Hive on and play a while)")); return true end
             for i = 1, math.min(3, #opts) do
-                Print(string.format("coach %d. %s: about %d XP per hour (%s)", i, opts[i].label, Round(opts[i].rate), opts[i].detail))
+                Print(string.format(L("coach %d. %s: about %d XP per hour (%s)"), i, opts[i].label, Round(opts[i].rate), opts[i].detail))
             end
         else
             Toggle()

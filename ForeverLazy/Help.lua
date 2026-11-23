@@ -4,6 +4,7 @@
 --   /lazy import     paste a line of settings
 --   /lazy new        what changed in this version
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -73,7 +74,7 @@ local function ShowStep()
     local step = STEPS[idx]
     if not step then return end
     tour.counter:SetText(string.format("%d of %d", idx, #STEPS))
-    tour.text:SetText(step.text)
+    tour.text:SetText(L(step.text))
     tour.back:SetEnabled(idx > 1)
     tour.next:SetText(idx == #STEPS and "Done" or "Next")
     local target = step.target and step.target()
@@ -116,13 +117,13 @@ local function BuildTour()
     local bg = f:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.97)
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-    f.title:SetPoint("TOPLEFT", 12, -10); f.title:SetText("Forever Lazy tour")
+    f.title:SetPoint("TOPLEFT", 12, -10); f.title:SetText(L("Forever Lazy tour"))
     f.counter = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.counter:SetPoint("TOPRIGHT", -12, -14)
     f.text = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.text:SetPoint("TOPLEFT", 12, -36); f.text:SetWidth(336); f.text:SetJustifyH("LEFT"); f.text:SetJustifyV("TOP")
     f.back = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    f.back:SetSize(70, 22); f.back:SetPoint("BOTTOMLEFT", 12, 10); f.back:SetText("Back")
+    f.back:SetSize(70, 22); f.back:SetPoint("BOTTOMLEFT", 12, 10); f.back:SetText(L("Back"))
     f.back:SetScript("OnClick", function() Leave(STEPS[idx]); idx = math.max(1, idx - 1); ShowStep() end)
     f.next = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     f.next:SetSize(80, 22); f.next:SetPoint("LEFT", f.back, "RIGHT", 6, 0)
@@ -131,7 +132,7 @@ local function BuildTour()
         if idx >= #STEPS then Finish() else idx = idx + 1; ShowStep() end
     end)
     local skip = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    skip:SetSize(70, 22); skip:SetPoint("BOTTOMRIGHT", -12, 10); skip:SetText("Skip")
+    skip:SetSize(70, 22); skip:SetPoint("BOTTOMRIGHT", -12, 10); skip:SetText(L("Skip"))
     skip:SetScript("OnClick", Finish)
     f:Hide()
     return f
@@ -237,7 +238,7 @@ local function BuildBox()
     f.action = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     f.action:SetSize(110, 24); f.action:SetPoint("BOTTOMLEFT", 14, 12)
     local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText("Close")
+    close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText(L("Close"))
     close:SetScript("OnClick", function() f:Hide() end)
     f:Hide()
     return f
@@ -246,24 +247,24 @@ end
 function addon.ExportSettings()
     box = box or BuildBox()
     local s = Export()
-    box.title:SetText("Export my settings")
-    box.hint:SetText("Copy this line (Ctrl+A, Ctrl+C) and send it. The other player pastes it under Import.")
+    box.title:SetText(L("Export my settings"))
+    box.hint:SetText(L("Copy this line (Ctrl+A, Ctrl+C) and send it. The other player pastes it under Import."))
     box.edit:SetText(s or "I could not make the line")
-    box.action:SetText("Select all")
+    box.action:SetText(L("Select all"))
     box.action:SetScript("OnClick", function() box.edit:SetFocus(); box.edit:HighlightText() end)
     box:Show()
 end
 
 function addon.ImportSettings()
     box = box or BuildBox()
-    box.title:SetText("Import settings")
-    box.hint:SetText("Paste a settings line here (Ctrl+V) and press Apply. Your waypoints and quests are not touched.")
+    box.title:SetText(L("Import settings"))
+    box.hint:SetText(L("Paste a settings line here (Ctrl+V) and press Apply. Your waypoints and quests are not touched."))
     box.edit:SetText("")
-    box.action:SetText("Apply")
+    box.action:SetText(L("Apply"))
     box.action:SetScript("OnClick", function()
         local ok, n = Import(box.edit:GetText())
         if ok then
-            Print(string.format("imported %d settings", n))
+            Print(string.format(L("imported %d settings"), n))
             if addon.ApplyAll then pcall(addon.ApplyAll, addon) end
             if addon.ModulesChanged then pcall(addon.ModulesChanged) end
             box:Hide()
@@ -279,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.21.0", {
+        "TRANSLATIONS are possible now: every text goes through one lookup, so a language file only has to list the texts. About 940 are ready to translate (docs/LOCALIZATION.md). Until a language is added, everything stays English. /lazy l10n shows the state, and the options have a Language button.",
+        "Stop labels like Turn in: and Pick up: are shown in your language once translated, while the rules that use them keep working on the English words.",
+    } },
     { "0.20.0", {
         "GEAR ADVISOR! Hover an item and a green line says if it is an upgrade for your class and spec (stat priorities from the WoW Forever lists). Upgrades in your bags get a green ^ in the bag window and a button on the gear bar: click it to equip. /lazy gear shows what you are scored as, /lazy gear stats shows what it reads from your gear.",
         "QUEST ITEM SPARKLES: the game's own sparkle on quest items you can loot stays on, even after a graphics preset (credit: Forever Loot Sparkles by Ashtar Senior).",
@@ -516,14 +521,14 @@ local function ShowNew(current, newer, who, autoFade)
         face:SetTexCoord(62 / 256, 186 / 256, 28 / 256, 152 / 256)
         local ohh = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
         ohh:SetPoint("TOP", face, "BOTTOM", 0, -2)
-        ohh:SetText("|cffff3333OH Oh OHH|r")
+        ohh:SetText(L("|cffff3333OH Oh OHH|r"))
         local by = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         by:SetPoint("TOPLEFT", 14, -6); by:SetWidth(330); by:SetJustifyH("LEFT")
-        by:SetText("Brought to you by Sam Skinison and Tank Hanks")
+        by:SetText(L("Brought to you by Sam Skinison and Tank Hanks"))
         local credit = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
         credit:SetPoint("BOTTOM", 0, 14)
         credit:SetWidth(170)
-        credit:SetText("Photo: The World Famous Comedy Store, CC BY-SA 2.0 (Wikimedia Commons)")
+        credit:SetText(L("Photo: The World Famous Comedy Store, CC BY-SA 2.0 (Wikimedia Commons)"))
         -- the list sits in a scroll area so a long history never runs off the window
         f.scroll = CreateFrame("ScrollFrame", "ForeverLazy_NewScroll", f, "UIPanelScrollFrameTemplate")
         f.scroll:SetPoint("TOPLEFT", 14, -92); f.scroll:SetPoint("BOTTOMRIGHT", -34, 46)
@@ -540,10 +545,10 @@ local function ShowNew(current, newer, who, autoFade)
         f.url:SetScript("OnTextChanged", function(s, user) if user then s:SetText("https://github.com/everyday3d/ForeverLazy/releases") end end)
         f.url:Hide()
         local tourBtn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        tourBtn:SetSize(120, 24); tourBtn:SetPoint("BOTTOMLEFT", 14, 12); tourBtn:SetText("Take the tour")
+        tourBtn:SetSize(120, 24); tourBtn:SetPoint("BOTTOMLEFT", 14, 12); tourBtn:SetText(L("Take the tour"))
         tourBtn:SetScript("OnClick", function() f:Hide(); addon.StartTour() end)
         local close = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText("Close")
+        close:SetSize(90, 24); close:SetPoint("BOTTOMRIGHT", -14, 12); close:SetText(L("Close"))
         close:SetScript("OnClick", function() f:Hide() end)
         f:SetScript("OnUpdate", function(self, dt)
             if not self.fadeLeft then return end
@@ -564,10 +569,10 @@ local function ShowNew(current, newer, who, autoFade)
     local lines = {}
     for _, v in ipairs(NEW) do
         lines[#lines + 1] = "|cffffd100" .. v[1] .. "|r"
-        for _, item in ipairs(v[2]) do lines[#lines + 1] = "  - " .. item end
+        for _, item in ipairs(v[2]) do lines[#lines + 1] = "  - " .. L(item) end
         lines[#lines + 1] = ""
     end
-    newWin.title:SetText("What's new new |cffff3333NEWWW!|r")
+    newWin.title:SetText(L("What's new new |cffff3333NEWWW!|r"))
     newWin.sub:SetText("Forever Lazy " .. (current or Version()) .. " (installed)")
     if newer then
         newWin.sub:SetText("You have Forever Lazy " .. (current or Version()) .. ". Version " .. newer .. " is out" .. (who and (" (" .. who .. " runs it)") or "") ..
@@ -600,7 +605,7 @@ ev:SetScript("OnEvent", function(self)
         local current = Version()
         if root.welcomed and not root.tourDone and not root.tourOffered then
             root.tourOffered = true
-            Print("a quick tour of the buttons: /lazy tour")
+            Print(L("a quick tour of the buttons: /lazy tour"))
         end
         if root.seenVersion and root.seenVersion ~= current and root.welcomed then
             ShowNew(current, nil, nil, true)

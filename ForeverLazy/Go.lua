@@ -5,6 +5,7 @@
 -- your hearthstone (when it is ready) and walking, and picks the quickest. Times are estimates; flights use the
 -- times the addon has learned. A leg it knows nothing about (a dock you never marked) is simply not used.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -272,9 +273,9 @@ end
 local function Start(dest)
     local legs, total = Route(dest)
     if not legs then Print(total); return end
-    if #legs == 0 then Print("you are already there"); return end
+    if #legs == 0 then Print(L("you are already there")); return end
     trip = { legs = legs, idx = 1, dest = dest }
-    Print(string.format("trip to %s: %d step%s, about %s in all", dest.name, #legs, #legs == 1 and "" or "s", Clock(total)))
+    Print(string.format(L("trip to %s: %d step%s, about %s in all"), dest.name, #legs, #legs == 1 and "" or "s", Clock(total)))
     for i, l in ipairs(legs) do Print(string.format("  %d. %s", i, LegText(l))) end
     Show()
 end
@@ -359,7 +360,7 @@ local function Tick()
         if l.kind == "walk" and trip.legStartDist and d and d > trip.legStartDist + 800 then       -- only walking steps: a ride carries me away on purpose
             trip.offSince = trip.offSince or GetTime()
             if GetTime() - trip.offSince > 20 then
-                Print("trip to " .. trip.dest.name .. " cancelled: you went another way. /lazy go " .. trip.dest.name .. " starts it again")
+                Print(L("trip to ") .. trip.dest.name .. L(" cancelled: you went another way. /lazy go ") .. trip.dest.name .. L(" starts it again"))
                 trip = nil
                 addon.GoLastCancel = GetTime()
                 Clear()
@@ -388,12 +389,12 @@ local function Tick()
         trip.idx = trip.idx + 1
         if trip.idx > #trip.legs then
             Clear()
-            Print("you have arrived at " .. trip.dest.name)
+            Print(L("you have arrived at ") .. trip.dest.name)
             trip = nil
             addon:RefreshPins()
         else
             Show()
-            Print("next: " .. LegText(trip.legs[trip.idx]))
+            Print(L("next: ") .. LegText(trip.legs[trip.idx]))
         end
     end
 end
@@ -416,19 +417,19 @@ function addon:HandleExtraCommand(cmd, rest)
             addon.GoLastCancel = GetTime()
             Clear()
             addon:RefreshPins()
-            Print("trip cancelled")
+            Print(L("trip cancelled"))
         elseif arg:lower() == "steps" then
-            if not trip then Print("no trip under way")
+            if not trip then Print(L("no trip under way"))
             else
                 local px, py, pinst = hbd:GetPlayerWorldPosition()
-                Print("trip to " .. trip.dest.name .. ", step " .. trip.idx .. " of " .. #trip.legs .. ":")
+                Print(L("trip to ") .. trip.dest.name .. L(", step ") .. trip.idx .. " of " .. #trip.legs .. ":")
                 for i, l in ipairs(trip.legs) do
                     local d = (px and l.to.instance == pinst) and string.format(" [%d yd from me to its end]", Dist({ x = px, y = py }, l.to)) or " [end in another area]"
                     Print(string.format("  %s%d. [%s] %s%s", i == trip.idx and "> " or "  ", i, l.kind, LegText(l), d))
                 end
             end
         elseif arg == "" then
-            if trip then Print("on the way to " .. trip.dest.name .. ": " .. LegText(trip.legs[trip.idx])) else Print("/lazy go <place>, for example /lazy go westfall, /lazy go stormwind, /lazy go the deadmines, /lazy go hearth") end
+            if trip then Print(L("on the way to ") .. trip.dest.name .. ": " .. LegText(trip.legs[trip.idx])) else Print(L("/lazy go <place>, for example /lazy go westfall, /lazy go stormwind, /lazy go the deadmines, /lazy go hearth")) end
         else
             local dest, err = Resolve(arg)
             if not dest then Print(err or "I could not place that"); return true end

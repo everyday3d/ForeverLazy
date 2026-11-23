@@ -8,6 +8,7 @@
 -- the only places it shares are where a rare was seen and coarse map squares where a quest objective was done or someone died.
 --   /lazy hive on|off      /lazy hive who      /lazy hive rares      /lazy hive rare (arrow to the nearest)
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -126,7 +127,7 @@ local function Receive(sender, text)
                 local here = hbd:GetPlayerZone()
                 if here == map and not told[npc] and DB().hiveRareAlert ~= false then
                     told[npc] = now
-                    Print(string.format("rare seen nearby: %s (%d, %d). /lazy hive rare points an arrow at it", name, zx * 100, zy * 100))
+                    Print(string.format(L("rare seen nearby: %s (%d, %d). /lazy hive rare points an arrow at it"), name, zx * 100, zy * 100))
                 end
             end
         end
@@ -256,11 +257,11 @@ local function RefreshPins()
                         local left = math.floor(est / 60) - ago
                         GameTooltip:AddLine(left > 0 and string.format("Usually back after about %d minutes (back in about %d)", math.floor(est / 60), left) or string.format("Usually back after about %d minutes: it may be up now", math.floor(est / 60)), 1, 1, 1, true)
                     else
-                        GameTooltip:AddLine("Nobody has timed its respawn yet.", 0.7, 0.7, 0.7, true)
+                        GameTooltip:AddLine(L("Nobody has timed its respawn yet."), 0.7, 0.7, 0.7, true)
                     end
                 elseif r then
                     GameTooltip:AddLine(string.format("Seen %d minutes ago by another Forever Lazy player", math.floor((GetTime() - r.t) / 60)), 1, 1, 1, true)
-                    GameTooltip:AddLine("It may have moved or died since.", 0.7, 0.7, 0.7, true)
+                    GameTooltip:AddLine(L("It may have moved or died since."), 0.7, 0.7, 0.7, true)
                 end
                 GameTooltip:Show()
             end)
@@ -330,7 +331,7 @@ local function Enable()
             Join()
             C_Timer.After(15, check)
         else
-            Print("live sharing: I could not join the shared channel. Try /lazy hive live off, then on again later.")
+            Print(L("live sharing: I could not join the shared channel. Try /lazy hive live off, then on again later."))
         end
     end
     C_Timer.After(5, check)
@@ -341,13 +342,13 @@ function addon.HiveLiveSet(on)
     db.hiveOn = on and true or false
     if on then
         if C_Timer then Enable() end
-        Print("the Hive is ON: it learns from your play and shares numbers, rares and zone counts with other players who have it on (never your name, and never a track of where you are). /lazy hive off stops it.")
+        Print(L("the Hive is ON: it learns from your play and shares numbers, rares and zone counts with other players who have it on (never your name, and never a track of where you are). /lazy hive off stops it."))
     else
         Leave()
         queue = {}
         RefreshPins()
         if label then label:Hide() end
-        Print("the Hive is off: nothing is learned or shared")
+        Print(L("the Hive is off: nothing is learned or shared"))
     end
     if addon.RefreshOptions then addon.RefreshOptions() end
 end
@@ -410,7 +411,7 @@ ev:SetScript("OnUpdate", function(_, dt)
                 local est = addon.HiveRareEstimate(npc)
                 if est and now - (r.deadAt or r.t) >= est then
                     r.alerted = true
-                    Print(string.format("%s should be back about now (it usually takes about %d minutes). /lazy hive rare points an arrow at the spot", r.name, math.floor(est / 60)))
+                    Print(string.format(L("%s should be back about now (it usually takes about %d minutes). /lazy hive rare points an arrow at the spot"), r.name, math.floor(est / 60)))
                 end
             end
         end
@@ -456,7 +457,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if arg == "on" or arg == "live on" or arg == "live" then addon.HiveLiveSet(true); return true end
         if arg == "off" or arg == "live off" then addon.HiveLiveSet(false); return true end
         if arg == "who" then
-            if not Enabled() then Print("live sharing is off. /lazy hive live on turns it on"); return true end
+            if not Enabled() then Print(L("live sharing is off. /lazy hive live on turns it on")); return true end
             Prune()
             local perMap = {}
             for _, p in pairs(players) do perMap[p.map] = (perMap[p.map] or 0) + 1 end
@@ -466,12 +467,12 @@ function addon:HandleExtraCommand(cmd, rest)
                 rows[#rows + 1] = { (info and info.name) or ("zone " .. map), n }
             end
             table.sort(rows, function(x, y) return x[2] > y[2] end)
-            if #rows == 0 then Print("no other Forever Lazy players have shown up yet (they appear once they share their zone)") end
-            for i = 1, math.min(8, #rows) do Print(string.format("  %s: %d player%s", rows[i][1], rows[i][2], rows[i][2] == 1 and "" or "s")) end
+            if #rows == 0 then Print(L("no other Forever Lazy players have shown up yet (they appear once they share their zone)")) end
+            for i = 1, math.min(8, #rows) do Print(string.format(L("  %s: %d player%s"), rows[i][1], rows[i][2], rows[i][2] == 1 and "" or "s")) end
             return true
         end
         if arg == "rares" then
-            if not Enabled() then Print("live sharing is off. /lazy hive live on turns it on"); return true end
+            if not Enabled() then Print(L("live sharing is off. /lazy hive live on turns it on")); return true end
             Prune()
             local n = 0
             for npc, r in pairs(rares) do
@@ -485,14 +486,14 @@ function addon:HandleExtraCommand(cmd, rest)
                 end
                 Print(string.format("  %s - %s (%d, %d), %s", r.name, (info and info.name) or "?", r.zx * 100, r.zy * 100, when))
             end
-            if n == 0 then Print("no rares reported lately") end
+            if n == 0 then Print(L("no rares reported lately")) end
             return true
         end
         if arg == "rare" then
             local r = NearestRare()
-            if not r then Print("no rare reported in this zone lately"); return true end
+            if not r then Print(L("no rare reported in this zone lately")); return true end
             addon:AddWaypointZone(r.map, r.zx, r.zy, "Rare: " .. r.name)
-            Print("arrow set on " .. r.name .. " (where it was last seen)")
+            Print(L("arrow set on ") .. r.name .. L(" (where it was last seen)"))
             return true
         end
     end

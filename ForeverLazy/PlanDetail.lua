@@ -1,6 +1,7 @@
 -- The line under the plan arrow (what to do at this stop) and the zone plan written out.
 -- Split out of Extras.lua.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local hbd = api.hbd
@@ -184,7 +185,7 @@ function addon.ZonePlanWindow()
     zpWin:SetScale(scale)
     local zone = GetRealZoneText and GetRealZoneText() or "this zone"
     zpWin.title:SetText("Level " .. zone)
-    zpWin.sub:SetText("In order. Get the quests, do their objectives together, and the plan hands them in in one go, unless a hand-in opens the next quest of a chain. Stop 1 is where the arrow points now.")
+    zpWin.sub:SetText(L("In order. Get the quests, do their objectives together, and the plan hands them in in one go, unless a hand-in opens the next quest of a chain. Stop 1 is where the arrow points now."))
     for _, r in ipairs(zpRows) do r.head:Hide(); r.body:Hide() end
     local steps = addon.ZonePlanLines(25)
     local y = 0
@@ -212,7 +213,7 @@ function addon.ZonePlanWindow()
             zpRows[1] = r
         end
         r.head:ClearAllPoints(); r.head:SetPoint("TOPLEFT", zpWin.content, "TOPLEFT", 0, 0); r.head:SetWidth(470)
-        r.head:SetText("There is no plan yet. /lazy level makes one for this zone."); r.head:Show()
+        r.head:SetText(L("There is no plan yet. /lazy level makes one for this zone.")); r.head:Show()
         y = 30
     end
     zpWin.content:SetHeight(math.max(y, 40))

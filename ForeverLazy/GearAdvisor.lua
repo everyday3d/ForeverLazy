@@ -5,6 +5,7 @@
 --   optional: a chat note when I loot or buy an upgrade
 --   /lazy gear on|off   /lazy gear bar on|off   /lazy gear note on|off
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -213,7 +214,7 @@ local function Apply()
             if not told[e.link] then
                 told[e.link] = true
                 local over = e.over and (GetItemInfo(e.over)) or nil
-                Print(string.format("upgrade: %s%s (+%.0f%s)", e.link, over and (" instead of " .. over) or "", e.gain, e.pct and string.format(", %.0f%%", e.pct) or ""))
+                Print(string.format(L("upgrade: %s%s (+%.0f%s)"), e.link, over and (" instead of " .. over) or "", e.gain, e.pct and string.format(", %.0f%%", e.pct) or ""))
             end
         end
     end
@@ -260,19 +261,19 @@ function addon:HandleExtraCommand(cmd, rest)
         local function Flag(v) if v == "on" then return true elseif v == "off" then return false end end
         if a == "on" or a == "off" then
             db.gearAdvisor = Flag(a) and nil or false
-            Print("gear advisor: " .. (db.gearAdvisor == false and "OFF" or "on")); Refresh(); return true
+            Print(L("gear advisor: ") .. (db.gearAdvisor == false and "OFF" or "on")); Refresh(); return true
         elseif which == "bar" and Flag(val) ~= nil then
             db.gearBar = Flag(val) and nil or false
-            Print("gear advisor bar: " .. (db.gearBar == false and "OFF" or "on")); Refresh(); return true
+            Print(L("gear advisor bar: ") .. (db.gearBar == false and "OFF" or "on")); Refresh(); return true
         elseif which == "note" and Flag(val) ~= nil then
             db.gearNote = Flag(val) and true or nil
-            Print("gear advisor chat note: " .. (db.gearNote and "on" or "OFF")); return true
+            Print(L("gear advisor chat note: ") .. (db.gearNote and "on" or "OFF")); return true
         elseif a == "list" then
             local list = Scan()
-            if #list == 0 then Print("gear: no upgrades in your bags") end
+            if #list == 0 then Print(L("gear: no upgrades in your bags")) end
             for _, e in ipairs(list) do
                 local over = e.over and (GetItemInfo(e.over)) or nil
-                Print(string.format("gear: %s +%.0f%s%s", e.link, e.gain, e.pct and string.format(" (%.0f%%)", e.pct) or "", over and (" over " .. over) or ""))
+                Print(string.format(L("gear: %s +%.0f%s%s"), e.link, e.gain, e.pct and string.format(" (%.0f%%)", e.pct) or "", over and (" over " .. over) or ""))
             end
             return true
         end

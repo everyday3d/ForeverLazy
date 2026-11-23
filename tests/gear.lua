@@ -5,6 +5,7 @@ local root = (arg and arg[0] or "tests/gear.lua"):gsub("[/\\]tests[/\\]gear%.lua
 local db = { rewardRole = "auto" }
 local addon = { Print = function() end, GetDB = function() return db end }
 local ns = { addon = addon }
+ns.L = function(t) return t end
 
 -- stand-ins for the game ---------------------------------------------------------------------------------
 local class, tabs = "MAGE", { 0, 0, 31 }

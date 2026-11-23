@@ -6,6 +6,7 @@
 -- It never interrupts a quest I am in the middle of, and never acts in a dungeon, in combat, dead or on a flight.
 --   /lazy autopilot on|off
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -71,7 +72,7 @@ local function Tick()
             if not lastService[d.label] or now - lastService[d.label] > 900 then
                 lastService[d.label] = now
                 Log("next step: " .. tostring(d.say))
-                Print("autopilot: " .. tostring(d.say))
+                Print(L("autopilot: ") .. tostring(d.say))
                 if addon.LazyNow then addon.LazyNow() end
                 return
             end
@@ -90,11 +91,11 @@ local function Tick()
         local s = NextZoneSegment()
         if s then
             Log("nothing left worth doing here: on to " .. tostring(s.zone))
-            Print("autopilot: nothing left to do here, on to " .. tostring(s.zone))
+            Print(L("autopilot: nothing left to do here, on to ") .. tostring(s.zone))
             if addon.PlanZone then addon.PlanZone(s.zone) end
         elseif now - lastNothing > 600 then
             lastNothing = now
-            Print("autopilot: nothing left to do here and no next zone on your journey (/lazy guide)")
+            Print(L("autopilot: nothing left to do here and no next zone on your journey (/lazy guide)"))
         end
     end
 end
@@ -116,7 +117,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if a == "on" then db.autopilot = true
         elseif a == "off" then db.autopilot = false
         else db.autopilot = not db.autopilot end
-        Print("autopilot " .. (db.autopilot and "on: services, the next zone and its plan follow by themselves" or "off"))
+        Print(L("autopilot ") .. (db.autopilot and "on: services, the next zone and its plan follow by themselves" or "off"))
         if addon.RefreshOptions then addon.RefreshOptions() end
         return true
     end

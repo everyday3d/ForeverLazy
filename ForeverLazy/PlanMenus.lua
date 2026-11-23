@@ -1,6 +1,7 @@
 -- The right-click menu on the plan arrow (skip, come back later, do next), profile and friend switching, and the base command handler.
 -- Split out of Extras.lua.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local hbd = api.hbd
@@ -29,9 +30,9 @@ local function ReplanAfterSkip()
     addon:PlanRoute(X.LastPlanAll() and true or false, true)
     local wps = db.waypoints
     if wps and wps[1] and wps[1].label then
-        Print("plan updated. Next: " .. wps[1].name)
+        Print(L("plan updated. Next: ") .. ns.LocalizeLabel(wps[1].name))
     else
-        Print("nothing left in the plan")
+        Print(L("nothing left in the plan"))
     end
 end
 
@@ -39,7 +40,7 @@ local function SkipQuest(id, label)
     local db = DB()
     db.planSkip = db.planSkip or {}
     db.planSkip[id] = PlainTitle(label)
-    Print("skipping " .. PlainTitle(label) .. " (/lazy skip clear brings skipped quests back)")
+    Print(L("skipping ") .. PlainTitle(label) .. L(" (/lazy skip clear brings skipped quests back)"))
     -- take it out of the plan I have right now, so it is gone even before (or if) the plan is rebuilt
     pcall(addon.ScrubQuest, id)
     if db.waypoints[1] and db.waypoints[1].label then ReplanAfterSkip() else addon:RefreshPins() end
@@ -77,7 +78,7 @@ function addon.PlanLater(id, label, minutes)
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
     local nxt = db.waypoints[1]
-    Print(string.format("%s put off. I will fit it back in when you are near it again (or in %d minutes). Next: %s",
+    Print(string.format(L("%s put off. I will fit it back in when you are near it again (or in %d minutes). Next: %s"),
         PlainTitle(label), minutes, nxt and tostring(nxt.name or nxt.label) or "nothing left in the plan"))
 end
 
@@ -116,7 +117,7 @@ function addon.PlanLaterReturn(id, why)
         RenumberPlan(wps)
         addon:RefreshPins()
         if addon.RefreshOptions then addon.RefreshOptions() end
-        Print(string.format("%s is back in your plan (%s)", PlainTitle(rec.label), why or "back"))
+        Print(string.format(L("%s is back in your plan (%s)"), PlainTitle(rec.label), why or "back"))
         if addon.PlanLog then addon.PlanLog("plan", string.format("%s fitted back into the plan (%s)", PlainTitle(rec.label), why or "back")) end
     elseif addon.PlanRoute then
         addon.planWhy = "a quest you put off came back"
@@ -141,7 +142,7 @@ function addon:FocusQuest(id, label)
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
     local first = db.waypoints[1]
-    Print("doing " .. PlainTitle(label) .. " first, then back to the plan" .. (first and (". Next: " .. first.name) or ""))
+    Print(L("doing ") .. PlainTitle(label) .. L(" first, then back to the plan") .. (first and (". Next: " .. ns.LocalizeLabel(first.name)) or ""))
 end
 
 local skipMenu, skipCatcher
@@ -193,7 +194,7 @@ function addon:OpenSkipMenu()
     -- the first quest stop of the plan, even when something else (directions, a trip) is in front of it
     local wp, wpIndex
     for i, w in ipairs(db.waypoints) do if w.label then wp, wpIndex = w, i; break end end
-    if not wp then Print("no plan stop to skip. /lazy plan builds a plan"); return end
+    if not wp then Print(L("no plan stop to skip. /lazy plan builds a plan")); return end
     skipMenu = skipMenu or BuildSkipMenu()
     local f = skipMenu
     f.title:SetText(wp.name or wp.label)
@@ -209,18 +210,18 @@ function addon:OpenSkipMenu()
     if db.planFocus then
         items[#items + 1] = { text = "Back to the plan (stop doing " .. tostring(db.planFocus.label) .. ")", fn = function()
             db.planFocus = nil
-            Print("back to the plan")
+            Print(L("back to the plan"))
             ReplanAfterSkip()
         end }
     end
     items[#items + 1] = { text = "Skip this stop for now", fn = function()
         addon:RemoveWaypoint(wpIndex)
         local nxt = db.waypoints[1]
-        Print(nxt and ("skipped. Next: " .. (nxt.name or "?")) or "skipped. That was the last stop")
+        Print(nxt and ("skipped. Next: " .. (ns.LocalizeLabel(nxt.name) or "?")) or "skipped. That was the last stop")
     end }
     if SkippedCount() > 0 then
         items[#items + 1] = { text = string.format("Bring back %d skipped quest%s", SkippedCount(), SkippedCount() == 1 and "" or "s"),
-                              fn = function() db.planSkip = nil; Print("skipped quests are back in"); ReplanAfterSkip() end }
+                              fn = function() db.planSkip = nil; Print(L("skipped quests are back in")); ReplanAfterSkip() end }
     end
     for i, it in ipairs(items) do
         local row = MenuRow(f, i)
@@ -256,15 +257,15 @@ function addon:OpenQuestList()
                     addon:RefreshPins()
                     if addon.RefreshOptions then addon.RefreshOptions() end
                     local first = db.waypoints[1]
-                    Print("doing " .. PlainTitle(lbl) .. " first, then back to the plan" .. (first and (". Next: " .. first.name) or ""))
+                    Print(L("doing ") .. PlainTitle(lbl) .. L(" first, then back to the plan") .. (first and (". Next: " .. ns.LocalizeLabel(first.name)) or ""))
                 end }
                 if #items >= 14 then break end
             end
         end
         if #items >= 14 then break end
     end
-    if #items == 0 then Print("no quests in the plan. /lazy plan builds one"); return end
-    f.title:SetText("Do which quest now?")
+    if #items == 0 then Print(L("no quests in the plan. /lazy plan builds one")); return end
+    f.title:SetText(L("Do which quest now?"))
     for i, it in ipairs(items) do
         local row = MenuRow(f, i)
         row.fn = it.fn
@@ -299,9 +300,9 @@ function addon:OpenFollowMenu()
     end
     for i = 1, 4 do add("party" .. i) end
     for i = 1, 40 do add("raid" .. i) end
-    if #items == 0 then Print("you are not in a group"); return end
+    if #items == 0 then Print(L("you are not in a group")); return end
     items[#items + 1] = { text = "|cffaaaaaaStop pinning (follow whoever sends a step)|r", fn = function() addon:StopFollowing() end }
-    f.title:SetText("Follow who?")
+    f.title:SetText(L("Follow who?"))
     for i, it in ipairs(items) do
         local row = MenuRow(f, i)
         row.fn = it.fn
@@ -357,7 +358,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local db = DB()
         db.ownQuests = not db.ownQuests
         mine.dirty = true
-        Print("my quest log arrow " .. (db.ownQuests and "on" or "off"))
+        Print(L("my quest log arrow ") .. (db.ownQuests and "on" or "off"))
         return true
 
     elseif cmd == "follow" then
@@ -378,28 +379,28 @@ function addon:HandleExtraCommand(cmd, rest)
         -- explains where the plan's arrow comes from, for the quest at stop 1 (or "why all" for every quest in the log)
         local db = DB()
         local QDB = api.GetQuestie()
-        if not (QDB and api.QuestieReady()) then Print("needs Questie loaded and ready"); return true end
+        if not (QDB and api.QuestieReady()) then Print(L("needs Questie loaded and ready")); return true end
         local zone = hbd:GetPlayerZone()
         local px, py = hbd:GetPlayerWorldPosition()
         local zi = zone and C_Map.GetMapInfo(zone)
-        Print(string.format("you are in %s (map %s)", zi and zi.name or "?", tostring(zone)))
+        Print(string.format(L("you are in %s (map %s)"), zi and zi.name or "?", tostring(zone)))
         local ids = {}
         if (rest or ""):lower() == "all" then
             for _, q in ipairs(ReadQuestLog()) do ids[#ids + 1] = q.id end
         else
             local w = db.waypoints[1]
             if w then
-                Print(string.format("stop 1: %s at %s %.1f, %.1f%s", tostring(w.label or w.name), tostring(w.uiMapId and C_Map.GetMapInfo(w.uiMapId).name),
+                Print(string.format(L("stop 1: %s at %s %.1f, %.1f%s"), tostring(w.label or w.name), tostring(w.uiMapId and C_Map.GetMapInfo(w.uiMapId).name),
                     (w.zx or 0) * 100, (w.zy or 0) * 100, w.detail and (" - " .. w.detail) or ""))
                 for _, q in ipairs(w.quests or {}) do ids[#ids + 1] = q.id end
             else
-                Print("no stop 1, try /lazy why all")
+                Print(L("no stop 1, try /lazy why all"))
             end
         end
         for _, id in ipairs(ids) do
             local title = QDB.QueryQuestSingle(id, "name") or ("quest " .. id)
             local open = UnfinishedTexts(id)
-            Print(string.format("%s (%d): open objectives: %s", title, id, open and (#open > 0 and table.concat(open, " | ") or "none") or "unknown"))
+            Print(string.format(L("%s (%d): open objectives: %s"), title, id, open and (#open > 0 and table.concat(open, " | ") or "none") or "unknown"))
             local obj = QDB.QueryQuestSingle(id, "objectives")
             local function show(kind, list, nameOf, spawnsOf)
                 for _, c in pairs(list or {}) do
@@ -422,7 +423,7 @@ function addon:HandleExtraCommand(cmd, rest)
                 show("npc", obj[1], function(i) return QDB.QueryNPCSingle(i, "name") end, function(sp, i) api.AddNpcs(sp, { i }) end)
                 show("object", obj[2], function(i) return QDB.QueryObjectSingle(i, "name") end, function(sp, i) api.AddObjects(sp, { i }) end)
             else
-                Print("  Questie has no objectives for this quest")
+                Print(L("  Questie has no objectives for this quest"))
             end
         end
         return true
@@ -440,7 +441,7 @@ function addon:HandleExtraCommand(cmd, rest)
         else
             db.mode = db.lastMode or "both"
         end
-        Print("arrows " .. (db.mode == "off" and "off" or ("on (" .. db.mode .. ")")))
+        Print(L("arrows ") .. (db.mode == "off" and "off" or ("on (" .. db.mode .. ")")))
         addon:RefreshPins()
         if addon.UpdateTomTom then addon:UpdateTomTom() end
         if addon.RefreshOptions then addon.RefreshOptions() end
@@ -450,13 +451,13 @@ function addon:HandleExtraCommand(cmd, rest)
         local db = DB()
         if (rest or ""):lower() == "clear" then
             db.planSkip = nil
-            Print("skipped quests are back in")
+            Print(L("skipped quests are back in"))
             if db.waypoints[1] and db.waypoints[1].label then ReplanAfterSkip() end
         else
             local n = 0
             for _, title in pairs(db.planSkip or {}) do
                 n = n + 1
-                Print("  skipped: " .. tostring(title))
+                Print(L("  skipped: ") .. tostring(title))
             end
             Print(n == 0 and "no quests skipped. Right-click the plan arrow to skip one" or "/lazy skip clear brings them back")
         end
@@ -467,16 +468,16 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         if a == "back" or a == "now" or a == "clear" then
             db.planLater = nil; db.planLaterStops = nil
-            Print("the quests you put off are back in the plan")
+            Print(L("the quests you put off are back in the plan"))
             if db.waypoints[1] and db.waypoints[1].label then ReplanAfterSkip() else addon:PlanRoute(false, true) end
         elseif a == "list" then
             local n = 0
             for id, due in pairs(db.planLater or {}) do
                 n = n + 1
                 local rec = db.planLaterStops and db.planLaterStops[id]
-                Print(string.format("  %s: back when you are near it again, or in about %d minutes", PlainTitle(rec and rec.label or ("quest " .. id)), math.max(0, math.ceil((due - time()) / 60))))
+                Print(string.format(L("  %s: back when you are near it again, or in about %d minutes"), PlainTitle(rec and rec.label or ("quest " .. id)), math.max(0, math.ceil((due - time()) / 60))))
             end
-            if n == 0 then Print("no quests put off") end
+            if n == 0 then Print(L("no quests put off")) end
         else
             -- put off the quests of the stop I am on
             local w = db.waypoints and db.waypoints[1]
@@ -485,7 +486,7 @@ function addon:HandleExtraCommand(cmd, rest)
                 for _, q in ipairs(w.quests) do list[#list + 1] = q end
                 for _, q in ipairs(list) do addon.PlanLater(q.id, q.label) end
             else
-                Print("nothing to put off: the arrow is not on a quest stop")
+                Print(L("nothing to put off: the arrow is not on a quest stop"))
             end
         end
         return true
@@ -494,7 +495,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         if a == "on" or a == "show" then addon.ToggleSteps(true)
         elseif a == "off" or a == "hide" then addon.ToggleSteps(false)
-        elseif a == "auto" then DB().stepsAuto = DB().stepsAuto == false; Print("the step window shows by itself: " .. tostring(DB().stepsAuto ~= false))
+        elseif a == "auto" then DB().stepsAuto = DB().stepsAuto == false; Print(L("the step window shows by itself: ") .. tostring(DB().stepsAuto ~= false))
         else addon.ToggleSteps() end
         return true
 
@@ -513,7 +514,7 @@ function addon:HandleExtraCommand(cmd, rest)
     elseif cmd == "compass" then
         local db = DB()
         db.compassBar = not db.compassBar
-        Print("compass bar " .. (db.compassBar and "on" or "off"))
+        Print(L("compass bar ") .. (db.compassBar and "on" or "off"))
         return true
 
     elseif cmd == "friend" then
@@ -521,12 +522,12 @@ function addon:HandleExtraCommand(cmd, rest)
             local names = {}
             for n in pairs(state.friends) do names[#names + 1] = n end
             table.sort(names)
-            Print("friends heard from: " .. (#names > 0 and table.concat(names, ", ") or "none"))
-            Print("following: " .. tostring(state.friend) .. (state.pinned and " (pinned)" or " (latest sender)"))
-            Print("/lazy friend <name> to pin, /lazy friend auto to follow whoever sent last")
+            Print(L("friends heard from: ") .. (#names > 0 and table.concat(names, ", ") or "none"))
+            Print(L("following: ") .. tostring(state.friend) .. (state.pinned and " (pinned)" or " (latest sender)"))
+            Print(L("/lazy friend <name> to pin, /lazy friend auto to follow whoever sent last"))
         elseif rest:lower() == "auto" then
             state.pinned = nil
-            Print("following the latest sender")
+            Print(L("following the latest sender"))
         else
             addon:SelectFriend(rest, true)
         end
@@ -538,24 +539,24 @@ function addon:HandleExtraCommand(cmd, rest)
         sub = (sub or ""):lower()
         if sub == "save" and name ~= "" then
             db.routes[name] = api.DeepCopy(db.waypoints)
-            Print(string.format("route '%s' saved (%d waypoints)", name, #db.waypoints))
+            Print(string.format(L("route '%s' saved (%d waypoints)"), name, #db.waypoints))
         elseif sub == "load" and name ~= "" then
             if db.routes[name] then
                 db.waypoints = api.DeepCopy(db.routes[name])
                 addon:RefreshPins()
-                Print(string.format("route '%s' loaded (%d waypoints)", name, #db.waypoints))
+                Print(string.format(L("route '%s' loaded (%d waypoints)"), name, #db.waypoints))
             else
-                Print("no route named " .. name)
+                Print(L("no route named ") .. name)
             end
         elseif sub == "delete" and name ~= "" then
             db.routes[name] = nil
-            Print("route '" .. name .. "' deleted")
+            Print(L("route '") .. name .. L("' deleted"))
         elseif sub == "list" or sub == "" then
             local any = false
-            for n, r in pairs(db.routes) do any = true; Print(string.format("%s (%d waypoints)", n, #r)) end
-            if not any then Print("no routes. /lazy route save <name> stores your current waypoints") end
+            for n, r in pairs(db.routes) do any = true; Print(string.format(L("%s (%d waypoints)"), n, #r)) end
+            if not any then Print(L("no routes. /lazy route save <name> stores your current waypoints")) end
         else
-            Print("usage: /lazy route save|load|delete <name>  or  /lazy route list")
+            Print(L("usage: /lazy route save|load|delete <name>  or  /lazy route list"))
         end
         return true
 
@@ -564,28 +565,28 @@ function addon:HandleExtraCommand(cmd, rest)
         sub = (sub or ""):lower()
         if sub == "" or sub == "list" then
             local names = ProfileNames()
-            Print("active: " .. (root.useChar and "this character" or (root.active or "default")))
-            Print("profiles: default" .. (#names > 0 and (", " .. table.concat(names, ", ")) or ""))
+            Print(L("active: ") .. (root.useChar and "this character" or (root.active or "default")))
+            Print(L("profiles: default") .. (#names > 0 and (", " .. table.concat(names, ", ")) or ""))
         elseif sub == "new" and name ~= "" then
             root.profiles[name] = api.DeepCopy(DB())
             root.active = name
             root.useChar = false
             SwitchProfile()
-            Print("created and switched to profile " .. name)
+            Print(L("created and switched to profile ") .. name)
         elseif (sub == "use" or sub == "switch") and name ~= "" then
             if name:lower() == "default" then root.active = nil
             elseif root.profiles[name] then root.active = name
-            else Print("no profile named " .. name); return true end
+            else Print(L("no profile named ") .. name); return true end
             root.useChar = false
             SwitchProfile()
-            Print("using profile " .. (root.active or "default"))
+            Print(L("using profile ") .. (root.active or "default"))
         elseif sub == "delete" and name ~= "" then
             root.profiles[name] = nil
             if root.active == name then root.active = nil end
             SwitchProfile()
-            Print("deleted profile " .. name)
+            Print(L("deleted profile ") .. name)
         else
-            Print("usage: /lazy profile list | new <name> | use <name> | delete <name>")
+            Print(L("usage: /lazy profile list | new <name> | use <name> | delete <name>"))
         end
         return true
     end

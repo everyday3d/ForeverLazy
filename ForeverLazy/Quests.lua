@@ -4,6 +4,7 @@
 --   /lazy farm [n]       best place to get the item my quest needs
 -- Quest and drop data come from Questie.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -197,10 +198,10 @@ local function AnnounceChain(doneId)
             or string.format("%s%s %.0f, %.0f%s", npc and (npc .. ", ") or "", MapName(s.uiMapId), s.zx * 100, s.zy * 100,
                 d and string.format(" (about %d yards)", d) or "")
     end
-    Print(string.format("next in the chain: %s (level %s) - %s%s", chainNext.name,
+    Print(string.format(L("next in the chain: %s (level %s) - %s%s"), chainNext.name,
         tostring(QDB.QueryQuestSingle(nxt, "questLevel") or "?"), where,
         steps > 1 and string.format(". %d more steps after it", steps - 1) or ". The last step"))
-    if s and not (d and d < 60) then Print("  /lazy chain go puts a waypoint on it") end
+    if s and not (d and d < 60) then Print(L("  /lazy chain go puts a waypoint on it")) end
 end
 
 --------------------------------------------------------------------------------
@@ -278,7 +279,7 @@ local function EvaluateRewards(retry)
         end
         m:Show()
     end
-    Print(string.format("reward pick: %s - %s", GetQuestItemLink("choice", pick) or ("choice " .. pick), why))
+    Print(string.format(L("reward pick: %s - %s"), GetQuestItemLink("choice", pick) or ("choice " .. pick), why))
 end
 
 --------------------------------------------------------------------------------
@@ -326,14 +327,14 @@ end
 
 local farmList = {}
 local function Farm(pick)
-    if not (api.QuestieReady and api.QuestieReady()) then Print("needs Questie loaded and ready"); return end
+    if not (api.QuestieReady and api.QuestieReady()) then Print(L("needs Questie loaded and ready")); return end
     local QDB = api.GetQuestie()
     local qid = FarmQuestId()
-    if not qid then Print("select a quest in your log (or have one at stop 1 of the plan) first"); return end
+    if not qid then Print(L("select a quest in your log (or have one at stop 1 of the plan) first")); return end
     local items = OpenItemTargets(QDB, qid)
-    if #items == 0 then Print((QDB.QueryQuestSingle(qid, "name") or "that quest") .. " has no item to collect"); return end
+    if #items == 0 then Print((QDB.QueryQuestSingle(qid, "name") or "that quest") .. L(" has no item to collect")); return end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
-    if not px then Print("I can't read your position here"); return end
+    if not px then Print(L("I can't read your position here")); return end
     local me = UnitLevel("player") or 1
     local here = { x = px, y = py }
     local results = {}
@@ -376,12 +377,12 @@ local function Farm(pick)
         end
     end
     table.sort(results, function(a, b) return a.score > b.score end)
-    if #results == 0 then Print("no drop sources found on this continent"); return end
+    if #results == 0 then Print(L("no drop sources found on this continent")); return end
     farmList = results
     pick = math.min(math.max(tonumber(pick) or 1, 1), #results)
     for i = 1, math.min(3, #results) do
         local r = results[i]
-        Print(string.format("%s%d. %s (level %s%s)%s drops %s ~%s%% - %s %.0f, %.0f, %d nearby, about %d yards", i == pick and "> " or "  ", i,
+        Print(string.format(L("%s%d. %s (level %s%s)%s drops %s ~%s%% - %s %.0f, %.0f, %d nearby, about %d yards"), i == pick and "> " or "  ", i,
             r.npc or "?", tostring(r.lo or "?"), (r.hi and r.hi ~= r.lo) and ("-" .. r.hi) or "", (r.rank and r.rank > 0) and " elite" or "",
             r.item, string.format("%.0f", r.rate), MapName(r.spawn.uiMapId), r.spawn.zx * 100, r.spawn.zy * 100, r.count, r.d))
     end
@@ -426,15 +427,15 @@ function addon:HandleExtraCommand(cmd, rest)
     local word = (cmd or ""):lower()
     local arg = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     if word == "chain" then
-        if not chainNext then Print("no follow-up quest known. It shows after you hand a quest in."); return true end
+        if not chainNext then Print(L("no follow-up quest known. It shows after you hand a quest in.")); return true end
         if arg == "go" then
             if chainNext.spawn then
                 addon:AddWaypointZone(chainNext.spawn.uiMapId, chainNext.spawn.zx, chainNext.spawn.zy, "Next: " .. chainNext.name)
             else
-                Print("I don't know where that quest starts")
+                Print(L("I don't know where that quest starts"))
             end
         else
-            Print("next in the chain: " .. chainNext.name .. ". /lazy chain go puts a waypoint on it")
+            Print(L("next in the chain: ") .. chainNext.name .. L(". /lazy chain go puts a waypoint on it"))
         end
         return true
     elseif word == "farm" then

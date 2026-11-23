@@ -6,6 +6,7 @@
 -- The routes come from the Forever travel guide. The game gives no dock positions, so a dock the addon does not
 -- know yet is learned from you with /lazy boat mark (it is kept for all your characters).
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -240,21 +241,21 @@ local function Show()
         PlaceStop(dock, "Boat to " .. toName .. ": " .. fromName .. " dock", detail)
     else
         ClearStop()
-        Print(string.format("I don't know where the %s dock is yet. Walk to the dock, stand on it, and type /lazy boat mark %s so I remember it.", fromName, NODES[from].words[1]))
+        Print(string.format(L("I don't know where the %s dock is yet. Walk to the dock, stand on it, and type /lazy boat mark %s so I remember it."), fromName, NODES[from].words[1]))
     end
 end
 
 local function StartTrip(fromKey, toKey)
     local path, boats = Path(fromKey, toKey)
     if not path then
-        Print(string.format("no boat route from %s to %s that your faction can take", NODES[fromKey].name, NODES[toKey].name))
+        Print(string.format(L("no boat route from %s to %s that your faction can take"), NODES[fromKey].name, NODES[toKey].name))
         return
     end
-    if #path == 1 then Print("you are already there"); return end
+    if #path == 1 then Print(L("you are already there")); return end
     trip = { path = path, boats = boats, idx = 1, goal = toKey }
     local names = {}
     for i, k in ipairs(path) do names[i] = NODES[k].name end
-    Print("route: " .. table.concat(names, " > ") .. " (" .. table.concat(boats, ", then ") .. ")")
+    Print(L("route: ") .. table.concat(names, " > ") .. " (" .. table.concat(boats, ", then ") .. ")")
     if NODES[toKey].note then Print(NODES[toKey].note) end
     Show()
 end
@@ -269,7 +270,7 @@ local function Arrived()
             trip.idx = idx
             if idx == #trip.path then
                 ClearStop()
-                Print("arrived at " .. NODES[here].name)
+                Print(L("arrived at ") .. NODES[here].name)
                 trip = nil
             else
                 Show()
@@ -302,15 +303,15 @@ function addon:HandleExtraCommand(cmd, rest)
     if low == "stop" or low == "off" then
         trip = nil
         ClearStop()
-        Print("boat trip cancelled")
+        Print(L("boat trip cancelled"))
     elseif low == "list" or low == "" then
         if low == "" then
-            Print("|cffffd100/lazy boat <where>|r  route and arrow to the dock, for example /lazy boat darnassus")
-            Print("|cffffd100/lazy boat <from> to <where>|r  name both ends, for example /lazy boat stormwind to darnassus")
-            Print("|cffffd100Adding a dock:|r stand on the dock where you board, then type |cffffd100/lazy boat mark <port>|r, for example /lazy boat mark menethil. I remember it for all your characters.")
-            Print("|cffffd100/lazy boat list|r shows the docks you taught me, |cffffd100/lazy boat stop|r cancels a trip")
+            Print(L("|cffffd100/lazy boat <where>|r  route and arrow to the dock, for example /lazy boat darnassus"))
+            Print(L("|cffffd100/lazy boat <from> to <where>|r  name both ends, for example /lazy boat stormwind to darnassus"))
+            Print(L("|cffffd100Adding a dock:|r stand on the dock where you board, then type |cffffd100/lazy boat mark <port>|r, for example /lazy boat mark menethil. I remember it for all your characters."))
+            Print(L("|cffffd100/lazy boat list|r shows the docks you taught me, |cffffd100/lazy boat stop|r cancels a trip"))
         end
-        Print("ports: " .. (function()
+        Print(L("ports: ") .. (function()
             local t = {}
             for _, n in pairs(NODES) do t[#t + 1] = n.name end
             table.sort(t)
@@ -322,22 +323,22 @@ function addon:HandleExtraCommand(cmd, rest)
         end
         table.sort(known)
         if #known > 0 then
-            Print("docks you taught me (share these in a GitHub issue to help everyone):")
+            Print(L("docks you taught me (share these in a GitHub issue to help everyone):"))
             for _, line in ipairs(known) do Print(line) end
         else
-            Print("no docks taught yet")
+            Print(L("no docks taught yet"))
         end
-        Print("use /lazy boat <where>, for example /lazy boat darnassus")
-        Print("to teach me a dock: stand on it, then type /lazy boat mark <port>, for example /lazy boat mark menethil")
+        Print(L("use /lazy boat <where>, for example /lazy boat darnassus"))
+        Print(L("to teach me a dock: stand on it, then type /lazy boat mark <port>, for example /lazy boat mark menethil"))
     elseif low:match("^mark") then
         local arg = low:gsub("^mark%s*", "")
         local key = arg ~= "" and NodeByWord(arg) or NodeHere()
         local zx, zy, map = hbd:GetPlayerZonePosition()
-        if not key then Print("tell me which port: /lazy boat mark auberdine"); return true end
-        if not zx then Print("I can't read your position here"); return true end
+        if not key then Print(L("tell me which port: /lazy boat mark auberdine")); return true end
+        if not zx then Print(L("I can't read your position here")); return true end
         Docks()[key] = { map = map, zx = zx, zy = zy }
         if addon.NetShareDock then addon.NetShareDock(key, map, zx, zy) end
-        Print(string.format("remembered the %s dock at %.1f, %.1f", NODES[key].name, zx * 100, zy * 100))
+        Print(string.format(L("remembered the %s dock at %.1f, %.1f"), NODES[key].name, zx * 100, zy * 100))
         if trip then Show() end
     else
         local a, b = low:match("^(.-)%s+to%s+(.+)$")
@@ -348,8 +349,8 @@ function addon:HandleExtraCommand(cmd, rest)
             toKey = NodeByWord(low)
             fromKey = NodeHere()
         end
-        if not toKey then Print("I don't know that place. /lazy boat list shows the ports"); return true end
-        if not fromKey then Print("stand in the zone of a port, or say where from: /lazy boat stormwind to darnassus"); return true end
+        if not toKey then Print(L("I don't know that place. /lazy boat list shows the ports")); return true end
+        if not fromKey then Print(L("stand in the zone of a port, or say where from: /lazy boat stormwind to darnassus")); return true end
         StartTrip(fromKey, toKey)
     end
     return true

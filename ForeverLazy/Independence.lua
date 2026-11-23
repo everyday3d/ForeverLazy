@@ -3,6 +3,7 @@
 --   /lazy data questie on      back to normal (then /reload)
 --   /lazy data selftest        checks the main pieces and says which work
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -57,12 +58,12 @@ end
 -- One command does the whole test: /lazy selftest (or /lazy data test). It switches the source off, reloads the interface by itself,
 -- and a few seconds after you are back shows the results in a window. /lazy selftest off switches the source back on the same way.
 local function Reload(why)
-    Print(why .. " Reloading the interface...")
+    Print(why .. L(" Reloading the interface..."))
     -- straight from the click or command (a timer is not allowed to reload)
     ReloadUI()
     -- only reached when the game refused: say what to do
     if C_Timer and C_Timer.After then
-        C_Timer.After(2, function() Print("The game would not reload by itself. Type /reload (the test is already set up and starts after it).") end)
+        C_Timer.After(2, function() Print(L("The game would not reload by itself. Type /reload (the test is already set up and starts after it).")) end)
     end
 end
 
@@ -77,7 +78,7 @@ boot:SetScript("OnEvent", function(self)
         local lines = addon.DataSelfTest()
         lines[#lines + 1] = ""
         lines[#lines + 1] = "To go back to normal, type /lazy selftest off"
-        if addon.ReportWindow then addon.ReportWindow("Test without the quest source", lines)
+        if addon.ReportWindow then addon.ReportWindow(L("Test without the quest source"), lines)
         else for _, l in ipairs(lines) do Print(l) end end
     end)
 end)

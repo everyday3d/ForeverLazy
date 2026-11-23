@@ -4,6 +4,7 @@
 -- Hover a pin for the quest and what is left. Finished objectives are not drawn. Own pins, separate from the route and arrow pins.
 --   /lazy questmap on|off   everything      /lazy questmap objectives|givers on|off
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local data = ns.data
@@ -61,8 +62,8 @@ local function OnEnterPin(self)
     end
     local area = self.cell and self.cell.area
     if area and not (DB() and DB().showAreas == false) then GameTooltip:AddLine(area, 0.7, 0.85, 1) end
-    GameTooltip:AddLine("Click: point the arrow here", 0.5, 1, 0.5)
-    GameTooltip:AddLine("Forever Lazy", 0.5, 0.5, 0.5)
+    GameTooltip:AddLine(L("Click: point the arrow here"), 0.5, 1, 0.5)
+    GameTooltip:AddLine(L("Forever Lazy"), 0.5, 0.5, 0.5)
     GameTooltip:Show()
 end
 
@@ -591,7 +592,7 @@ function addon:HandleExtraCommand(cmd, rest)
                 end
             end
             if not next(seen) then Say("  no pin frames have been made yet") end
-            addon.ShowTextPopup("Quest map pins", table.concat(lines, "\n"))
+            addon.ShowTextPopup(L("Quest map pins"), table.concat(lines, "\n"))
             end
             if WorldMapFrame and not WorldMapFrame:IsShown() and ToggleWorldMap and not InCombatLockdown() then
                 pcall(ToggleWorldMap)
@@ -609,7 +610,7 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "givers" then Set("questMapGivers")
         elseif a == "on" or a == "off" then Set("questMap") end
         if db.questMap == false then Clear() else addon.QuestMapRefresh() end
-        Print(string.format("quest map: %s (objectives %s, areas %s, quest givers and turn-ins %s)", db.questMap == false and "OFF" or "on",
+        Print(string.format(L("quest map: %s (objectives %s, areas %s, quest givers and turn-ins %s)"), db.questMap == false and "OFF" or "on",
             db.questMapObjectives == false and "off" or "on", db.questMapAreas == false and "off" or "on", db.questMapGivers == false and "off" or "on"))
         return true
     end

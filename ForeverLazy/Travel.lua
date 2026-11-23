@@ -6,6 +6,7 @@
 -- The game does not tell addons where the hearthstone is bound or where flight masters stand, so the addon learns it:
 -- it notices when you bind (or open a flight map) and remembers the spot you were standing on.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -39,11 +40,11 @@ end
 local lastBind
 local function RememberHearth(manual)
     local zx, zy, map = hbd:GetPlayerZonePosition()
-    if not zx then if manual then Print("I can't read your position here") end; return end
+    if not zx then if manual then Print(L("I can't read your position here")) end; return end
     local h = Store("hearth")
     h.map, h.zx, h.zy = map, zx, zy
     h.name = (GetBindLocation and GetBindLocation()) or MapName(map)
-    Print(string.format("hearthstone spot remembered: %s (%s %.1f, %.1f)", h.name, MapName(map), zx * 100, zy * 100))
+    Print(string.format(L("hearthstone spot remembered: %s (%s %.1f, %.1f)"), h.name, MapName(map), zx * 100, zy * 100))
 end
 
 local function BindCheck()
@@ -61,8 +62,8 @@ end
 local function GoHearth()
     local h = Store("hearth")
     if not h.map then
-        Print("I don't know where your hearthstone is bound yet. Stand at your inn and type /lazy hearth set,")
-        Print("or just bind again at an innkeeper and I will remember it.")
+        Print(L("I don't know where your hearthstone is bound yet. Stand at your inn and type /lazy hearth set,"))
+        Print(L("or just bind again at an innkeeper and I will remember it."))
         return
     end
     local wps = DB().waypoints
@@ -95,7 +96,7 @@ local function HearthNudge()
     local fromHearth = Dist({ x = hx, y = hy }, wp)
     if fromHere - fromHearth > 1500 then
         nudged = key
-        Print(string.format("your next stop is far: your hearthstone (bound at %s) would save about %d yards. /lazy hearth shows the way to it.",
+        Print(string.format(L("your next stop is far: your hearthstone (bound at %s) would save about %d yards. /lazy hearth shows the way to it."),
             tostring(h.name), fromHere - fromHearth))
     end
 end
@@ -124,8 +125,8 @@ local function LearnFlightPoint()
             end
         end
     end
-    if added == 1 then Print("flight point learned: " .. last)
-    elseif added > 1 then Print(string.format("learned %d flight points from the flight map", added)) end
+    if added == 1 then Print(L("flight point learned: ") .. last)
+    elseif added > 1 then Print(string.format(L("learned %d flight points from the flight map"), added)) end
 end
 
 local function KnownFlightPoints()
@@ -160,11 +161,11 @@ end
 local function GoFlightPoint(n)
     local list, err = Undiscovered()
     if not list then Print(err); return end
-    if #list == 0 then Print("no undiscovered flight masters on this continent that I know of"); return end
+    if #list == 0 then Print(L("no undiscovered flight masters on this continent that I know of")); return end
     local pick = math.min(math.max(tonumber(n) or 1, 1), #list)
     for i = 1, math.min(3, #list) do
         local r = list[i]
-        Print(string.format("%s%d. %s - %s %.0f, %.0f (about %d yards)", i == pick and "> " or "  ", i, r.name,
+        Print(string.format(L("%s%d. %s - %s %.0f, %.0f (about %d yards)"), i == pick and "> " or "  ", i, r.name,
             MapName(r.spawn.uiMapId), r.spawn.zx * 100, r.spawn.zy * 100, r.d))
     end
     local r = list[pick]
@@ -176,7 +177,7 @@ local function GoFlightPoint(n)
         DB().waypoints[1].detail = "Talk to " .. r.name .. " to learn this flight point"
     end
     if next(Store("flightPoints")) == nil then
-        Print("I have not learned any of your flight points yet, so this may include ones you already have. Opening a flight map at a flight master teaches me.")
+        Print(L("I have not learned any of your flight points yet, so this may include ones you already have. Opening a flight map at a flight master teaches me."))
     end
 end
 

@@ -4,6 +4,7 @@
 --   /lazy data export clear   delete the dump (do this once the file is made, it is large)
 -- Each record is saved as one Lua-literal string, { field values in a fixed order }, so no decoding is needed later.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -53,10 +54,10 @@ end
 
 local running
 local function Export()
-    if running then Print("an export is already running") return end
+    if running then Print(L("an export is already running")) return end
     local QDB = ns.data and ns.data.Module and ns.data.Module("QuestieDB")
     local root = addon.GetRoot and addon.GetRoot()
-    if not (QDB and root) then Print("the data source is not loaded yet") return end
+    if not (QDB and root) then Print(L("the data source is not loaded yet")) return end
     running = true
     local dump = { version = 1, fields = FIELDS, count = {} }
     root.exportDump = dump
@@ -98,11 +99,11 @@ local function Export()
         else
             running = false
             dump.seconds = (debugprofilestop() - started) / 1000
-            Print(string.format("export done: %d quests, %d creatures, %d objects, %d items. Type /reload to save it to disk.",
+            Print(string.format(L("export done: %d quests, %d creatures, %d objects, %d items. Type /reload to save it to disk."),
                 dump.count.quests or 0, dump.count.npcs or 0, dump.count.objects or 0, dump.count.items or 0))
         end
     end
-    Print("exporting the data source in small steps, it takes a few seconds...")
+    Print(L("exporting the data source in small steps, it takes a few seconds..."))
     Step()
 end
 
@@ -110,7 +111,7 @@ end
 local function ExportZones()
     local Z = ns.data and ns.data.Module and ns.data.Module("ZoneDB")
     local root = addon.GetRoot and addon.GetRoot()
-    if not (Z and root and Z.GetUiMapIdByAreaId) then Print("the zone data is not loaded yet") return end
+    if not (Z and root and Z.GetUiMapIdByAreaId) then Print(L("the zone data is not loaded yet")) return end
     local ids = {}
     local function Add(id) if type(id) == "number" and id > 0 then ids[id] = true end end
     local DS = ns.dataset
@@ -151,7 +152,7 @@ local function ExportZones()
     for id, ui in pairs(map) do pieces[#pieces + 1] = "[" .. id .. "]=" .. ui end
     zones.areaToMap = table.concat(pieces, ",")
     root.exportZones = zones
-    Print(string.format("zones exported: %d areas with a map id%s. Type /reload to save it.", n, zones.dungeons and ", and the dungeon list" or ""))
+    Print(string.format(L("zones exported: %d areas with a map id%s. Type /reload to save it."), n, zones.dungeons and ", and the dungeon list" or ""))
 end
 
 -- service lists: vendors, trainers, innkeepers ... as the source built them from the creature flags this session
@@ -159,8 +160,8 @@ local function ExportTownsfolk()
     local T = ns.data and ns.data.Module and ns.data.Module("Townsfolk")
     local P = ns.data and ns.data.Module and ns.data.Module("QuestieProfessions")
     local root = addon.GetRoot and addon.GetRoot()
-    if not (T and root and T.townsfolk) then Print("the service lists are not loaded yet (they fill in about a minute after login)") return end
-    if not next(T.townsfolk) then Print("the service lists are still empty, wait a minute and try again") return end
+    if not (T and root and T.townsfolk) then Print(L("the service lists are not loaded yet (they fill in about a minute after login)")) return end
+    if not next(T.townsfolk) then Print(L("the service lists are still empty, wait a minute and try again")) return end
     local out = {
         townsfolk = Lit(T.townsfolk),
         professionTrainers = Lit(T.professionTrainers or {}),
@@ -172,14 +173,14 @@ local function ExportTownsfolk()
     root.exportTownsfolk = out
     local cats = 0
     for _ in pairs(T.townsfolk) do cats = cats + 1 end
-    Print(string.format("service lists exported: %d categories, %d characters of data. Type /reload to save it.", cats, #out.townsfolk + #out.professionTrainers + #out.classSpecificTownsfolk + #out.factionSpecificTownsfolk))
+    Print(string.format(L("service lists exported: %d categories, %d characters of data. Type /reload to save it."), cats, #out.townsfolk + #out.professionTrainers + #out.classSpecificTownsfolk + #out.factionSpecificTownsfolk))
 end
 
 -- quests the source never offers (its blacklist), as a plain list of ids
 local function ExportHidden()
     local C = ns.data and ns.data.Module and ns.data.Module("QuestieCorrections")
     local root = addon.GetRoot and addon.GetRoot()
-    if not (C and root and type(C.hiddenQuests) == "table") then Print("the quest blacklist is not loaded yet") return end
+    if not (C and root and type(C.hiddenQuests) == "table") then Print(L("the quest blacklist is not loaded yet")) return end
     local ids = {}
     for id, hide in pairs(C.hiddenQuests) do if hide and type(id) == "number" then ids[#ids + 1] = id end end
     table.sort(ids)
@@ -200,21 +201,21 @@ local function ExportHidden()
     root.exportHiddenGroups = extra
     local names = {}
     for name, s in pairs(extra) do names[#names + 1] = name end
-    Print(string.format("quest blacklist exported: %d quests, and the groups %s. Type /reload to save it.", #ids, #names > 0 and table.concat(names, ", ") or "(none found)"))
+    Print(string.format(L("quest blacklist exported: %d quests, and the groups %s. Type /reload to save it."), #ids, #names > 0 and table.concat(names, ", ") or "(none found)"))
 end
 
 -- quest tags (dungeon, raid, elite, class ...) as the source answers them, for every quest in the data set
 local function ExportTags()
     local QDB = ns.data and ns.data.Module and ns.data.Module("QuestieDB")
     local root = addon.GetRoot and addon.GetRoot()
-    if not (QDB and QDB.GetQuestTagInfo and root) then Print("the data source is not loaded yet") return end
+    if not (QDB and QDB.GetQuestTagInfo and root) then Print(L("the data source is not loaded yet")) return end
     local parts, n = {}, 0
     for id in pairs(ns.dataset.quests) do
         local ok, tag = pcall(QDB.GetQuestTagInfo, id)
         if ok and tonumber(tag) then parts[#parts + 1] = id .. "=" .. tonumber(tag); n = n + 1 end
     end
     root.exportTags = table.concat(parts, ",")
-    Print(string.format("quest tags exported: %d of %d quests have one. Type /reload to save it.", n, (ns.data.DatasetSize())))
+    Print(string.format(L("quest tags exported: %d of %d quests have one. Type /reload to save it."), n, (ns.data.DatasetSize())))
 end
 
 local prev = addon.HandleExtraCommand
@@ -229,7 +230,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if a == "export clear" then
             local root = addon.GetRoot and addon.GetRoot()
             if root then root.exportDump = nil end
-            Print("export dump deleted. /reload to save the smaller file.")
+            Print(L("export dump deleted. /reload to save the smaller file."))
             return true
         end
     end

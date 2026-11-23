@@ -5,6 +5,7 @@
 --   /lazy books turnin   waypoint to your faction's librarian
 --   /lazy books list     show the book list
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local hbd = api.hbd
@@ -162,7 +163,7 @@ local function LoadBooks(onlyZone, append, includeDone)
     end
     if #list == 0 then
         if onlyZone and haveIt > 0 then
-            Print("you already have every known book in this zone. /lazy books zone all shows them anyway.")
+            Print(L("you already have every known book in this zone. /lazy books zone all shows them anyway."))
         else
             Print(onlyZone and "no known books in this zone" or "no books left to find, or none could be placed")
         end
@@ -199,7 +200,7 @@ local function LoadBooks(onlyZone, append, includeDone)
     end
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
-    Print(string.format("%d book waypoint%s set, nearest first. Walk to the arrow and click the book.",
+    Print(string.format(L("%d book waypoint%s set, nearest first. Walk to the arrow and click the book."),
         #ordered, #ordered == 1 and "" or "s") ..
         (skipped > 0 and (" (" .. skipped .. " couldn't be placed)") or "") ..
         (tooHigh > 0 and (" " .. tooHigh .. " left out as too high for your level.") or "") ..
@@ -229,16 +230,16 @@ end
 local function Turnin()
     local faction = UnitFactionGroup and UnitFactionGroup("player")
     local e = LIBRARIANS[faction or ""]
-    if not e then Print("couldn't tell your faction"); return end
+    if not e then Print(L("couldn't tell your faction")); return end
     local w = Entry(e)
-    if not w then Print("couldn't place the librarian waypoint"); return end
+    if not w then Print(L("couldn't place the librarian waypoint")); return end
     table.insert(DB().waypoints, 1, w)
     addon:RefreshPins()
-    Print("waypoint set: " .. w.name)
+    Print(L("waypoint set: ") .. w.name)
 end
 
 local function ListBooks()
-    Print(string.format("%d known library books, %d collected. Names ending in * come from the Mage Rune guide.",
+    Print(string.format(L("%d known library books, %d collected. Names ending in * come from the Mage Rune guide."),
         #BOOKS, CountDone()))
     for _, e in ipairs(BOOKS) do
         Print(string.format("%s %s %.1f, %.1f - %s", IsDone(e) and "|cff55ff55[x]|r" or "[ ]", e[1], e[3], e[4], e[5]))
@@ -252,16 +253,16 @@ local function MarkDone(value, nameBit)
         for _, e in ipairs(BOOKS) do
             if BookKey(e):lower():find(nameBit, 1, true) then
                 SetDone(e, value)
-                Print(string.format("%s marked as %s", BookKey(e), value and "collected" or "not collected"))
+                Print(string.format(L("%s marked as %s"), BookKey(e), value and "collected" or "not collected"))
                 if addon.RefreshOptions then addon.RefreshOptions() end
                 return
             end
         end
-        Print("no book with that in its name. /lazy books list shows them all")
+        Print(L("no book with that in its name. /lazy books list shows them all"))
         return
     end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
-    if not px then Print("can't read your position"); return end
+    if not px then Print(L("can't read your position")); return end
     local best, bestD
     for _, e in ipairs(BOOKS) do
         local w = Entry(e)
@@ -272,9 +273,9 @@ local function MarkDone(value, nameBit)
     end
     if best and bestD <= 60 then
         SetDone(best, value)
-        Print(string.format("%s marked as %s", BookKey(best), value and "collected" or "not collected"))
+        Print(string.format(L("%s marked as %s"), BookKey(best), value and "collected" or "not collected"))
     else
-        Print("no book within 60 yards. Stand next to it, or use /lazy books done <part of its name>")
+        Print(L("no book within 60 yards. Stand next to it, or use /lazy books done <part of its name>"))
     end
 end
 
@@ -282,7 +283,7 @@ local function ResetDone()
     local t = DoneTable()
     for k in pairs(t) do t[k] = nil end
     if RefreshBookPins then RefreshBookPins() end
-    Print("collected list cleared for this character")
+    Print(L("collected list cleared for this character"))
 end
 
 -- Picking a book up shows in the loot messages: "You receive item: [Title]."
@@ -300,7 +301,7 @@ lootFrame:SetScript("OnEvent", function(_, _, msg, _, _, _, _, _, _, _, _, _, _,
         -- same title, ignoring capitals and punctuation (or one inside the other)
         if not IsDone(e) and (key == want or (#want > 8 and (key:find(want, 1, true) or want:find(key, 1, true)))) then
             SetDone(e, true)
-            Print(string.format("%s marked as collected", BookKey(e)))
+            Print(string.format(L("%s marked as collected"), BookKey(e)))
             return
         end
     end
@@ -318,7 +319,7 @@ lootFrame:SetScript("OnEvent", function(_, _, msg, _, _, _, _, _, _, _, _, _, _,
     end
     if best then
         SetDone(best, true)
-        Print(string.format("%s marked as collected (you picked up %s right at its spot)", BookKey(best), item))
+        Print(string.format(L("%s marked as collected (you picked up %s right at its spot)"), BookKey(best), item))
     end
 end)
 
@@ -331,9 +332,9 @@ local pending   -- who offered us the book route
 -- Offer the whole book route to party members who also run this addon.
 -- They get a chat line and accept with /lazy books accept (nothing changes on their side until then).
 function addon:ShareBooks()
-    if not IsInGroup() then Print("you are not in a party"); return end
+    if not IsInGroup() then Print(L("you are not in a party")); return end
     self:SendCommMessage(BOOK_PREFIX, "offer", IsInRaid() and "RAID" or "PARTY")
-    Print("offered the library book route to the group (only players with this addon see it)")
+    Print(L("offered the library book route to the group (only players with this addon see it)"))
 end
 
 function addon:OnBooksComm(prefix, message, distribution, sender)
@@ -343,13 +344,13 @@ function addon:OnBooksComm(prefix, message, distribution, sender)
     if not DB().acceptShared then return end
     if message ~= "offer" then return end
     pending = from
-    Print(string.format("%s shared the library book route. Type |cff55ff55/lazy books accept|r to load it as waypoints (replaces your current ones).", from))
+    Print(string.format(L("%s shared the library book route. Type |cff55ff55/lazy books accept|r to load it as waypoints (replaces your current ones)."), from))
 end
 addon:RegisterComm(BOOK_PREFIX, "OnBooksComm")
 
 -- Post the books in the current zone to party chat, so people without the addon get the coordinates.
 local function SayZoneBooks()
-    if not IsInGroup() then Print("you are not in a party"); return end
+    if not IsInGroup() then Print(L("you are not in a party")); return end
     local zoneId = hbd:GetPlayerZone()
     local chan = IsInRaid() and "RAID" or "PARTY"
     local n = 0
@@ -359,7 +360,7 @@ local function SayZoneBooks()
             n = n + 1
         end
     end
-    if n == 0 then Print("no known books in this zone") else Print("posted " .. n .. " book location(s) to " .. chan:lower() .. " chat") end
+    if n == 0 then Print(L("no known books in this zone")) else Print(L("posted ") .. n .. L(" book location(s) to ") .. chan:lower() .. L(" chat")) end
 end
 
 --------------------------------------------------------------------------------
@@ -427,10 +428,10 @@ local function CheckZone()
     end
     told[zoneId] = true
     if db.bookAuto then
-        Print(string.format("%d library book%s in this zone - adding waypoints.", n, n == 1 and "" or "s"))
+        Print(string.format(L("%d library book%s in this zone - adding waypoints."), n, n == 1 and "" or "s"))
         LoadBooks(true, true)
     else
-        Print(string.format("%d library book%s in this zone. |cff55ff55/lazy books zone|r for arrows.", n, n == 1 and "" or "s"))
+        Print(string.format(L("%d library book%s in this zone. |cff55ff55/lazy books zone|r for arrows."), n, n == 1 and "" or "s"))
     end
 end
 
@@ -467,7 +468,7 @@ end
 -- make one book the active waypoint (keeps the others, no duplicates)
 local function TrackBook(e)
     local w = Entry(e)
-    if not w then Print("couldn't place that book"); return end
+    if not w then Print(L("couldn't place that book")); return end
     local wps = DB().waypoints
     for i = #wps, 1, -1 do
         if wps[i].name == w.name then table.remove(wps, i) end
@@ -475,7 +476,7 @@ local function TrackBook(e)
     table.insert(wps, 1, w)
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
-    Print("tracking: " .. w.name)
+    Print(L("tracking: ") .. w.name)
 end
 
 local bookMenu, menuCatcher
@@ -518,7 +519,7 @@ local function MakeBookMenu()
     f.title:SetPoint("TOPLEFT", 10, -8)
     f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.hint:SetPoint("BOTTOMLEFT", 10, 8)
-    f.hint:SetText("Click: track   Shift+click: mark collected   Wheel: scroll")
+    f.hint:SetText(L("Click: track   Shift+click: mark collected   Wheel: scroll"))
     f.offset = 0
     f.rows = {}
     local function wheel(_, delta) f.offset = (f.offset or 0) - delta * 3; RefreshMenu() end
@@ -604,13 +605,13 @@ local function SetupLDB()
             end
         end,
         OnTooltipShow = function(tt)
-            tt:AddLine("Library books")
+            tt:AddLine(L("Library books"))
             tt:AddLine(string.format("%d of %d collected", CountDone(), #BOOKS), 1, 1, 1)
             local wp = DB().waypoints[1]
             if wp then tt:AddLine("Tracking: " .. wp.name, 0.6, 0.8, 1) end
             tt:AddLine(" ")
-            tt:AddLine("Left-click: pick a book to track", 0.7, 0.7, 0.7)
-            tt:AddLine("Middle-click: show / hide the waypoint arrow", 0.7, 0.7, 0.7)
+            tt:AddLine(L("Left-click: pick a book to track"), 0.7, 0.7, 0.7)
+            tt:AddLine(L("Middle-click: show / hide the waypoint arrow"), 0.7, 0.7, 0.7)
         end,
     })
 end
@@ -637,7 +638,7 @@ function addon:HandleExtraCommand(cmd, rest)
             db.pos.waypoint = { point = "CENTER", x = 0, y = 140 }
             db.waypointArrowOff = false
             if f then f:ClearAllPoints(); f:SetPoint("CENTER", UIParent, "CENTER", 0, 140); f:SetScale(db.scale or 1) end
-            Print("the arrow is back in the middle of the screen")
+            Print(L("the arrow is back in the middle of the screen"))
             return true
         end
         local sub = (rest or ""):lower()
@@ -645,7 +646,7 @@ function addon:HandleExtraCommand(cmd, rest)
             -- say what stops the arrow from showing
         else
             db.waypointArrowOff = not db.waypointArrowOff
-            Print("waypoint arrow " .. (db.waypointArrowOff and "hidden (waypoints are kept)" or "shown"))
+            Print(L("waypoint arrow ") .. (db.waypointArrowOff and "hidden (waypoints are kept)" or "shown"))
             if db.waypointArrowOff then return true end
         end
         -- is there anything to see? say what stops it
@@ -672,9 +673,9 @@ function addon:HandleExtraCommand(cmd, rest)
             if (db.alpha or 1) < 0.15 then reasons[#reasons + 1] = "the arrow is almost see-through (opacity " .. string.format("%.2f", db.alpha) .. ") in Options" end
         end
         if #reasons == 0 then
-            Print("nothing is hiding the arrow. Pointing at: " .. tostring(target and (target.name or target.label) or "?"))
+            Print(L("nothing is hiding the arrow. Pointing at: ") .. tostring(target and (target.name or target.label) or "?"))
         else
-            for _, r in ipairs(reasons) do Print("arrow: " .. r) end
+            for _, r in ipairs(reasons) do Print(L("arrow: ") .. r) end
         end
         return true
     end
@@ -683,7 +684,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if rest == "share" or rest == "send" then self:ShareBooks(); return true end
         if rest == "say" or rest == "post" then SayZoneBooks(); return true end
         if rest == "accept" then
-            if pending then pending = nil; LoadBooks(false) else Print("nobody has offered you a book route") end
+            if pending then pending = nil; LoadBooks(false) else Print(L("nobody has offered you a book route")) end
             return true
         end
         if rest == "done" or rest:match("^done%s") then MarkDone(true, rest:match("^done%s+(.*)$")); return true end
@@ -693,7 +694,7 @@ function addon:HandleExtraCommand(cmd, rest)
         if rest == "pins" then
             DB().bookPins = (DB().bookPins == false)
             RefreshBookPins()
-            Print("book icons on the world map " .. (DB().bookPins and "on" or "off"))
+            Print(L("book icons on the world map ") .. (DB().bookPins and "on" or "off"))
             return true
         end
         if rest == "zone all" or rest == "here all" then LoadBooks(true, false, true)

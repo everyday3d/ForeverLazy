@@ -6,6 +6,7 @@
 --   /lazy drops <item>      the mobs you have seen drop an item, with the rate
 --   /lazy hive              what has been learned so far (and /lazy hive reset to forget it)
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -924,7 +925,7 @@ dangerFrame:SetScript("OnUpdate", function(_, dt)
     local key = map .. ":" .. math.floor(zx * 20) .. ":" .. math.floor(zy * 20)
     if key == lastDangerKey and GetTime() - lastDangerAt < 600 then return end
     lastDangerKey, lastDangerAt = key, GetTime()
-    Print(string.format("careful: players have died near here (%d times). Look out for elites or patrols.", n))
+    Print(string.format(L("careful: players have died near here (%d times). Look out for elites or patrols."), n))
 end)
 
 -- the places with the most deaths in a zone: { { zx, zy, n }, ... }
@@ -996,31 +997,31 @@ function addon:HandleExtraCommand(cmd, rest)
     if word == "danger" then
         local zx, zy, map = hbd:GetPlayerZonePosition()
         local spots = map and addon.HiveDangerSpots(map) or {}
-        if #spots == 0 then Print("no deaths recorded in this zone yet (they are collected while the Hive is on)"); return true end
-        Print("where players have died in this zone:")
-        for i = 1, math.min(6, #spots) do Print(string.format("  %d, %d: %d deaths", spots[i].zx * 100, spots[i].zy * 100, spots[i].n)) end
+        if #spots == 0 then Print(L("no deaths recorded in this zone yet (they are collected while the Hive is on)")); return true end
+        Print(L("where players have died in this zone:"))
+        for i = 1, math.min(6, #spots) do Print(string.format(L("  %d, %d: %d deaths"), spots[i].zx * 100, spots[i].zy * 100, spots[i].n)) end
         return true
     end
     if word == "grind" then
         local zone = (arg ~= "" and arg) or (GetRealZoneText and GetRealZoneText()) or "?"
         local list = addon.HiveBestGrind(zone)
         if #list == 0 then
-            Print("no grind data for " .. zone .. " yet: I need at least 5 kills of a kind of mob near your level (turn the Hive on and kill some)")
+            Print(L("no grind data for ") .. zone .. L(" yet: I need at least 5 kills of a kind of mob near your level (turn the Hive on and kill some)"))
             return true
         end
-        Print("best grind in " .. zone .. " near your level (XP per hour, with the time between kills):")
+        Print(L("best grind in ") .. zone .. L(" near your level (XP per hour, with the time between kills):"))
         for i = 1, math.min(5, #list) do
             local extra = ""
             if list[i].ttk then extra = extra .. string.format(", dies in about %d s", list[i].ttk) end
             if list[i].taken then extra = extra .. string.format(", costs you about %d damage", list[i].taken) end
-            Print(string.format("  %s: about %d XP/hr (%d XP a kill, %d kills seen%s)", list[i].name, list[i].rate, list[i].per, list[i].n, extra))
+            Print(string.format(L("  %s: about %d XP/hr (%d XP a kill, %d kills seen%s)"), list[i].name, list[i].rate, list[i].per, list[i].n, extra))
         end
         return true
     end
     if word == "session" then
         local mins = math.max(1, (time() - session.t0) / 60)
         local gold = (GetMoney and session.money0) and (GetMoney() - session.money0) or nil
-        Print(string.format("this session (%s): %d XP (about %d per hour), %d quest%s turned in, %d kill%s looted%s",
+        Print(string.format(L("this session (%s): %d XP (about %d per hour), %d quest%s turned in, %d kill%s looted%s"),
             mins >= 120 and string.format("%.1f hours", mins / 60) or string.format("%d minutes", math.floor(mins + 0.5)),
             session.xp, math.floor(session.xp / mins * 60), session.quests, session.quests == 1 and "" or "s",
             session.kills, session.kills == 1 and "" or "s",
@@ -1029,7 +1030,7 @@ function addon:HandleExtraCommand(cmd, rest)
     end
     if word == "pace" and arg:lower() == "reset" then
         Root().xp[CharKey()] = {}
-        Print("your measured pace was cleared; it starts again from now")
+        Print(L("your measured pace was cleared; it starts again from now"))
         return true
     end
     if word == "pace" and arg:lower() == "quests" then
@@ -1043,11 +1044,11 @@ function addon:HandleExtraCommand(cmd, rest)
                 rows[#rows + 1] = { name, r, e.n }
             end
         end
-        if #rows == 0 then Print("no timed quests yet: I time each quest from accepting it to turning it in"); return true end
+        if #rows == 0 then Print(L("no timed quests yet: I time each quest from accepting it to turning it in")); return true end
         table.sort(rows, function(a, b) return a[2] > b[2] end)
-        Print("your quests by XP per minute (accept to turn-in):")
-        for i = 1, math.min(5, #rows) do Print(string.format("  fast: %s - %d XP/min", rows[i][1], rows[i][2])) end
-        for i = #rows, math.max(#rows - 2, 6), -1 do Print(string.format("  slow: %s - %d XP/min", rows[i][1], rows[i][2])) end
+        Print(L("your quests by XP per minute (accept to turn-in):"))
+        for i = 1, math.min(5, #rows) do Print(string.format(L("  fast: %s - %d XP/min"), rows[i][1], rows[i][2])) end
+        for i = #rows, math.max(#rows - 2, 6), -1 do Print(string.format(L("  slow: %s - %d XP/min"), rows[i][1], rows[i][2])) end
         return true
     end
     if word == "pace" then
@@ -1062,22 +1063,22 @@ function addon:HandleExtraCommand(cmd, rest)
             table.sort(rows, function(a, b) return a[2] > b[2] end)
             for i = 1, math.min(8, #rows) do
                 any = true
-                Print(string.format("  %s: about %d XP per hour near your level", rows[i][1], rows[i][2]))
+                Print(string.format(L("  %s: about %d XP per hour near your level"), rows[i][1], rows[i][2]))
             end
         end
         local best, bestPace, here, herePace = addon.HiveBestZone()
         if best and here and best ~= here and herePace and herePace < bestPace * 0.7 then
-            Print(string.format("  you have earned more in %s (%d XP/hr) than here in %s (%d XP/hr)", best, bestPace, here, herePace))
+            Print(string.format(L("  you have earned more in %s (%d XP/hr) than here in %s (%d XP/hr)"), best, bestPace, here, herePace))
         end
         local mins, pace = addon.HiveTimeToLevel()
         if mins then
-            Print(string.format("at your pace (%d XP/hr) you reach the next level in about %s", pace, Clock(mins)))
+            Print(string.format(L("at your pace (%d XP/hr) you reach the next level in about %s"), pace, Clock(mins)))
         elseif not any then
-            Print("not enough data yet: play for a few minutes and earn some XP, and I will start measuring")
+            Print(L("not enough data yet: play for a few minutes and earn some XP, and I will start measuring"))
         end
         return true
     elseif word == "drops" then
-        if arg == "" then Print("/lazy drops <part of an item name>, for example /lazy drops light hide"); return true end
+        if arg == "" then Print(L("/lazy drops <part of an item name>, for example /lazy drops light hide")); return true end
         local want = arg:lower()
         local seen, found = {}, 0
         for _, e in pairs(Root().drops) do
@@ -1099,14 +1100,14 @@ function addon:HandleExtraCommand(cmd, rest)
                 end
             end
         end
-        if found == 0 then Print("I have not seen anything like that drop yet (I count the corpses you loot, and need at least 3 kills of a mob)") end
+        if found == 0 then Print(L("I have not seen anything like that drop yet (I count the corpses you loot, and need at least 3 kills of a mob)")) end
         return true
     elseif word == "hive" then
         if arg:lower() == "reset" then
             local r = addon.GetRoot()
             r.hive = { xp = {}, drops = {} }
             seenKill, seenItem, seenCount = {}, {}, 0
-            Print("everything the hive learned has been forgotten")
+            Print(L("everything the hive learned has been forgotten"))
             return true
         end
         local mobs, items, kills = 0, 0, 0
@@ -1119,8 +1120,8 @@ function addon:HandleExtraCommand(cmd, rest)
             zones = zones + 1
             for _, e in pairs(zd) do secs = secs + e.secs end
         end
-        Print(string.format("the hive has learned from %d kills of %d kinds of mob (%d item drops seen), and %d minutes of XP in %d zones for this character", kills, mobs, items, math.floor(secs / 60), zones))
-        Print("the Hive is " .. ((addon.GetDB() and addon.GetDB().hiveOn) and "ON" or "OFF") .. ". /lazy hive on|off, /lazy pace, /lazy drops <item>, /lazy hive reset")
+        Print(string.format(L("the hive has learned from %d kills of %d kinds of mob (%d item drops seen), and %d minutes of XP in %d zones for this character"), kills, mobs, items, math.floor(secs / 60), zones))
+        Print(L("the Hive is ") .. ((addon.GetDB() and addon.GetDB().hiveOn) and "ON" or "OFF") .. L(". /lazy hive on|off, /lazy pace, /lazy drops <item>, /lazy hive reset"))
         return true
     end
     if prev then return prev(self, cmd, rest) end

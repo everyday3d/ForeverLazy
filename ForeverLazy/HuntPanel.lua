@@ -2,6 +2,7 @@
 --   /lazy hunt on|off     show or hide the panel
 -- Drag the title to move it (when the frames are not locked). It only shows while there is something to hunt.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -36,7 +37,7 @@ local function MakeFrame()
     end)
     f.title = title:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     f.title:SetPoint("LEFT", 6, 0)
-    f.title:SetText("Hunt (click to target)")
+    f.title:SetText(L("Hunt (click to target)"))
     f.title:SetPoint("RIGHT", f, "RIGHT", -20, 0)
     f.title:SetJustifyH("LEFT")
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
@@ -45,7 +46,7 @@ local function MakeFrame()
     close:SetScript("OnClick", function()
         DB().huntPanel = false
         f:Hide()
-        Print("hunt panel closed. /lazy hunt on (or the checkbox in the options) brings it back.")
+        Print(L("hunt panel closed. /lazy hunt on (or the checkbox in the options) brings it back."))
     end)
     f:Hide()
     return f
@@ -207,7 +208,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
         if a == "off" then db.huntPanel = false elseif a == "on" then db.huntPanel = nil end
-        Print("hunt panel: " .. (db.huntPanel == false and "OFF" or "on") .. "  (/lazy hunt on|off). It shows the mobs your quests need; click one to target it.")
+        Print(L("hunt panel: ") .. (db.huntPanel == false and "OFF" or "on") .. L("  (/lazy hunt on|off). It shows the mobs your quests need; click one to target it."))
         addon.HuntPanelRefresh()
         return true
     end

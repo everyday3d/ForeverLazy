@@ -2,6 +2,7 @@
 -- Split out into their own files: PlanDetail.lua, StepWindow.lua, PlanMenus.lua (skip / later / do next, profiles, friends, the command handler)
 -- and ExtrasTools.lua (waypoint sharing, import / export, the minimap menu, the self-test).
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local hbd = api.hbd
@@ -304,11 +305,11 @@ local function UpdateMine(dt)
     mineArrow:Show()
     mineArrow:SetAlpha(db.alpha)
     if not api.QuestieReady() then
-        mineArrow.arrow:Hide(); mineArrow.title:SetText("My quests need Questie"); mineArrow.sub:SetText("")
+        mineArrow.arrow:Hide(); mineArrow.title:SetText(L("My quests need Questie")); mineArrow.sub:SetText("")
         return
     end
     if not mine.chosen then
-        mineArrow.arrow:Hide(); mineArrow.title:SetText("No quest spots found"); mineArrow.sub:SetText("")
+        mineArrow.arrow:Hide(); mineArrow.title:SetText(L("No quest spots found")); mineArrow.sub:SetText("")
         return
     end
     api.PointAt(mineArrow, mine.chosen.spawn.instance, mine.chosen.spawn.x, mine.chosen.spawn.y, mine.chosen.label)
@@ -1043,15 +1044,15 @@ end
 function addon.PlanDebug()
     local db = DB()
     local QDB = api.GetQuestie()
-    if not (QDB and api.QuestieReady()) then Print("plan debug: needs Questie loaded and ready"); return end
+    if not (QDB and api.QuestieReady()) then Print(L("plan debug: needs Questie loaded and ready")); return end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
-    if not px then Print("plan debug: can't read your position"); return end
+    if not px then Print(L("plan debug: can't read your position")); return end
     local here = { x = px, y = py }
     local zoneId = hbd:GetPlayerZone()
     local zi = zoneId and C_Map.GetMapInfo(zoneId)
     local function ZoneName(id) local i = id and C_Map.GetMapInfo(id); return i and i.name or "?" end
-    Print(string.format("plan debug: you are in %s (map %s), level %d", zi and zi.name or "?", tostring(zoneId), UnitLevel("player") or 0))
-    Print(string.format("  settings: planAuto=%s zoneOnly=%s batch=%s autoTrip=%s hiveSpots=%s lastPlanAll=%s planActive=%s",
+    Print(string.format(L("plan debug: you are in %s (map %s), level %d"), zi and zi.name or "?", tostring(zoneId), UnitLevel("player") or 0))
+    Print(string.format(L("  settings: planAuto=%s zoneOnly=%s batch=%s autoTrip=%s hiveSpots=%s lastPlanAll=%s planActive=%s"),
         tostring(db.planAuto ~= false), tostring(db.planZoneOnly ~= false), tostring(db.planBatch ~= false), tostring(db.autoTrip == true),
         tostring(db.hiveSpots ~= false), tostring(lastPlanAll and true or false), tostring(planActive and true or false)))
     -- what the arrow is doing right now, next to what the plan says: a plan that moved but an arrow that did not shows here
@@ -1059,24 +1060,24 @@ function addon.PlanDebug()
         local wps = db.waypoints or {}
         for i = 1, math.min(3, #wps) do
             local w = wps[i]
-            Print(string.format("  plan stop %d: %s (%.0f, %.0f)%s", i, tostring(w.name or w.label), w.x or 0, w.y or 0, w.guard and " [guard]" or ""))
+            Print(string.format(L("  plan stop %d: %s (%.0f, %.0f)%s"), i, tostring(w.name or w.label), w.x or 0, w.y or 0, w.guard and " [guard]" or ""))
         end
-        if #wps == 0 then Print("  plan: no stops") end
+        if #wps == 0 then Print(L("  plan: no stops")) end
         local okA, at = pcall(addon.ArrowTarget)
         if not okA then
-            Print("  arrow: ERROR " .. tostring(at))
+            Print(L("  arrow: ERROR ") .. tostring(at))
         elseif at == false then
-            Print("  arrow: none, the next stop is in another zone")
+            Print(L("  arrow: none, the next stop is in another zone"))
         elseif not at then
-            Print("  arrow: no target")
+            Print(L("  arrow: no target"))
         else
             local d = (at.instance == pinst and at.x) and math.sqrt((at.x - px) ^ 2 + (at.y - py) ^ 2) or nil
-            Print(string.format("  arrow: %s (%.0f, %.0f)%s, because: %s; %s", tostring(at.name or at.label), at.x or 0, at.y or 0,
+            Print(string.format(L("  arrow: %s (%.0f, %.0f)%s, because: %s; %s"), tostring(at.name or at.label), at.x or 0, at.y or 0,
                 d and string.format(", %d yd away", d) or "", tostring(addon.arrowWhy or "no reason set"),
                 (wps[1] and (at == wps[1] or at.quests == wps[1].quests)) and "that is the first stop" or "that is NOT the first stop"))
         end
     end
-    Print("  your quests (spots = places the planner knows for it):")
+    Print(L("  your quests (spots = places the planner knows for it):"))
     for _, q in ipairs(ReadQuestLog()) do
         local ok, g = pcall(BuildGroup, q)
         if ok and g then
@@ -1092,12 +1093,12 @@ function addon.PlanDebug()
             if q.complete then flags[#flags + 1] = "done" end
             if g.grey then flags[#flags + 1] = "grey" end
             if db.planSkip and db.planSkip[q.id] then flags[#flags + 1] = "SKIPPED" end
-            Print(string.format("    %s [%s%s]: %d spots, %d in this zone, nearest %s", tostring(q.title), tostring(g.tier),
+            Print(string.format(L("    %s [%s%s]: %d spots, %d in this zone, nearest %s"), tostring(q.title), tostring(g.tier),
                 #flags > 0 and (", " .. table.concat(flags, ", ")) or "", #g.spawns, inScope,
                 nearD and string.format("%d yd away (%s)", nearD, ZoneName(nearZone)) or "none on this continent"))
         end
     end
-    Print("  the plan, as it stands:")
+    Print(L("  the plan, as it stands:"))
     local shown = 0
     for i, w in ipairs(db.waypoints or {}) do
         if shown >= 8 then break end
@@ -1105,7 +1106,7 @@ function addon.PlanDebug()
         local d = (w.x and w.instance == pinst) and string.format("%d yd", Dist(w, here)) or "other area"
         Print(string.format("    %d. %s  (%s%s)", i, tostring(w.name or w.label), d, w.go and ", TRIP STOP" or (w.lazy and ", lazy" or "")))
     end
-    if shown == 0 then Print("    no stops") end
+    if shown == 0 then Print(L("    no stops")) end
 end
 -- a quest I put off ("come back to it later"): it stays out of the plan until its time is up, or until nothing else is left
 local function LaterActive(db, id)
@@ -1120,13 +1121,13 @@ function addon:PlanRoute(allZones, quiet, auto)
         -- the plan is switched off: only me asking for a new one (not an automatic replan) brings it back
         if quiet or auto then return end
         db.planPaused, db.planSaved = nil, nil
-        Print("a new plan replaces the paused one")
+        Print(L("a new plan replaces the paused one"))
     end
     local zonePlanNow = addon.zonePlanFlag      -- set by /lazy plan zone for this one call
     addon.zonePlanFlag = nil
-    if not api.QuestieReady() then Print("planning needs Questie loaded and ready"); return end
+    if not api.QuestieReady() then Print(L("planning needs Questie loaded and ready")); return end
     local px, py, pinst = hbd:GetPlayerWorldPosition()
-    if not px then Print("can't read your position here"); return end
+    if not px then Print(L("can't read your position here")); return end
     lastPlanInst = pinst
     RebuildMine(db.planSkipGrey == false)
     mine.dirty = true      -- the arrow rebuilds its own list again afterwards
@@ -1335,12 +1336,12 @@ function addon:PlanRoute(allZones, quiet, auto)
     if #pool == 0 then
         if otherZone > 0 and not allZones then
             -- nothing to do here: plan the worthwhile quests wherever they are instead
-            Print(string.format("none of your quests are in this zone, planning the %d elsewhere instead", otherZone))
+            Print(string.format(L("none of your quests are in this zone, planning the %d elsewhere instead"), otherZone))
             return addon:PlanRoute(true, quiet, true)
         elseif greyCount > 0 then
-            Print(string.format("nothing worth planning: %d grey quest%s skipped", greyCount, greyCount == 1 and "" or "s"))
+            Print(string.format(L("nothing worth planning: %d grey quest%s skipped"), greyCount, greyCount == 1 and "" or "s"))
         else
-            Print("no quest locations found on this continent")
+            Print(L("no quest locations found on this continent"))
         end
         return
     end
@@ -1568,28 +1569,28 @@ function addon:PlanRoute(allZones, quiet, auto)
         -- the plan replaces the "nearest/selected quest" arrow, two arrows would disagree
         db.ownQuests = false
         mine.dirty = true
-        Print("my quest log arrow switched off while you follow the plan (/lazy own turns it back on)")
+        Print(L("my quest log arrow switched off while you follow the plan (/lazy own turns it back on)"))
     end
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
-    Print(string.format("planned %d stop%s for %d quest%s, about %d yards of walking%s. First: %s",
+    Print(string.format(L("planned %d stop%s for %d quest%s, about %d yards of walking%s. First: %s"),
         #list, #list == 1 and "" or "s", questCount, questCount == 1 and "" or "s", total,
         totalXP > 0 and string.format(", about %d XP in total", totalXP) or "", list[1].name))
     if groupSkipped > 0 then
-        Print(string.format("%d group quest%s left out because you are solo (they come back when you join a group)",
+        Print(string.format(L("%d group quest%s left out because you are solo (they come back when you join a group)"),
             groupSkipped, groupSkipped == 1 and "" or "s"))
     end
     if pickup then
-        Print("none of your quests are in this zone: pick up the quests at the nearest quest givers (!), then the plan fills in with their objectives")
+        Print(L("none of your quests are in this zone: pick up the quests at the nearest quest givers (!), then the plan fills in with their objectives"))
     end
-    if greyCount > 0 then Print(string.format("%d quest%s skipped (grey, or too high a level)", greyCount, greyCount == 1 and "" or "s")) end
+    if greyCount > 0 then Print(string.format(L("%d quest%s skipped (grey, or too high a level)"), greyCount, greyCount == 1 and "" or "s")) end
     if notWorth > 0 then
-        Print(string.format("%d small quest%s left out: not worth the time for the XP (Options > planner turns this off)", notWorth, notWorth == 1 and "" or "s"))
+        Print(string.format(L("%d small quest%s left out: not worth the time for the XP (Options > planner turns this off)"), notWorth, notWorth == 1 and "" or "s"))
     end
     if otherZone > 0 then
-        Print(string.format("%d quest%s in other zones left out. /lazy plan all includes them", otherZone, otherZone == 1 and "" or "s"))
+        Print(string.format(L("%d quest%s in other zones left out. /lazy plan all includes them"), otherZone, otherZone == 1 and "" or "s"))
     end
-    if elsewhere > 0 then Print(string.format("%d quest%s on another continent left out", elsewhere, elsewhere == 1 and "" or "s")) end
+    if elsewhere > 0 then Print(string.format(L("%d quest%s on another continent left out"), elsewhere, elsewhere == 1 and "" or "s")) end
     if addon.PurgeDungeonStops then pcall(addon.PurgeDungeonStops) end       -- belt and braces: no dungeon quest in a fresh plan
 end
 
@@ -1611,10 +1612,10 @@ function addon.PlanZone(name)
             for _, s in ipairs(addon.JourneySegments and addon.JourneySegments() or {}) do
                 if s.map and (s.zone or ""):lower():find(want, 1, true) then seg = s; break end
             end
-            if not seg then Print("I don't know a zone called '" .. name .. "'. /lazy guide lists the zones on your way.") return end
+            if not seg then Print(L("I don't know a zone called '") .. name .. L("'. /lazy guide lists the zones on your way.")) return end
             db.zonePlanPending = { zone = seg.zone, t = time() }
             if addon.GoTo then addon.GoTo(seg.map, seg.zx, seg.zy, seg.zone) end
-            Print("on the way to " .. seg.zone .. ": I will plan the zone when you arrive")
+            Print(L("on the way to ") .. seg.zone .. L(": I will plan the zone when you arrive"))
             return
         end
     end
@@ -1624,7 +1625,7 @@ function addon.PlanZone(name)
     local ok, opts = pcall(addon.CoachOptions)
     local best = ok and opts and opts[1]
     if best and best.key == "grind" then
-        Print("tip: by your measured numbers, " .. best.label:lower() .. " is faster right now (/lazy coach)")
+        Print(L("tip: by your measured numbers, ") .. best.label:lower() .. L(" is faster right now (/lazy coach)"))
     end
 end
 
@@ -1648,12 +1649,12 @@ end)
 -- Turn the plan off but keep my place: the stops still to do are put aside, and nothing replans or re-adds arrows.
 function addon.PlanPause()
     local db = DB()
-    if db.planPaused then Print("the plan is already off. /lazy plan on picks it up where you left it"); return end
+    if db.planPaused then Print(L("the plan is already off. /lazy plan on picks it up where you left it")); return end
     local keep, rest = {}, {}
     for _, w in ipairs(db.waypoints or {}) do
         if w.label and not w.go and not w.gather then keep[#keep + 1] = w else rest[#rest + 1] = w end
     end
-    if #keep == 0 then Print("there is no plan to turn off"); return end
+    if #keep == 0 then Print(L("there is no plan to turn off")); return end
     local zone = GetRealZoneText and GetRealZoneText() or "?"
     db.planSaved = { stops = api.DeepCopy(keep), zone = zone, time = time and time() or 0, all = lastPlanAll and true or false }
     db.waypoints = rest
@@ -1665,7 +1666,7 @@ function addon.PlanPause()
     if addon.RefreshQuestItems then pcall(addon.RefreshQuestItems) end
     if addon.UpdateTomTom then addon:UpdateTomTom() end
     if addon.RefreshOptions then addon.RefreshOptions() end
-    Print(string.format("plan off. I kept your place: %d stop%s still to do, next was %s. /lazy plan on resumes it.",
+    Print(string.format(L("plan off. I kept your place: %d stop%s still to do, next was %s. /lazy plan on resumes it."),
         #keep, #keep == 1 and "" or "s", tostring(keep[1].name or keep[1].label)))
 end
 
@@ -1673,11 +1674,11 @@ end
 function addon.PlanResume()
     local db = DB()
     local saved = db.planSaved
-    if not db.planPaused then Print("the plan is not off"); return end
+    if not db.planPaused then Print(L("the plan is not off")); return end
     db.planPaused = nil
     db.planSaved = nil
     if not saved or not saved.stops or #saved.stops == 0 then
-        Print("nothing was saved, planning fresh")
+        Print(L("nothing was saved, planning fresh"))
         addon:PlanRoute()
         return
     end
@@ -1692,7 +1693,7 @@ function addon.PlanResume()
     if addon.UpdateTomTom then addon:UpdateTomTom() end
     if addon.RefreshOptions then addon.RefreshOptions() end
     local here = GetRealZoneText and GetRealZoneText() or "?"
-    Print(string.format("plan back on: %d stop%s, next is %s%s", #saved.stops, #saved.stops == 1 and "" or "s",
+    Print(string.format(L("plan back on: %d stop%s, next is %s%s"), #saved.stops, #saved.stops == 1 and "" or "s",
         tostring(saved.stops[1].name or saved.stops[1].label),
         saved.zone and saved.zone ~= here and (" (it was in " .. saved.zone .. "; /lazy plan makes a new one for here)") or ""))
 end
@@ -1714,7 +1715,7 @@ local function AddQuestToPlan(questId)
         addon.planWhy = "the plan was empty and a quest was accepted"
         addon:PlanRoute(false, true)
         local now = db.waypoints
-        if now[1] and now[1].label then Print("plan updated with your new quest: " .. now[1].name) end
+        if now[1] and now[1].label then Print(L("plan updated with your new quest: ") .. ns.LocalizeLabel(now[1].name)) end
         return
     end
     if not (wps[1] and wps[1].label) then return end        -- no plan running
@@ -1764,7 +1765,7 @@ local function AddQuestToPlan(questId)
             RenumberPlan(wps)
             addon:RefreshPins()
             if addon.PlanLog then addon.PlanLog("plan", "added " .. tostring(g.label) .. " to stop " .. i .. " (a quest was accepted next to it)") end
-            Print(string.format("added %s to plan stop %d", g.label, i))
+            Print(string.format(L("added %s to plan stop %d"), g.label, i))
             return
         end
     end
@@ -1777,7 +1778,7 @@ local function AddQuestToPlan(questId)
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
     if addon.PlanLog then addon.PlanLog("plan", "added " .. tostring(g.label) .. " as stop " .. (bestPos + 1) .. " (a quest was accepted)") end
-    Print(string.format("added %s to your plan as stop %d%s", g.label, bestPos + 1,
+    Print(string.format(L("added %s to your plan as stop %d%s"), g.label, bestPos + 1,
         bestPos == 0 and " (next up)" or ""))
 end
 
@@ -1854,11 +1855,11 @@ local function ReplanForZone()
             RenumberPlan(now)
             addon:RefreshPins()
             if addon.RefreshOptions then addon.RefreshOptions() end
-            Print(string.format("new continent: %d plan stop%s from the other one put away. /lazy plan rebuilds when you are back", removed, removed == 1 and "" or "s"))
+            Print(string.format(L("new continent: %d plan stop%s from the other one put away. /lazy plan rebuilds when you are back"), removed, removed == 1 and "" or "s"))
         end
     end
     if now and now[1] and now[1].label then
-        Print(string.format("new zone, plan rebuilt: %d stop%s. First: %s", #now, #now == 1 and "" or "s", now[1].name))
+        Print(string.format(L("new zone, plan rebuilt: %d stop%s. First: %s"), #now, #now == 1 and "" or "s", ns.LocalizeLabel(now[1].name)))
     end
 end
 
@@ -1897,7 +1898,7 @@ driftFrame:SetScript("OnUpdate", function(_, dt)
         pcall(addon.PlanRoute, addon, lastPlanAll and true or false, true)
         local after = db.waypoints
         if after and after[1] and after[1].label then
-            Print("you moved on, plan rebuilt from here. Next: " .. after[1].name)
+            Print(L("you moved on, plan rebuilt from here. Next: ") .. ns.LocalizeLabel(after[1].name))
         end
     end
 end)
@@ -1943,7 +1944,7 @@ local function QuestChanged()
     addon:PlanRoute(lastPlanAll and true or false, true)
     local after = db.waypoints
     if after and after[1] and after[1].label then
-        Print("quest progress, plan updated. Next: " .. after[1].name)
+        Print(L("quest progress, plan updated. Next: ") .. ns.LocalizeLabel(after[1].name))
     end
 end
 
@@ -2021,21 +2022,21 @@ function addon.PurgeDungeonStops(verbose)
     for si, s in ipairs(db.waypoints) do
         for _, q in ipairs(s.quests or {}) do
             local verdict = q.id and api.IsDungeonQuest(q.id, false)
-            if verbose then Print(string.format("  stop %d: %s (id %s): dungeon = %s", si, tostring(q.label), tostring(q.id), tostring(verdict))) end
+            if verbose then Print(string.format(L("  stop %d: %s (id %s): dungeon = %s"), si, tostring(q.label), tostring(q.id), tostring(verdict))) end
             if q.id and verdict and not ids[q.id] then
                 local done = false
                 if C_QuestLog and C_QuestLog.IsComplete then
                     local okC, c = pcall(C_QuestLog.IsComplete, q.id)
                     done = okC and c and true or false
                 end
-                if verbose then Print("     finished and waiting for a hand-in: " .. tostring(done)) end
+                if verbose then Print(L("     finished and waiting for a hand-in: ") .. tostring(done)) end
                 if not done then ids[q.id] = true; count = count + 1 end
             end
         end
     end
     if count > 0 and addon.ScrubQuest then
         for id in pairs(ids) do pcall(addon.ScrubQuest, id) end
-        Print(string.format("took %d dungeon quest%s out of your plan", count, count == 1 and "" or "s"))
+        Print(string.format(L("took %d dungeon quest%s out of your plan"), count, count == 1 and "" or "s"))
     end
     -- stops that only carry a name (no quest list): match them by title against my log and my class quests
     local byTitle = {}
@@ -2053,7 +2054,7 @@ function addon.PurgeDungeonStops(verbose)
             local title = tostring(shownName):gsub("^%d+%.%s*", ""):gsub("^Class quest: ", ""):gsub("^Pick up: ", ""):gsub("^Turn in: ", "")
             local id = byTitle[title:lower()] or (addon.ClassQuestIdByTitle and addon.ClassQuestIdByTitle(title))
             local byName = (not id) and api.DungeonTitle and api.DungeonTitle(title)
-            if verbose then Print(string.format("  named stop %d: %s -> id %s%s", i, tostring(shownName), tostring(id), byName and " (a dungeon quest by name)" or "")) end
+            if verbose then Print(string.format(L("  named stop %d: %s -> id %s%s"), i, tostring(shownName), tostring(id), byName and " (a dungeon quest by name)" or "")) end
             if byName or (id and api.IsDungeonQuest(id, false)) then
                 local done = false
                 if C_QuestLog and C_QuestLog.IsComplete then
@@ -2067,10 +2068,10 @@ function addon.PurgeDungeonStops(verbose)
     if named > 0 then
         addon:RefreshPins()
         if addon.RefreshOptions then addon.RefreshOptions() end
-        Print(string.format("took %d dungeon quest stop%s out of your arrow list", named, named == 1 and "" or "s"))
+        Print(string.format(L("took %d dungeon quest stop%s out of your arrow list"), named, named == 1 and "" or "s"))
     end
     if verbose and count == 0 and named == 0 then
-        Print("no dungeon quests to take out (" .. #db.waypoints .. " stops looked at)")
+        Print(L("no dungeon quests to take out (") .. #db.waypoints .. L(" stops looked at)"))
     end
     return count + named
 end
@@ -2192,7 +2193,7 @@ nearTick:SetScript("OnUpdate", function(_, dt)
                     addon:RefreshPins()
                     if addon.RefreshOptions then addon.RefreshOptions() end
                     if addon.PlanLog then addon.PlanLog("plan", "you are close to a hand-in, so it was moved to the front: " .. tostring(w.label)) end
-                    Print("you are close to a hand-in: " .. tostring(w.label):gsub("^Turn in: ", "Turn in "))
+                    Print(L("you are close to a hand-in: ") .. tostring(w.label):gsub("^Turn in: ", "Turn in "))
                     return
                 end
             end
@@ -2340,7 +2341,7 @@ local function UpdateCorpse(dt)
     local inst, x, y, label = CorpsePoint()
     if not inst then
         corpseArrow.arrow:Hide()
-        corpseArrow.title:SetText("Corpse location unknown")
+        corpseArrow.title:SetText(L("Corpse location unknown"))
         corpseArrow.sub:SetText("")
         return
     end
@@ -2360,10 +2361,10 @@ function addon.FollowPosition() return followLast end
 function addon:FollowMember(name)
     local short = name and name:match("^[^-]+")
     local unit = short and api.FindUnit(short)
-    if not unit or unit == "player" then Print((short or "that player") .. " is not in your group"); return false end
+    if not unit or unit == "player" then Print((short or "that player") .. L(" is not in your group")); return false end
     DB().followName = short
     followLast = nil
-    Print("following " .. short .. " with the purple arrow (right-click it to change)")
+    Print(L("following ") .. short .. L(" with the purple arrow (right-click it to change)"))
     return true
 end
 
@@ -2371,7 +2372,7 @@ function addon:StopFollowing()
     DB().followName = nil
     followLast = nil
     if followArrow then followArrow:Hide() end
-    Print("follow arrow off")
+    Print(L("follow arrow off"))
 end
 
 local function UpdateFollow(dt)
@@ -2388,7 +2389,7 @@ local function UpdateFollow(dt)
     if not unit then
         followArrow.arrow:Hide()
         followArrow.title:SetText(name)
-        followArrow.sub:SetText("|cffaaaaaaNot in your group|r")
+        followArrow.sub:SetText(L("|cffaaaaaaNot in your group|r"))
         return
     end
     local ux, uy, uinst = hbd:GetUnitWorldPosition(unit)
@@ -2402,7 +2403,7 @@ local function UpdateFollow(dt)
     else
         followArrow.arrow:Hide()
         followArrow.title:SetText(name)
-        followArrow.sub:SetText("|cffaaaaaaToo far away to track|r")
+        followArrow.sub:SetText(L("|cffaaaaaaToo far away to track|r"))
     end
 end
 

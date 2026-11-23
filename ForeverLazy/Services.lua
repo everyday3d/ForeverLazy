@@ -7,6 +7,7 @@
 --   add a number for the next nearest, for example /lazy inn 2
 -- The lists come from Questie's database, so they need Questie loaded and ready.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -127,23 +128,23 @@ end
 local function Search(label, getter, object, pick)
     local T = Mod("Townsfolk")
     local QDB = api.GetQuestie()
-    if not (T and QDB and api.QuestieReady and api.QuestieReady()) then Print("needs Questie loaded and ready"); return end
+    if not (T and QDB and api.QuestieReady and api.QuestieReady()) then Print(L("needs Questie loaded and ready")); return end
     local ids = getter(T)
     if not ids or #ids == 0 then
-        Print("Questie has no " .. label .. " list yet (it is still loading, try again in a minute)")
+        Print(L("Questie has no ") .. label .. L(" list yet (it is still loading, try again in a minute)"))
         return
     end
     local list = Nearest(QDB, ids, object, 5)
-    if #list == 0 then Print("no " .. label .. " found on this continent"); return end
+    if #list == 0 then Print("no " .. label .. L(" found on this continent")); return end
     pick = math.min(math.max(tonumber(pick) or 1, 1), #list)
     for i, r in ipairs(list) do
         if i <= 3 or i == pick then
-            Print(string.format("%s%d. %s%s - %s %.0f, %.0f (about %d yards)", i == pick and "> " or "  ", i, r.name,
+            Print(string.format(L("%s%d. %s%s - %s %.0f, %.0f (about %d yards)"), i == pick and "> " or "  ", i, r.name,
                 r.sub and (" (" .. r.sub .. ")") or "", MapName(r.spawn.uiMapId), r.spawn.zx * 100, r.spawn.zy * 100, r.d))
         end
     end
     Go(list[pick], label:gsub("^%l", string.upper))
-    if #list > 1 and pick == 1 then Print("  add a number for the next nearest, for example /lazy inn 2") end
+    if #list > 1 and pick == 1 then Print(L("  add a number for the next nearest, for example /lazy inn 2")) end
 end
 
 local prev = addon.HandleExtraCommand

@@ -4,6 +4,7 @@
 --   /lazy dungeons go [n|name]  put a waypoint on a dungeon entrance
 -- Dungeon names, entrances and quest locations come from Questie's database.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -285,18 +286,18 @@ local function ForMyLevel()
 end
 
 local function Summary()
-    if not Build() then Print("dungeon data needs Questie loaded and ready"); return end
+    if not Build() then Print(L("dungeon data needs Questie loaded and ready")); return end
     listing = {}
     local dq = DungeonQuests()
     if #dq == 0 then
-        Print("none of your quests need a dungeon right now")
+        Print(L("none of your quests need a dungeon right now"))
     else
-        Print("your quests that need a dungeon:")
+        Print(L("your quests that need a dungeon:"))
         for _, v in ipairs(dq) do
             listing[#listing + 1] = v.rec
             local titles = {}
             for i = 1, math.min(#v.quests, 4) do titles[i] = v.quests[i] end
-            Print(string.format("  %d. %s%s: %d quest%s (%s%s) - %s", #listing, v.rec.name,
+            Print(string.format(L("  %d. %s%s: %d quest%s (%s%s) - %s"), #listing, v.rec.name,
                 v.rec.levels and string.format(" (level %d-%d)", v.rec.levels[1], v.rec.levels[2]) or "",
                 #v.quests, #v.quests == 1 and "" or "s", table.concat(titles, ", "),
                 #v.quests > 4 and ", ..." or "", Where(v.rec)))
@@ -304,17 +305,17 @@ local function Summary()
     end
     local fit = ForMyLevel()
     if #fit > 0 then
-        Print("dungeons for your level:")
+        Print(L("dungeons for your level:"))
         for _, rec in ipairs(fit) do
             listing[#listing + 1] = rec
-            Print(string.format("  %d. %s (level %d-%d) - %s", #listing, rec.name, rec.levels[1], rec.levels[2], Where(rec)))
+            Print(string.format(L("  %d. %s (level %d-%d) - %s"), #listing, rec.name, rec.levels[1], rec.levels[2], Where(rec)))
         end
     end
-    if #listing > 0 then Print("/lazy dungeons go 1  puts a waypoint on the first entrance") end
+    if #listing > 0 then Print(L("/lazy dungeons go 1  puts a waypoint on the first entrance")) end
 end
 
 local function Go(arg)
-    if not Build() then Print("dungeon data needs Questie loaded and ready"); return end
+    if not Build() then Print(L("dungeon data needs Questie loaded and ready")); return end
     if #listing == 0 then Summary() end
     local rec
     local n = tonumber(arg)
@@ -328,9 +329,9 @@ local function Go(arg)
     else
         rec = listing[1]
     end
-    if not rec then Print("no such dungeon, try /lazy dungeons first"); return end
+    if not rec then Print(L("no such dungeon, try /lazy dungeons first")); return end
     local e = Nearest(rec)
-    if not e then Print(rec.name .. ": entrance position unknown"); return end
+    if not e then Print(rec.name .. L(": entrance position unknown")); return end
     addon:AddWaypointZone(e.uiMapId, e.zx, e.zy, rec.name .. " entrance")
 end
 
@@ -418,7 +419,7 @@ local function ShowDungeonToast(name, quests)
         local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
         close:SetPoint("TOPRIGHT", 2, 2)
         local btn = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-        btn:SetSize(100, 22); btn:SetPoint("BOTTOM", 0, 10); btn:SetText("Close")
+        btn:SetSize(100, 22); btn:SetPoint("BOTTOM", 0, 10); btn:SetText(L("Close"))
         btn:SetScript("OnClick", function() f:Hide() end)
         table.insert(UISpecialFrames, "ForeverLazy_DungeonToast")
         f:Hide()
@@ -441,12 +442,12 @@ end
 function addon.DungeonHere(auto)
     local name, itype = GetInstanceInfo and GetInstanceInfo()
     if not name or (itype ~= "party" and itype ~= "raid") then
-        if not auto then Print("you are not inside a dungeon") end
+        if not auto then Print(L("you are not inside a dungeon")) end
         return
     end
     local quests = addon.DungeonQuestsHere(name)
     if #quests == 0 then
-        if not auto then Print("none of your quests need anything in " .. name) end
+        if not auto then Print(L("none of your quests need anything in ") .. name) end
         return
     end
     ShowDungeonToast(name, quests)
@@ -591,7 +592,7 @@ end)
 -- /lazy dungeons why <part of a quest title>: why a quest in my plan or log is, or is not, counted as a dungeon quest
 function addon.DungeonWhy(text)
     text = (text or ""):lower()
-    if not Build() then Print("dungeon data needs Questie loaded and ready"); return end
+    if not Build() then Print(L("dungeon data needs Questie loaded and ready")); return end
     local QDB = api.GetQuestie()
     local seen, n = {}, 0
     local function Report(id, title)
@@ -608,7 +609,7 @@ function addon.DungeonWhy(text)
         local group = QDB.QueryQuestSingle(id, "groupSize") or QDB.QueryQuestSingle(id, "suggestedGroup")
         dungeonQuestCache[id .. "o"] = nil; dungeonQuestCache[id .. "c"] = nil
         local verdict = api.IsDungeonQuest(id, false)
-        Print(string.format("%s (id %d): dungeon = %s | game tag: %s | Questie tag: %s | zoneOrSort: %s (dungeon area: %s) | group: %s",
+        Print(string.format(L("%s (id %d): dungeon = %s | game tag: %s | Questie tag: %s | zoneOrSort: %s (dungeon area: %s) | group: %s"),
             tostring(title), id, tostring(verdict), gameTag, tostring(qTag), tostring(zone),
             tostring(type(zone) == "number" and areaTo[zone] and true or false), tostring(group)))
     end
@@ -623,7 +624,7 @@ function addon.DungeonWhy(text)
             if q.id and (text == "" or (q.title or ""):lower():find(text, 1, true)) then Report(q.id, q.title) end
         end
     end
-    if n == 0 then Print("no quest in your plan or log matches '" .. text .. "'") end
+    if n == 0 then Print(L("no quest in your plan or log matches '") .. text .. "'") end
 end
 
 local prev = addon.HandleExtraCommand
@@ -660,7 +661,7 @@ ev:SetScript("OnEvent", function()
                 for _, e in ipairs(v.rec.entrances) do
                     if e.uiMapId == here and not hinted[v.rec.name] then
                         hinted[v.rec.name] = true
-                        Print(string.format("%d of your quests are inside %s, the entrance is here (%s). /lazy dungeons go %s",
+                        Print(string.format(L("%d of your quests are inside %s, the entrance is here (%s). /lazy dungeons go %s"),
                             #v.quests, v.rec.name, Where(v.rec), v.rec.name))
                     end
                 end

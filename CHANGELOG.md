@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.0
+### New
+- **Translations.** Every text the addon shows now goes through one lookup, so a language file only has to list the texts (about 940 are ready: the options, the tour, what's new, the chat messages and the windows). Nothing is translated yet; everything stays English until a language file is added. `docs/LOCALIZATION.md` says how, `docs/locale-template.lua` lists every text, `/lazy l10n` shows what is translated, `/lazy l10n missing` lists what still is not, and the options have a Language button. Plan stop labels (Turn in, Pick up, Class quest) are translated for showing while the rules still work on the English words.
+
+### Changed
+- **Under the hood:** a new offline test builds the options window, the tour, what's new and the report windows, so a mistake inside a window shows up before a release.
+
 ## 0.20.0
 ### Fixed
 - **The spell rank swap never started.** The file stopped on an event the Forever client does not know, so nothing watched for a new spell, and `/lazy check` reported it. Events are registered one by one now, and the swap also uses the newer function for picking a spell up (and names the one that is missing if there is a problem).

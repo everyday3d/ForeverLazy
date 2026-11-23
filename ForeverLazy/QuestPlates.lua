@@ -2,6 +2,7 @@
 -- mob that drops an item one of my quests needs.
 --   /lazy plates on|off     the icons
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local data = ns.data
 local Print = addon.Print
@@ -349,7 +350,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         local db = DB()
         if a == "off" then db.questPlates = false elseif a == "on" then db.questPlates = nil end
-        Print("quest icons on nameplates: " .. (db.questPlates == false and "OFF" or "on") .. "  (/lazy plates on|off)")
+        Print(L("quest icons on nameplates: ") .. (db.questPlates == false and "OFF" or "on") .. L("  (/lazy plates on|off)"))
         UpdateAll()
         return true
     end

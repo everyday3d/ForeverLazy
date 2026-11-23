@@ -7,6 +7,7 @@
 -- Questie's tracker is another addon: turn it off in Questie's own options.
 --   /lazy tracker [on|off]
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -399,7 +400,7 @@ local function Build()
     scroll:SetScrollChild(f.content)
     f.empty = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.empty:SetPoint("TOPLEFT", 8, -32); f.empty:SetJustifyH("LEFT")
-    f.empty:SetText("No quests in your log.")
+    f.empty:SetText(L("No quests in your log."))
 
     -- resize from the corner, the right edge or the bottom edge
     local function Sizer(point, w, h, ...)
@@ -687,7 +688,7 @@ function addon.TrackerSet(on, hideBlizzard)
         ApplyBlizzard(false)
     end
     if addon.RefreshOptions then addon.RefreshOptions() end
-    Print("Forever Lazy's quest tracker is " .. (db.trackerOn and "on" or "off") ..
+    Print(L("Forever Lazy's quest tracker is ") .. (db.trackerOn and "on" or "off") ..
         ((db.trackerOn and db.trackerHideBlizzard ~= false) and " (WoW's tracker is hidden)" or ""))
 end
 
@@ -749,34 +750,34 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "min" or a == "minimize" or a == "mini" then
             DB().trackerCollapsed = not DB().trackerCollapsed
             dirty = true
-            Print("tracker " .. (DB().trackerCollapsed and "minimized" or "restored"))
+            Print(L("tracker ") .. (DB().trackerCollapsed and "minimized" or "restored"))
         elseif a == "debug" then
             local name, itype, diff, _, _, _, _, instId = GetInstanceInfo()
-            local L = { "instance: " .. tostring(name) .. "  type: " .. tostring(itype) .. "  id: " .. tostring(instId) }
-            L[#L + 1] = "questie ready: " .. tostring(api.QuestieReady and api.QuestieReady())
-            L[#L + 1] = "DungeonQuestsHere exists: " .. tostring(addon.DungeonQuestsHere ~= nil)
+            local dbg = { "instance: " .. tostring(name) .. "  type: " .. tostring(itype) .. "  id: " .. tostring(instId) }
+            dbg[#dbg + 1] = "questie ready: " .. tostring(api.QuestieReady and api.QuestieReady())
+            dbg[#dbg + 1] = "DungeonQuestsHere exists: " .. tostring(addon.DungeonQuestsHere ~= nil)
             local ids = DungeonIds()
             local n = 0
-            if ids then for id in pairs(ids) do n = n + 1; L[#L + 1] = "  here: " .. id end end
-            L[#L + 1] = "DungeonIds: " .. (ids and (n .. " quests") or "nil (not seen as a dungeon)")
+            if ids then for id in pairs(ids) do n = n + 1; dbg[#dbg + 1] = "  here: " .. id end end
+            dbg[#dbg + 1] = "DungeonIds: " .. (ids and (n .. " quests") or "nil (not seen as a dungeon)")
             for _, q in ipairs(api.ReadQuestLog and api.ReadQuestLog() or {}) do
-                L[#L + 1] = string.format("log: %s [%s] complete=%s dungeonQuest=%s here=%s", tostring(q.title), tostring(q.id), tostring(q.complete),
+                dbg[#dbg + 1] = string.format("log: %s [%s] complete=%s dungeonQuest=%s here=%s", tostring(q.title), tostring(q.id), tostring(q.complete),
                     tostring(api.IsDungeonQuest and api.IsDungeonQuest(q.id, q.complete)), tostring(ids and ids[q.id]))
             end
             dcache = { name = nil, t = 0, ids = {} }
-            if addon.ShowTextPopup then addon.ShowTextPopup("Tracker debug", table.concat(L, "\n")) else Print(table.concat(L, "\n")) end
+            if addon.ShowTextPopup then addon.ShowTextPopup(L("Tracker debug"), table.concat(dbg, "\n")) else Print(table.concat(dbg, "\n")) end
         elseif a == "refresh" then
             ApplyLook(); dirty = true
         elseif a == "bg" or a == "background" then
             DB().trackerNoBg = not DB().trackerNoBg
             ApplyLook()
-            Print("tracker background " .. (DB().trackerNoBg and "off" or "on"))
+            Print(L("tracker background ") .. (DB().trackerNoBg and "off" or "on"))
         elseif a == "reset" then
             local db = DB()
             if db.pos then db.pos.tracker = nil; db.pos.trackerSize = nil end
             if win then win:ClearAllPoints(); win:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -20, -220); win:SetSize(300, 300) end
             dirty = true
-            Print("tracker put back at the top right")
+            Print(L("tracker put back at the top right"))
         else
             addon.TrackerSet(not DB().trackerOn)
         end

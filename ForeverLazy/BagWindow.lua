@@ -9,6 +9,7 @@
 --   /lazy bags replace on|off  take over the bag keys and buttons (default: off, the game already has a one-bag view; /lazy bags opens this window anyway)
 --   /lazy bags cols <n>        slots per row     /lazy bags scale <n>     size     /lazy bags reset   move it back
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -249,7 +250,7 @@ local function BuildNow()
     local note = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     note:SetPoint("BOTTOM", 0, 6)
     note:SetWidth(190)
-    note:SetText("off = the game's own bags (/lazy bags opens this window)")
+    note:SetText(L("off = the game's own bags (/lazy bags opens this window)"))
     frame.gear = Button("...", 24, function()
         if panel:IsShown() then panel:Hide() else for _, r in ipairs(rows) do r.update() end; panel:Show() end
     end, "Settings: auto sort, border colours, replacing the game's bags")
@@ -334,7 +335,7 @@ local function BuildNow()
         b:SetScript("OnEnter", function(self)
             GameTooltip:SetOwner(self, "ANCHOR_TOP")
             GameTooltip:SetText(self.bag == 0 and "Backpack" or ("Bag " .. self.bag))
-            GameTooltip:AddLine("Click to show or hide what is in it", 1, 1, 1)
+            GameTooltip:AddLine(L("Click to show or hide what is in it"), 1, 1, 1)
             GameTooltip:Show()
         end)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -420,7 +421,7 @@ local function NewItemButton(parent)
         for k, v in pairs(b) do
             if type(v) == "table" and v.GetObjectType and v:GetObjectType() == "Texture" and v:IsShown() then found[#found + 1] = tostring(k) end
         end
-        if #found > 0 then Print("bag slot textures showing: " .. table.concat(found, ", ")) end
+        if #found > 0 then Print(L("bag slot textures showing: ") .. table.concat(found, ", ")) end
     end
     b.flBorder = b:CreateTexture(nil, "OVERLAY")
     b.flBorder:SetTexture("Interface\\Buttons\\UI-ActionButton-Border")
@@ -590,7 +591,7 @@ CategoryOf = function(e)
     end
     if not classId and not warned then
         warned = true
-        Print("bag sections: could not read the item type of " .. tostring(info.hyperlink or info.itemID) .. " (id " .. tostring(info.itemID) .. ")")
+        Print(L("bag sections: could not read the item type of ") .. tostring(info.hyperlink or info.itemID) .. " (id " .. tostring(info.itemID) .. ")")
     end
     if classId == 2 or classId == 4 then return "gear" end
     if classId == 0 then
@@ -877,7 +878,7 @@ local bankWin = NewWindow(2, true)
 -- any error is shown in chat (not everyone has Lua errors switched on)
 local function Toggle()
     local ok, err = pcall(main.ToggleNow)
-    if not ok then Print("the bag window hit an error: " .. tostring(err)) end
+    if not ok then Print(L("the bag window hit an error: ") .. tostring(err)) end
 end
 addon.ToggleBags = Toggle
 
@@ -904,7 +905,7 @@ local function Wrap(name, fn)
     _G[name] = function(...)
         if Takeover() then
             local ok, err = pcall(fn, ...)
-            if not ok then Print("the bag window hit an error: " .. tostring(err)) end
+            if not ok then Print(L("the bag window hit an error: ") .. tostring(err)) end
             return
         end
         return o(...)
@@ -932,7 +933,7 @@ local function EnableGameCombine()
     local okG, cur = pcall(GetCVar, "combinedBags")
     if not okG or cur == nil then return end                        -- this client has no such setting
     if cur == "1" or cur == 1 or cur == true then return end
-    if pcall(SetCVar, "combinedBags", "1") then Print("the game's Combine Bags is on now (one bag with everything), since the Forever Lazy bag window is off") end
+    if pcall(SetCVar, "combinedBags", "1") then Print(L("the game's Combine Bags is on now (one bag with everything), since the Forever Lazy bag window is off")) end
 end
 
 local function SyncWrappers(justSwitchedOff)
@@ -995,7 +996,7 @@ end
 ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_LOGIN" then
         SyncWrappers()
-        if Takeover() then Print("bag window is in charge of the bag keys (B)") end
+        if Takeover() then Print(L("bag window is in charge of the bag keys (B)")) end
     elseif event == "BANKFRAME_OPENED" then
         atBank = true
         if Takeover() then
@@ -1038,33 +1039,33 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "replace" then
             if b == "on" then db.bagsReplace = true else db.bagsReplace = nil end
             SyncWrappers(true)
-            Print("bag window takes over the bag keys: " .. (Takeover() and "YES" or "no") .. (Takeover() and "" or "  (off by default: /lazy bags replace on)"))
+            Print(L("bag window takes over the bag keys: ") .. (Takeover() and "YES" or "no") .. (Takeover() and "" or "  (off by default: /lazy bags replace on)"))
         elseif a == "debug" then
             -- what is going on with the game's own bags, as a popup you can copy
-            local L = {}
-            L[#L + 1] = "replace setting: " .. tostring(db.bagsReplace) .. "  takeover: " .. tostring(Takeover()) .. "  wrapped: " .. tostring(wrapped)
+            local dbg = {}
+            dbg[#dbg + 1] = "replace setting: " .. tostring(db.bagsReplace) .. "  takeover: " .. tostring(Takeover()) .. "  wrapped: " .. tostring(wrapped)
             for _, n in ipairs({ "ToggleAllBags", "ToggleBackpack", "ToggleBag", "OpenAllBags", "OpenBackpack", "OpenBag", "CloseAllBags" }) do
                 local ok, info = pcall(function()
                     local f = _G[n]
                     if type(f) ~= "function" then return "missing" end
                     return (issecurevariable and issecurevariable(n)) and "game's own (secure)" or "REPLACED by an addon"
                 end)
-                L[#L + 1] = n .. ": " .. tostring(ok and info or "?")
+                dbg[#dbg + 1] = n .. ": " .. tostring(ok and info or "?")
             end
             local cf = {}
             for i = 1, 13 do
                 local f = _G["ContainerFrame" .. i]
                 if f then cf[#cf + 1] = i .. (f:IsShown() and "=open" or "=closed") end
             end
-            L[#L + 1] = "ContainerFrames: " .. (#cf > 0 and table.concat(cf, " ") or "none found")
-            L[#L + 1] = "ContainerFrameCombinedBags: " .. tostring(_G.ContainerFrameCombinedBags ~= nil and (_G.ContainerFrameCombinedBags:IsShown() and "open" or "closed") or "not in this client")
+            dbg[#dbg + 1] = "ContainerFrames: " .. (#cf > 0 and table.concat(cf, " ") or "none found")
+            dbg[#dbg + 1] = "ContainerFrameCombinedBags: " .. tostring(_G.ContainerFrameCombinedBags ~= nil and (_G.ContainerFrameCombinedBags:IsShown() and "open" or "closed") or "not in this client")
             local nb, ns = 0, 0
             for bg = 0, 4 do
                 local okN, cnt = pcall(function() return (C_Container and C_Container.GetContainerNumSlots and C_Container.GetContainerNumSlots(bg)) or (GetContainerNumSlots and GetContainerNumSlots(bg)) or 0 end)
                 if okN and type(cnt) == "number" and cnt > 0 then nb = nb + 1; ns = ns + cnt end
             end
-            L[#L + 1] = "bags carried: " .. nb .. " (slots " .. ns .. ")"
-            if addon.ShowTextPopup then addon.ShowTextPopup("Bag debug", table.concat(L, "\n")) else Print(table.concat(L, "\n")) end
+            dbg[#dbg + 1] = "bags carried: " .. nb .. " (slots " .. ns .. ")"
+            if addon.ShowTextPopup then addon.ShowTextPopup(L("Bag debug"), table.concat(dbg, "\n")) else Print(table.concat(dbg, "\n")) end
         elseif a == "cols" and tonumber(b) then
             db.bagsCols = math.max(4, math.min(24, tonumber(b)))
             main.NeedLayout(); bankWin.NeedLayout()
@@ -1076,7 +1077,7 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "reset" then
             db.bagsPos = nil; main.Build(); main.Frame():ClearAllPoints(); main.Frame():SetPoint("BOTTOMRIGHT", UIParent, "BOTTOMRIGHT", -80, 110)
         else
-            Print("/lazy bags  (open)   /lazy bags replace on|off   /lazy bags cols <n>   /lazy bags scale <n>   /lazy bags reset")
+            Print(L("/lazy bags  (open)   /lazy bags replace on|off   /lazy bags cols <n>   /lazy bags scale <n>   /lazy bags reset"))
         end
         return true
     end

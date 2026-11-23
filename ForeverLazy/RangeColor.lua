@@ -4,6 +4,7 @@
 -- Adapted from tullaRange by Tuller (MIT licence, see media/CREDITS.txt for the notice). If tullaRange is installed it does
 -- the job and this one stays out of the way, so the two never fight over the colours.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -122,7 +123,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
         if a == "off" then db.rangeColor = false elseif a == "on" then db.rangeColor = nil end
-        Print("action button range colours: " .. (db.rangeColor == false and "OFF" or "on") .. "  (/lazy range on|off): red = out of range, blue = no mana, grey = cannot use."
+        Print(L("action button range colours: ") .. (db.rangeColor == false and "OFF" or "on") .. L("  (/lazy range on|off): red = out of range, blue = no mana, grey = cannot use.")
             .. (Handled() and " tullaRange is installed, so it does this job." or ""))
         addon.RangeColorRefresh()
         return true

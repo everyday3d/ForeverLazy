@@ -1,6 +1,7 @@
 -- Quest history: the quests I have finished, zone by zone, with how many are left (for my race and class).
 --   /lazy history     (also a button in the options)    hover a zone to see some of the quests still to do there
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local data = ns.data
 local Print = addon.Print
@@ -99,7 +100,7 @@ local function Build()
     bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     f.title:SetPoint("TOPLEFT", 14, -12)
-    f.title:SetText("Quest history")
+    f.title:SetText(L("Quest history"))
     f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.sub:SetPoint("TOPLEFT", f.title, "BOTTOMLEFT", 0, -4)
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
@@ -130,7 +131,7 @@ local function Build()
                 -- the ones near my level first
                 table.sort(list, function(a, b) return math.abs((a.level or 0) - lvl) < math.abs((b.level or 0) - lvl) end)
                 GameTooltip:AddLine(" ")
-                GameTooltip:AddLine("Still to do (nearest my level):", 0.7, 0.85, 1)
+                GameTooltip:AddLine(L("Still to do (nearest my level):"), 0.7, 0.85, 1)
                 for i2 = 1, math.min(8, #list) do GameTooltip:AddLine(string.format("[%d] %s", list[i2].level or 0, list[i2].name), 0.9, 0.9, 0.9) end
                 if #list > 8 then GameTooltip:AddLine(string.format("... and %d more", #list - 8), 0.5, 0.5, 0.5) end
             end

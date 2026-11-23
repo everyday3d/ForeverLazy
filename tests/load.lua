@@ -33,6 +33,18 @@ format, strfind, strmatch, gsub, strsub, strlower, strupper, strlen = string.for
 floor, ceil, max, min, abs, sqrt = math.floor, math.ceil, math.max, math.min, math.abs, math.sqrt
 bit = { band = function(a, b) return a & b end, bor = function(a, b) return a | b end, bxor = function(a, b) return a ~ b end, lshift = function(a, b) return a << b end, rshift = function(a, b) return a >> b end }
 GetTime = function() return 0 end
+-- a few answers that must be real numbers or text, not stand-ins
+UnitLevel = function() return 30 end
+UnitClass = function() return "Paladin", "PALADIN" end
+GetNumTalentTabs = function() return 3 end
+GetTalentTabInfo = function(i) return "tab" .. i, "icon", i == 3 and 31 or 0 end
+GetBuildInfo = function() return "1.15.0", "12345" end
+GetLocale = function() return "enUS" end
+InCombatLockdown = function() return false end
+IsInInstance = function() return false, "none" end
+C_AddOns = { GetNumAddOns = function() return 0 end, GetAddOnInfo = function() return nil end, IsAddOnLoaded = function() return false end, GetAddOnMetadata = function() return "test" end }
+-- a frame answers every call, and lines of a tooltip count as none
+CreateFrame = function() return setmetatable({ NumLines = function() return 0 end }, { __index = function() return standIn end }) end
 time, date = os.time, os.date
 UISpecialFrames = {}
 SlashCmdList = {}
@@ -70,4 +82,30 @@ for _, f in ipairs(files) do
     if text:find('loaded["' .. leaf .. '"]', 1, true) and not marks[leaf] then missing[#missing + 1] = leaf end
 end
 print(#missing .. " file(s) did not reach their own end marker" .. (#missing > 0 and (": " .. table.concat(missing, ", ")) or ""))
-os.exit((#errors == 0 and #missing == 0) and 0 or 1)
+local fail = not (#errors == 0 and #missing == 0)
+
+-- Build the windows once with a plain settings table, so a mistake inside a window builder (not only at load) shows up too.
+local addon = ns.addon
+if addon then
+    local db = { pos = {}, waypoints = {}, modules = {}, scale = 1, alpha = 1, arrival = 10, routes = {}, optOpen = nil }
+    addon.GetDB = function() return db end
+    addon.GetRoot = function() return { chars = {}, profiles = {}, global = db } end
+    local tries = {
+        { "options window", function() return addon.OpenOptions and addon:OpenOptions() end },
+        { "tour", function() return addon.StartTour and addon.StartTour() end },
+        { "what's new", function() return addon.ShowWhatsNew and addon.ShowWhatsNew() end },
+        { "commands list", function() return addon.CommandsReport and addon.CommandsReport() end },
+        { "bug report", function() return addon.BugReport and addon.BugReport() end },
+        { "game functions", function() return addon.ApisReport and addon.ApisReport() end },
+        { "language report", function() return addon.LanguageReport and addon.LanguageReport() end },
+    }
+    local bad = {}
+    for _, tr in ipairs(tries) do
+        local ok, e = pcall(tr[2])
+        if not ok then bad[#bad + 1] = tr[1] .. ": " .. tostring(e) end
+    end
+    print(#tries .. " windows built, " .. #bad .. " with an error")
+    for _, e in ipairs(bad) do print("  " .. e) end
+    if #bad > 0 or fail then os.exit(1) end
+end
+os.exit(fail and 1 or 0)

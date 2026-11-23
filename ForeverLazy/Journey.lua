@@ -6,6 +6,7 @@
 --   /lazy journey go [n]          waypoint on the quest hub of that stop
 -- The level ranges are rough (from community guides), so treat it as a good guide rather than a rule.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -38,29 +39,29 @@ local function Build()
         return { x = wx, y = wy, instance = inst, mapId = mapId, zx = hub[1] / 100, zy = hub[2] / 100 }
     end
 
-    local L = level
+    local lv = level
     -- the zone I am standing in comes first while it still has levels in it
     local zoneId = hbd:GetPlayerZone()
     local info = zoneId and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(zoneId)
     if info then
         for _, z in ipairs(NZ.zones) do
-            if z[1] == info.name and L < z[3] and L >= z[2] - 2 then
+            if z[1] == info.name and lv < z[3] and lv >= z[2] - 2 then
                 used[z[1]] = true
                 local hub = hubFor(z)
-                out[#out + 1] = { zone = z[1], from = L, to = z[3], hub = hub }
-                L = z[3]
+                out[#out + 1] = { zone = z[1], from = lv, to = z[3], hub = hub }
+                lv = z[3]
                 if hub then prev = hub end
             end
         end
     end
 
-    while L < 60 and #out < 12 do
+    while lv < 60 and #out < 12 do
         local best, bestScore, bestHub
         for _, z in ipairs(NZ.zones) do
-            if not z.start and not used[z[1]] and z[2] <= L + 2 and z[3] > L then
+            if not z.start and not used[z[1]] and z[2] <= lv + 2 and z[3] > lv then
                 local hub = hubFor(z)
                 if hub then
-                    local score = math.abs(L - (z[2] + z[3]) / 2)
+                    local score = math.abs(lv - (z[2] + z[3]) / 2)
                     if prev and prev.instance == hub.instance then score = score + Dist(prev, hub) / 800 else score = score + 4 end
                     if not bestScore or score < bestScore then best, bestScore, bestHub = z, score, hub end
                 end
@@ -68,9 +69,9 @@ local function Build()
         end
         if not best then break end
         used[best[1]] = true
-        out[#out + 1] = { zone = best[1], from = math.max(L, best[2]), to = math.min(best[3], 60), hub = bestHub }
-        if best[3] <= L then break end
-        L = best[3]
+        out[#out + 1] = { zone = best[1], from = math.max(lv, best[2]), to = math.min(best[3], 60), hub = bestHub }
+        if best[3] <= lv then break end
+        lv = best[3]
         prev = bestHub
     end
 
@@ -124,9 +125,9 @@ end
 
 local function Show()
     local segs = Segments()
-    if not segs or #segs == 0 then Print("you have no journey yet: /lazy journey generate"); return end
+    if not segs or #segs == 0 then Print(L("you have no journey yet: /lazy journey generate")); return end
     local level = UnitLevel("player") or 1
-    Print("your journey (made at level " .. tostring(Saved().level or "?") .. "):")
+    Print(L("your journey (made at level ") .. tostring(Saved().level or "?") .. "):")
     for i, s in ipairs(segs) do
         local st = Status(s, level)
         local mark = st == "done" and "|cff888888done|r" or (st == "now" and "|cff55ff55<- you are here|r" or "")
@@ -134,19 +135,19 @@ local function Show()
         if s.dungeons and #s.dungeons > 0 then
             d = "  |cffaaaaaa(dungeons: " .. table.concat(s.dungeons, ", ", 1, math.min(#s.dungeons, 3)) .. ")|r"
         end
-        Print(string.format("  %d. level %d-%d: %s  %s%s", i, s.from, s.to, s.zone, mark, d))
+        Print(string.format(L("  %d. level %d-%d: %s  %s%s"), i, s.from, s.to, s.zone, mark, d))
     end
-    Print("/lazy journey go 2 puts a waypoint on the quest hub of stop 2")
+    Print(L("/lazy journey go 2 puts a waypoint on the quest hub of stop 2"))
 end
 
 local function Generate(force)
     if Saved() and not force then
-        Print("you already have a journey. /lazy journey shows it, /lazy journey regenerate makes a new one from your level now.")
+        Print(L("you already have a journey. /lazy journey shows it, /lazy journey regenerate makes a new one from your level now."))
         return
     end
     local segs = Build()
     if not segs or #segs == 0 then
-        Print("I could not make a journey from level " .. tostring(UnitLevel("player")) .. ", the zone data is not ready yet")
+        Print(L("I could not make a journey from level ") .. tostring(UnitLevel("player")) .. L(", the zone data is not ready yet"))
         return
     end
     Save(segs)
@@ -182,9 +183,9 @@ end
 
 local function Go(n)
     local segs = Segments()
-    if not segs then Print("no journey yet: /lazy journey generate"); return end
+    if not segs then Print(L("no journey yet: /lazy journey generate")); return end
     local s = segs[tonumber(n) or 1]
-    if not (s and s.map) then Print("no such stop, try /lazy journey first"); return end
+    if not (s and s.map) then Print(L("no such stop, try /lazy journey first")); return end
     addon:AddWaypointZone(s.map, s.zx, s.zy, string.format("%s (level %d-%d)", s.zone, s.from, s.to))
 end
 
@@ -203,16 +204,16 @@ ev:SetScript("OnEvent", function(_, _, newLevel)
         if level == s.to then
             local nxt = segs[i + 1]
             if nxt then
-                Print(string.format("journey: you have outgrown %s. Next: %s (level %d-%d). /lazy journey go %d", s.zone, nxt.zone, nxt.from, nxt.to, i + 1))
+                Print(string.format(L("journey: you have outgrown %s. Next: %s (level %d-%d). /lazy journey go %d"), s.zone, nxt.zone, nxt.from, nxt.to, i + 1))
             else
-                Print("journey: you have reached the end of it, nice. /lazy journey regenerate plans the rest")
+                Print(L("journey: you have reached the end of it, nice. /lazy journey regenerate plans the rest"))
             end
             return
         end
     end
     local last = segs[#segs]
     if last and level > last.to and level < 60 then
-        Print("journey: you are past the end of it. /lazy journey regenerate makes a new one from your level.")
+        Print(L("journey: you are past the end of it. /lazy journey regenerate makes a new one from your level."))
     end
 end)
 

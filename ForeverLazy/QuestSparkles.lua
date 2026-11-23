@@ -5,6 +5,7 @@
 -- https://www.curseforge.com/wow/addons/forever-loot-sparkles). This is a small re-write of its job inside Forever Lazy.
 -- If that addon is installed too, it does the job and this one stays out of the way.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -64,7 +65,7 @@ addon.QuestSparklesRefresh = function()
         Apply()
     elseif wasOn and not Handled() then
         if not InCombatLockdown() then SetCVar("0") end
-        Print("quest item sparkles: restart the game to remove them (/reload is not enough)")
+        Print(L("quest item sparkles: restart the game to remove them (/reload is not enough)"))
     end
 end
 
@@ -74,7 +75,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
         if a == "off" then db.questSparkles = false elseif a == "on" then db.questSparkles = nil end
-        Print("quest item sparkles: " .. (db.questSparkles == false and "OFF" or "on") .. "  (/lazy sparkles on|off). The game's own sparkle on quest items you can loot."
+        Print(L("quest item sparkles: ") .. (db.questSparkles == false and "OFF" or "on") .. L("  (/lazy sparkles on|off). The game's own sparkle on quest items you can loot.")
             .. (Handled() and " Forever Loot Sparkles is installed, so it does this job." or ""))
         addon.QuestSparklesRefresh()
         return true

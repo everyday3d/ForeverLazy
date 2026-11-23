@@ -3,6 +3,7 @@
 -- says which item and which quest, once per visit.
 --   Shift-drag the button to move it.   Switch it off in the options (Quests).
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local data = ns.data
@@ -136,7 +137,7 @@ local function Build()
             if self.link then GameTooltip:SetHyperlink(self.link) end
             GameTooltip:AddLine(" ")
             GameTooltip:AddLine("Quest: " .. (self.title or ""), 1, 0.82, 0)
-            GameTooltip:AddLine("Click to use it. Shift-drag to move.", 0.5, 1, 0.5)
+            GameTooltip:AddLine(L("Click to use it. Shift-drag to move."), 0.5, 1, 0.5)
             GameTooltip:Show()
         end)
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -163,7 +164,7 @@ local function Apply()
             local now = GetTime()
             if not told[w.qid] or now - told[w.qid] > 90 then
                 told[w.qid] = now
-                Print("use " .. tostring(w.link) .. " here (" .. w.title .. ")")
+                Print(L("use ") .. tostring(w.link) .. L(" here (") .. w.title .. ")")
             end
         else
             b:Hide()

@@ -7,6 +7,7 @@
 --   /lazy data           what we know so far
 --   /lazy data clear     forget it
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -241,23 +242,23 @@ function addon.DataReport()
         if q.xp then withXp = withXp + 1 end
     end
     for _, n in pairs(o.npcs) do if n.spots and #n.spots > 0 then withSpot = withSpot + 1 end end
-    Print(string.format("our own data: %d quests (%d with a giver, %d with a hand-in npc, %d with their XP), %d creatures (%d with a position)",
+    Print(string.format(L("our own data: %d quests (%d with a giver, %d with a hand-in npc, %d with their XP), %d creatures (%d with a position)"),
         quests, withGiver, withTaker, withXp, npcs, withSpot))
     local QDB = api.GetQuestie and api.GetQuestie()
     if QDB and QDB.QuestPointers and QDB.NPCPointers then
         local qq, nn = Count(QDB.QuestPointers), Count(QDB.NPCPointers)
         local both = 0
         for id in pairs(o.quests) do if QDB.QuestPointers[id] then both = both + 1 end end
-        Print(string.format("%s knows %d quests and %d creatures. We have %d of its quests (%.1f%%), plus %d it does not have",
+        Print(string.format(L("%s knows %d quests and %d creatures. We have %d of its quests (%.1f%%), plus %d it does not have"),
             ns.data and ns.data.Source() or "the source", qq, nn, both, qq > 0 and (both / qq * 100) or 0, quests - both))
     end
     local s = ns.data and ns.data.Stats and ns.data.Stats()
     if s then
         local total = s.own + s.source + s.filled + s.set + s.setfill + s.none
-        Print(string.format("lookups since login: %d total - %d from what I saw myself, %d from %s, %d where only my data knew it, %d from our data set (first), %d where only the data set knew it, %d unknown",
+        Print(string.format(L("lookups since login: %d total - %d from what I saw myself, %d from %s, %d where only my data knew it, %d from our data set (first), %d where only the data set knew it, %d unknown"),
             total, s.own, s.source, ns.data.Source(), s.filled, s.set, s.setfill, s.none))
         local q, n, o, i = ns.data.DatasetSize()
-        Print(string.format("our data set holds %d quests, %d creatures, %d objects and %d items. It is asked %s the source.", q, n, o, i,
+        Print(string.format(L("our data set holds %d quests, %d creatures, %d objects and %d items. It is asked %s the source."), q, n, o, i,
             addon.GetDB().dataFirst and "BEFORE" or "after"))
     end
 end
@@ -279,10 +280,10 @@ function addon.DataMisses()
             end
         end
         table.sort(list, function(a, b) return a.n > b.n end)
-        Print(string.format("%s the source does not have: %d asked about, %d of them in our own data", label, #list, held))
+        Print(string.format(L("%s the source does not have: %d asked about, %d of them in our own data"), label, #list, held))
         for i = 1, math.min(8, #list) do
             local x = list[i]
-            Print(string.format("   %d  %s  (asked %d times for '%s')%s", x.id, x.rec and x.rec.name or "?", x.n, tostring(x.field), x.rec and "  ours" or ""))
+            Print(string.format(L("   %d  %s  (asked %d times for '%s')%s"), x.id, x.rec and x.rec.name or "?", x.n, tostring(x.field), x.rec and "  ours" or ""))
         end
     end
     Report("quests", "quests", o.quests)
@@ -295,23 +296,23 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         if a == "questie off" or a == "questie on" then
             addon.GetDB().noQuestie = (a == "questie off")
-            Print("pretending the data source is " .. (a == "questie off" and "NOT installed" or "installed") .. ". Type /reload to apply.")
+            Print(L("pretending the data source is ") .. (a == "questie off" and "NOT installed" or "installed") .. L(". Type /reload to apply."))
         elseif a == "verify" then
             addon.capture = addon.capture
             for _, l in ipairs(ns.data.Verify(300)) do Print(l) end
         elseif a == "first on" or a == "first off" then
             addon.GetDB().dataFirst = (a == "first on")
-            Print("our own data set is asked " .. (a == "first on" and "BEFORE" or "after") .. " the source (Questie). /lazy data verify compares the two.")
+            Print(L("our own data set is asked ") .. (a == "first on" and "BEFORE" or "after") .. L(" the source (Questie). /lazy data verify compares the two."))
         elseif a == "misses" or a == "missing" then
             addon.DataMisses()
         elseif a == "off" or a == "on" then
             local db = addon.GetDB()
             db.useOwnData = (a == "on")
-            Print("using our own data " .. (a == "on" and "on: it is asked first for names and levels, and fills what the source does not know" or "off: only the source is used"))
+            Print(L("using our own data ") .. (a == "on" and "on: it is asked first for names and levels, and fills what the source does not know" or "off: only the source is used"))
         elseif a == "clear" or a == "reset" then
             local root = addon.GetRoot and addon.GetRoot()
             if root then root.own = nil end
-            Print("our own data forgotten")
+            Print(L("our own data forgotten"))
         else
             addon.DataReport()
         end

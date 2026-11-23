@@ -1,6 +1,7 @@
 -- Report window: the output of debug and report commands (/lazy data, moblevels, check, why, ...) shown in a window you can
 -- scroll, resize, and copy from, instead of chat that scrolls by.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 
 local function DB() return addon.GetDB() end
@@ -39,7 +40,7 @@ local function Build()
     f.title:SetPoint("TOPLEFT", 14, -12)
     f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     f.hint:SetPoint("TOPLEFT", f.title, "BOTTOMLEFT", 0, -3)
-    f.hint:SetText("Click in the text, then Ctrl+A and Ctrl+C to copy it. Drag the corner to resize.")
+    f.hint:SetText(L("Click in the text, then Ctrl+A and Ctrl+C to copy it. Drag the corner to resize."))
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 2)
     local scroll = CreateFrame("ScrollFrame", "ForeverLazy_ReportScroll", f, "UIPanelScrollFrameTemplate")

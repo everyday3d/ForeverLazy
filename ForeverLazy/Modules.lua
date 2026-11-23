@@ -1,6 +1,7 @@
 -- Modules: every part of the addon can be switched off in the options (Modules at the top).
 -- A module that is off does nothing, and its commands say so. This file loads last so it can stand in front of all of them.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -64,7 +65,7 @@ function addon:HandleExtraCommand(cmd, rest)
     if c == "class" and ((rest or ""):lower():gsub("%s*%d+$", "")):match("^%s*trainer") then key = "services" end
     if not key and api.IsServiceCommand and api.IsServiceCommand(cmd, rest) then key = "services" end
     if key and not addon.ModuleOn(key) then
-        Print(string.format("%s is switched off. Turn it on in the options, under Modules.", LABEL[key] or key))
+        Print(string.format(L("%s is switched off. Turn it on in the options, under Modules."), LABEL[key] or key))
         return true
     end
     if prev then return prev(self, cmd, rest) end
@@ -124,7 +125,7 @@ function addon.ApplyPreset(name)
     elseif PRESETS[name] then
         for _, k in ipairs(PRESETS[name]) do set[k] = true end
     else
-        Print("presets: minimal, leveler, duo, full")
+        Print(L("presets: minimal, leveler, duo, full"))
         return
     end
     db.modules = {}
@@ -133,7 +134,7 @@ function addon.ApplyPreset(name)
     addon.ModulesChanged()
     local on = {}
     for _, m in ipairs(addon.MODULES) do if set[m[1]] then on[#on + 1] = m[1] end end
-    Print(string.format("preset %s: %d modules on (%s)", name, #on, table.concat(on, ", ")))
+    Print(string.format(L("preset %s: %d modules on (%s)"), name, #on, table.concat(on, ", ")))
 end
 
 local prevPreset = addon.HandleExtraCommand
@@ -169,7 +170,7 @@ function addon.CheckInstall()
         { "levelling guide (Guide.lua)", addon.ToggleGuide }, { "damage meter (Meter.lua)", addon.MeterSet }, { "XP hot spots", addon.XPHotSpots }, { "arrow choice", addon.ArrowTarget },
         { "menu and buttons (UI.lua)", addon.ShowMenu }, { "tour and settings sharing (Help.lua)", addon.StartTour },
     }
-    local FILES = { "Data.lua", "ForeverLazy.lua", "Report.lua", "Options.lua", "Extras.lua", "ExtrasTools.lua", "PlanDetail.lua", "StepWindow.lua", "PlanMenus.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
+    local FILES = { "Data.lua", "ForeverLazy.lua", "Locale.lua", "Report.lua", "Options.lua", "Extras.lua", "ExtrasTools.lua", "PlanDetail.lua", "StepWindow.lua", "PlanMenus.lua", "Books.lua", "Pet.lua", "Flight.lua", "NextZone.lua", "Dungeons.lua", "Bag.lua",
         "ClassQuests.lua", "Boats.lua", "Services.lua", "FlightData.lua", "Travel.lua", "Party.lua", "Quests.lua", "PlanWindow.lua", "Journey.lua",
         "Community.lua", "Crafting.lua", "Inventory.lua", "Hive.lua", "Live.lua", "Gather.lua", "Nodes.lua", "Protect.lua", "GuardPoi.lua", "PlanGuard.lua", "Tracker.lua", "Autopilot.lua", "Couch.lua", "TalentGuide.lua", "Talents.lua", "MobLevels.lua", "Learn.lua", "DataExport.lua", "Availability.lua", "Townsfolk.lua", "Independence.lua", "QuestTooltips.lua", "PartyProgress.lua", "QuestieLink.lua", "QuestMap.lua", "QuestSounds.lua", "QuestInfo.lua", "QuestSearch.lua", "QuestHistory.lua", "HandInPing.lua", "NewZones.lua", "ChatTweaks.lua", "QuestPlates.lua", "BagWindow.lua", "RankUp.lua", "NameplateCasts.lua", "QuestItems.lua", "Version.lua", "Go.lua", "LazyMode.lua", "UI.lua", "Help.lua", "Guide.lua", "Coach.lua", "Meter.lua", "Modules.lua" }
     for _, f in ipairs(FILES) do
@@ -178,12 +179,12 @@ function addon.CheckInstall()
     for _, p in ipairs(parts) do check("part loaded: " .. p[1], p[2] ~= nil, "its file did not load, check for a Lua error and the .toc list") end
     local fails = 0
     for _, r in ipairs(results) do if not r.ok then fails = fails + 1 end end
-    Print(string.format("check: %d of %d passed. Version %s.", #results - fails, #results,
+    Print(string.format(L("check: %d of %d passed. Version %s."), #results - fails, #results,
         ((C_AddOns and C_AddOns.GetAddOnMetadata) or GetAddOnMetadata)("ForeverLazy", "Version") or "?"))
     for _, r in ipairs(results) do
-        if not r.ok then Print("  |cffff5555FAILED|r " .. r.name .. (r.hint and (" - " .. r.hint) or "")) end
+        if not r.ok then Print(L("  |cffff5555FAILED|r ") .. r.name .. (r.hint and (" - " .. r.hint) or "")) end
     end
-    if fails == 0 then Print("  everything is in place.") end
+    if fails == 0 then Print(L("  everything is in place.")) end
 end
 
 local prevCheck = addon.HandleExtraCommand

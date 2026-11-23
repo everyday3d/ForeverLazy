@@ -2,6 +2,7 @@
 -- at it (where to pick it up, where to hand it in, or the next thing to do for it).
 --   /lazy find <text>     open the search (also in the options)     shift-click a row: put the quest link in chat
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local data = ns.data
@@ -28,11 +29,11 @@ local function PointAt(id, name)
     else
         by = data.Field("quests", id, "startedBy")
     end
-    if type(by) ~= "table" then Print("no place known for " .. tostring(name)) return end
+    if type(by) ~= "table" then Print(L("no place known for ") .. tostring(name)) return end
     local list = {}
     if api.AddNpcs then pcall(api.AddNpcs, list, by[1]) end
     if api.AddObjects then pcall(api.AddObjects, list, by[2]) end
-    if #list == 0 then Print("no place known for " .. tostring(name)) return end
+    if #list == 0 then Print(L("no place known for ") .. tostring(name)) return end
     local hbd = api.hbd
     local px, py, pinst = hbd and hbd:GetPlayerWorldPosition()
     local best, bd
@@ -123,7 +124,7 @@ local function Build()
     bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.96)
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     f.title:SetPoint("TOPLEFT", 14, -12)
-    f.title:SetText("Find a quest")
+    f.title:SetText(L("Find a quest"))
     local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
     close:SetPoint("TOPRIGHT", 2, 2)
     local edit = CreateFrame("EditBox", "ForeverLazy_QuestSearchBox", f, "InputBoxTemplate")
@@ -136,7 +137,7 @@ local function Build()
     f.edit = edit
     f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
     f.hint:SetPoint("LEFT", edit, "RIGHT", 10, 0)
-    f.hint:SetText("click: point the arrow   shift-click: link")
+    f.hint:SetText(L("click: point the arrow   shift-click: link"))
     f.count = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.count:SetPoint("BOTTOMLEFT", 16, 14)
     f.rows = {}

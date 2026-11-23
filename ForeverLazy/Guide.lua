@@ -4,6 +4,7 @@
 --   /lazy guide bigger      bigger text (also: smaller, tv, normal)
 -- The whole window scales, so it can be made big enough to read from the couch on a TV.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -15,7 +16,7 @@ local W, H = 540, 620
 
 local function Run(cmd, rest)
     local ok, err = pcall(addon.HandleExtraCommand, addon, cmd, rest)
-    if not ok then Print("error in /" .. cmd .. ": " .. tostring(err)) end
+    if not ok then Print(L("error in /") .. cmd .. ": " .. tostring(err)) end
 end
 
 local function GetScale()
@@ -93,9 +94,9 @@ local function Row(i)
     r.detail = win.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     r.detail:SetJustifyH("LEFT"); r.detail:SetJustifyV("TOP")
     r.go = CreateFrame("Button", nil, win.content, "UIPanelButtonTemplate")
-    r.go:SetSize(130, 22); r.go:SetText("Take me there")
+    r.go:SetSize(130, 22); r.go:SetText(L("Take me there"))
     r.plan = CreateFrame("Button", nil, win.content, "UIPanelButtonTemplate")
-    r.plan:SetSize(130, 22); r.plan:SetText("Plan this zone")
+    r.plan:SetSize(130, 22); r.plan:SetText(L("Plan this zone"))
     rows[i] = r
     return r
 end
@@ -213,7 +214,7 @@ local function Build()
 
     f.title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")
     f.title:SetPoint("TOPLEFT", 16, -14)
-    f.title:SetText("Levelling guide")
+    f.title:SetText(L("Levelling guide"))
     f.head = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.head:SetPoint("TOPLEFT", 16, -44)
     f.head:SetWidth(W - 32); f.head:SetJustifyH("LEFT")
@@ -230,7 +231,7 @@ local function Build()
     tv:SetScript("OnClick", function() SetScaleTo(SCALE_TV) end)
     tv:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_BOTTOM")
-        GameTooltip:AddLine("Big text for the couch and TV")
+        GameTooltip:AddLine(L("Big text for the couch and TV"))
         GameTooltip:Show()
     end)
     tv:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -248,16 +249,16 @@ local function Build()
     scroll:SetScrollChild(f.content)
     f.empty = f.content:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.empty:SetPoint("TOPLEFT", 0, 0); f.empty:SetWidth(W - 70); f.empty:SetJustifyH("LEFT")
-    f.empty:SetText("There is no journey yet. Click Rebuild to make one from your level, or wait until the game has loaded the zone data.")
+    f.empty:SetText(L("There is no journey yet. Click Rebuild to make one from your level, or wait until the game has loaded the zone data."))
 
     local now = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    now:SetSize(150, 26); now:SetText("Do the next thing"); now:SetPoint("BOTTOMLEFT", 16, 16)
+    now:SetSize(150, 26); now:SetText(L("Do the next thing")); now:SetPoint("BOTTOMLEFT", 16, 16)
     now:SetScript("OnClick", function() Run("now") end)
     local rebuild = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    rebuild:SetSize(100, 26); rebuild:SetText("Rebuild"); rebuild:SetPoint("LEFT", now, "RIGHT", 6, 0)
+    rebuild:SetSize(100, 26); rebuild:SetText(L("Rebuild")); rebuild:SetPoint("LEFT", now, "RIGHT", 6, 0)
     rebuild:SetScript("OnClick", function() Run("journey", "regenerate"); Refresh() end)
     local heat = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
-    heat:SetSize(120, 26); heat:SetText("XP hot spots"); heat:SetPoint("LEFT", rebuild, "RIGHT", 6, 0)
+    heat:SetSize(120, 26); heat:SetText(L("XP hot spots")); heat:SetPoint("LEFT", rebuild, "RIGHT", 6, 0)
     heat:SetScript("OnClick", function() Run("xpmap") end)
 
     table.insert(UISpecialFrames, "ForeverLazy_Guide")
@@ -281,13 +282,13 @@ function addon:HandleExtraCommand(cmd, rest)
     if (cmd or ""):lower() == "guide" then
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         if a == "bigger" or a == "larger" or a == "+" then
-            SetScaleTo(GetScale() + 0.2); Print(string.format("guide text size %d%%", math.floor(GetScale() * 100 + 0.5)))
+            SetScaleTo(GetScale() + 0.2); Print(string.format(L("guide text size %d%%"), math.floor(GetScale() * 100 + 0.5)))
         elseif a == "smaller" or a == "-" then
-            SetScaleTo(GetScale() - 0.2); Print(string.format("guide text size %d%%", math.floor(GetScale() * 100 + 0.5)))
+            SetScaleTo(GetScale() - 0.2); Print(string.format(L("guide text size %d%%"), math.floor(GetScale() * 100 + 0.5)))
         elseif a == "tv" or a == "couch" then
-            SetScaleTo(SCALE_TV); Print("guide text size set for the TV")
+            SetScaleTo(SCALE_TV); Print(L("guide text size set for the TV"))
         elseif a == "normal" or a == "reset" then
-            SetScaleTo(1); Print("guide text size back to normal")
+            SetScaleTo(1); Print(L("guide text size back to normal"))
         else
             Toggle()
         end

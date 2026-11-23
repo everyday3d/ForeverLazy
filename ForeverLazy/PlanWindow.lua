@@ -3,6 +3,7 @@
 --   click a stop to do it next, right-click to skip that quest (or drop the stop)
 -- The map draws a gold line from you through every stop of your plan.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -110,14 +111,14 @@ local function Build()
     f.title:SetPoint("TOPLEFT", 10, -8)
     f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.hint:SetPoint("TOPRIGHT", -28, -10)
-    f.hint:SetText("|cff888888click: do next  right-click: skip|r")
+    f.hint:SetText(L("|cff888888click: do next  right-click: skip|r"))
     local close = CreateFrame("Button", nil, f)
     close:SetSize(18, 18); close:SetPoint("TOPRIGHT", -4, -4)
     close.fs = close:CreateFontString(nil, "OVERLAY", "GameFontNormal"); close.fs:SetPoint("CENTER"); close.fs:SetText("x")
     close:SetScript("OnClick", function() f:Hide() end)
     f.empty = f:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     f.empty:SetPoint("TOPLEFT", 12, -28)
-    f.empty:SetText("No plan yet. /lazy plan builds one.")
+    f.empty:SetText(L("No plan yet. /lazy plan builds one."))
     f.rows = {}
     for i = 1, ROWS do
         local b = CreateFrame("Button", nil, f)
@@ -597,7 +598,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local db = DB()
         local a = (rest or ""):lower()
         if a == "on" then db.xpHeat = true elseif a == "off" then db.xpHeat = false else db.xpHeat = not db.xpHeat end
-        Print("XP hot spots on the world map " .. (db.xpHeat and "on (open the map)" or "off"))
+        Print(L("XP hot spots on the world map ") .. (db.xpHeat and "on (open the map)" or "off"))
         if addon.DrawXPHeat then addon.DrawXPHeat() end
         if addon.RefreshOptions then addon.RefreshOptions() end
         return true

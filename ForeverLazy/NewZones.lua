@@ -4,6 +4,7 @@
 -- those quests start. It then adds them to the same list, so the journey, the coach and /lazy nextzone use them.
 --   /lazy zones     what it found
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local data = ns.data
@@ -157,7 +158,7 @@ function addon:HandleExtraCommand(cmd, rest)
         for _, d in ipairs(foundDungeons) do lines[#lines + 1] = string.format("  %s: levels %d-%d", d.name, d.from, d.to) end
         lines[#lines + 1] = ""
         lines[#lines + 1] = "Rebuild the levelling guide (the Rebuild button) to use them."
-        if addon.ReportWindow then addon.ReportWindow("New zones", lines) else for _, l in ipairs(lines) do Print(l) end end
+        if addon.ReportWindow then addon.ReportWindow(L("New zones"), lines) else for _, l in ipairs(lines) do Print(l) end end
         return true
     end
     if prev then return prev(self, cmd, rest) end

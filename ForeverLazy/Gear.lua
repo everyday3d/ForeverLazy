@@ -6,6 +6,7 @@
 -- penetration is capped low on purpose: it tops the raid lists but does nothing for levelling.
 -- addon.GearGain(link, slots, equipLoc, ilvl) -> gain, note   (nil when the item gives nothing to compare)
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local Print = addon.Print
 
@@ -267,7 +268,7 @@ function addon.GearItemStats(link)
         stats, un = addon.GearParseLines(lines)
         if not stats and not warnedLanguage and GetLocale and GetLocale() ~= "enUS" then
             warnedLanguage = true
-            Print("gear advisor: item stats can only be read from the tooltip in English, so on this game language it compares item levels when the game gives no stat table")
+            Print(L("gear advisor: item stats can only be read from the tooltip in English, so on this game language it compares item levels when the game gives no stat table"))
         end
         source = "tooltip"
         unknown = {}
@@ -405,9 +406,9 @@ function addon:HandleExtraCommand(cmd, rest)
         end        local spec = addon.GearSpec()
         local top = {}
         for i, s in ipairs(spec.priority) do top[#top + 1] = s end
-        Print(string.format("gear: scoring as %s %s%s. Stat order: %s. Hit cap %d%%.", spec.name, LABEL[spec.kind] or spec.kind,
+        Print(string.format(L("gear: scoring as %s %s%s. Stat order: %s. Hit cap %d%%."), spec.name, LABEL[spec.kind] or spec.kind,
             spec.forced and " (set by hand in Options)" or " (from your talents)", table.concat(top, " > "), spec.cap))
-        Print("  /lazy gear stats shows the stat names the game gives for your gear (to check nothing is missed).")
+        Print(L("  /lazy gear stats shows the stat names the game gives for your gear (to check nothing is missed)."))
         return true
     end
     if prev then return prev(self, cmd, rest) end

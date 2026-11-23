@@ -9,6 +9,7 @@
 --   /lazy windows: which windows were found and what failed (for bug reports)
 -- Everything sits beside or below the game's windows, never on top of their own buttons.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -224,7 +225,7 @@ local function SetArrowSource(key)
     db.arrowSource = key
     if key == "mine" then db.ownQuests = true end          -- needed to work out my nearest objective
     if key == "rxp" then db.rxpListen = true end           -- needed to hear my friend's target
-    Print("the arrow now points at: " .. ArrowLabel(key))
+    Print(L("the arrow now points at: ") .. ArrowLabel(key))
     if addon.RefreshOptions then addon.RefreshOptions() end
 end
 local function ArrowChoices(withBack)
@@ -369,10 +370,10 @@ local function HookMinimap()
     end)
     b:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Forever Lazy")
-        GameTooltip:AddLine("Left-click: do the next thing", 1, 1, 1)
-        GameTooltip:AddLine("Right-click: the menu", 1, 1, 1)
-        GameTooltip:AddLine("Shift-click: options", 1, 1, 1)
+        GameTooltip:AddLine(L("Forever Lazy"))
+        GameTooltip:AddLine(L("Left-click: do the next thing"), 1, 1, 1)
+        GameTooltip:AddLine(L("Right-click: the menu"), 1, 1, 1)
+        GameTooltip:AddLine(L("Shift-click: options"), 1, 1, 1)
         GameTooltip:Show()
     end)
     built.minimap = "ForeverLazy_MinimapButton"
@@ -467,11 +468,11 @@ local function BuildQuestLog()
         { "Plan my route", 110, function() addon:PlanRoute() end },
         { "Do this next", 100, function()
             local id, title = SelectedQuest()
-            if id then addon:FocusQuest(id, title) else Print("select a quest in the log first") end
+            if id then addon:FocusQuest(id, title) else Print(L("select a quest in the log first")) end
         end },
         { "Skip this", 80, function()
             local id, title = SelectedQuest()
-            if id and addon.SkipQuest then addon.SkipQuest(id, title) else Print("select a quest in the log first") end
+            if id and addon.SkipQuest then addon.SkipQuest(id, title) else Print(L("select a quest in the log first")) end
         end },
     })
 end
@@ -571,7 +572,7 @@ local function BuildCraftPanel(frame)
     local bg = p:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(); bg:SetColorTexture(0.05, 0.05, 0.08, 0.92)
     local t = p:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    t:SetPoint("TOPLEFT", 10, -8); t:SetText("Forever Lazy: craft plan")
+    t:SetPoint("TOPLEFT", 10, -8); t:SetText(L("Forever Lazy: craft plan"))
     -- close it; it comes back the next time the crafting window opens, or when a different recipe is selected
     local closeBtn = CreateFrame("Button", nil, p, "UIPanelCloseButton")
     closeBtn:SetSize(22, 22); closeBtn:SetPoint("TOPRIGHT", 2, 2)
@@ -593,14 +594,14 @@ local function BuildCraftPanel(frame)
     -- opens the recommended recipe in the window itself: the game scrolls the list to it and shows it on the right
     local bS = MakeButton(p, "Show it", 58, function()
         local best = addon.CraftHighlights and addon.CraftHighlights()
-        if not best then Print("click Plan it first, so I know which recipe to show"); return end
+        if not best then Print(L("click Plan it first, so I know which recipe to show")); return end
         local shown
         if C_TradeSkillUI and C_TradeSkillUI.OpenRecipe then shown = pcall(C_TradeSkillUI.OpenRecipe, best) end
         if not shown and _G.TradeSkillFrame and TradeSkillFrame.SelectRecipe then shown = pcall(TradeSkillFrame.SelectRecipe, TradeSkillFrame, best) end
         if not shown and _G.ProfessionsFrame and ProfessionsFrame.CraftingPage and ProfessionsFrame.CraftingPage.SelectRecipe then
             shown = pcall(ProfessionsFrame.CraftingPage.SelectRecipe, ProfessionsFrame.CraftingPage, best)
         end
-        if not shown then Print("this window would not open that recipe for me"); return end
+        if not shown then Print(L("this window would not open that recipe for me")); return end
         -- put the planned number in the window's own quantity box (it stops at what you can make)
         local _, crafts = addon.CraftHighlights()
         if crafts and C_Timer then
@@ -622,7 +623,7 @@ local function BuildCraftPanel(frame)
     b2:SetPoint("LEFT", b1, "RIGHT", 4, 0)
     local b3 = MakeButton(p, "Clear", 46, function()
         if addon.ClearWaypoints then pcall(addon.ClearWaypoints, addon) end
-        Print("arrow cleared")
+        Print(L("arrow cleared"))
     end)
     b3:SetPoint("LEFT", b2, "RIGHT", 4, 0)
     local acc = 0
@@ -653,7 +654,7 @@ local craftWarned = {}
 local function CraftWarn(key, text)
     if craftWarned[key] then return end
     craftWarned[key] = true
-    Print("craft panel: " .. text)
+    Print(L("craft panel: ") .. text)
 end
 
 local function ShowCraft(names)
@@ -1030,7 +1031,7 @@ local function ShowZoneToast(zoneId)
         f.text:SetPoint("TOP", 0, -12); f.text:SetWidth(380)
         f.sub = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         f.sub:SetPoint("TOP", f.text, "BOTTOM", 0, -4); f.sub:SetWidth(380)
-        f.sub:SetText("Plan the quests you can do here, or leave it if you are just passing through?")
+        f.sub:SetText(L("Plan the quests you can do here, or leave it if you are just passing through?"))
         local plan = MakeButton(f, "Plan it", 90, function()
             f:Hide()
             if addon.PlanRoute then addon:PlanRoute() end
@@ -1175,31 +1176,31 @@ local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
     if (cmd or ""):lower() == "windows" then
         local function has(n) return _G[n] and "yes" or "no" end
-        Print("buttons in the windows: " .. (On() and "on" or "OFF in the options"))
-        Print(string.format("  windows: map %s, quest log %s, quest map %s, old profession %s, new profession %s, bank %s, flight map %s, new flight map %s, gossip %s, minimap button %s",
+        Print(L("buttons in the windows: ") .. (On() and "on" or "OFF in the options"))
+        Print(string.format(L("  windows: map %s, quest log %s, quest map %s, old profession %s, new profession %s, bank %s, flight map %s, new flight map %s, gossip %s, minimap button %s"),
             has("WorldMapFrame"), has("QuestLogFrame"), has("QuestMapFrame"), has("TradeSkillFrame"), has("ProfessionsFrame"),
             has("BankFrame"), has("TaxiFrame"), has("FlightMapFrame"), has("GossipFrame"), has("ForeverLazy_MinimapButton")))
-        Print(string.format("  old profession API %s, new profession API %s",
+        Print(string.format(L("  old profession API %s, new profession API %s"),
             GetTradeSkillLine and "yes" or "no", (C_TradeSkillUI and C_TradeSkillUI.GetAllRecipeIDs) and "yes" or "no"))
         local d = addon.CraftDiag
         if d then
-            Print(string.format("  last recipe read: profession %s, %s recipes listed, %s learned read%s", tostring(d.profession), tostring(d.total or "?"),
+            Print(string.format(L("  last recipe read: profession %s, %s recipes listed, %s learned read%s"), tostring(d.profession), tostring(d.total or "?"),
                 tostring(d.recipes or 0), d.note and (" - " .. d.note) or ""))
         else
-            Print("  no recipe read yet (open a profession window)")
+            Print(L("  no recipe read yet (open a profession window)"))
         end
         local h = addon.HighlightDiag
         if h then
-            Print(string.format("  recipe list: window %s, source %s, rows seen %s, plan pick %s, matched %s, sample ids %s%s",
+            Print(string.format(L("  recipe list: window %s, source %s, rows seen %s, plan pick %s, matched %s, sample ids %s%s"),
                 tostring(h.window), tostring(h.source), tostring(h.rows), tostring(h.best),
                 tostring(h.matched), tostring(h.sampleIds), h.note and (" - " .. h.note) or ""))
         end
         local any
-        for k, v in pairs(built) do Print("  built on " .. k .. ": " .. tostring(v)); any = true end
-        if not any then Print("  nothing built yet (open a window, then try again)") end
+        for k, v in pairs(built) do Print(L("  built on ") .. k .. ": " .. tostring(v)); any = true end
+        if not any then Print(L("  nothing built yet (open a window, then try again)")) end
         local bad
-        for k, v in pairs(problems) do Print("  |cffff5555problem|r " .. k .. ": " .. v); bad = true end
-        if not bad then Print("  no errors recorded") end
+        for k, v in pairs(problems) do Print(L("  |cffff5555problem|r ") .. k .. ": " .. v); bad = true end
+        if not bad then Print(L("  no errors recorded")) end
         return true
     end
     if prev then return prev(self, cmd, rest) end

@@ -4,6 +4,7 @@
 --   addon.QuestIndex()        the list of all quests   (built a little at a time, so the game never stutters)
 --   /lazy links on|off        quest link tooltips
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local data = ns.data
@@ -155,7 +156,7 @@ local function AddInfo(tt, link)
     if not (ok and type(lines) == "table") then return end
     tt:AddLine(" ")
     for _, l in ipairs(lines) do tt:AddLine(l, 1, 1, 1) end
-    tt:AddLine("Forever Lazy", 0.5, 0.5, 0.5)
+    tt:AddLine(L("Forever Lazy"), 0.5, 0.5, 0.5)
     tt:Show()
 end
 
@@ -228,7 +229,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         local db = DB()
         if a == "off" then db.questLinkTooltips = false elseif a == "on" then db.questLinkTooltips = nil end
-        Print("quest link tooltips: " .. (db.questLinkTooltips == false and "OFF" or "on") .. "  (/lazy links on|off)")
+        Print(L("quest link tooltips: ") .. (db.questLinkTooltips == false and "OFF" or "on") .. L("  (/lazy links on|off)"))
         return true
     end
     if prev then return prev(self, cmd, rest) end

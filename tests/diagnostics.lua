@@ -9,6 +9,7 @@ addon = { Print = function() end, GetDB = function() return db end, ReportWindow
     ArrowTarget = function() addon.arrowWhy = "a hand-in close by"; return { name = "Turn in: X", x = 10, y = 20 } end,
     GearSpec = function() return { name = "Retribution", kind = "melee" } end }
 local ns = { addon = addon }
+ns.L = function(t) return t end
 
 local scripts = {}
 local frameMT = { __index = function() return function() end end }

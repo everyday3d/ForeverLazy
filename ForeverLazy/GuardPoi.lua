@@ -2,6 +2,7 @@
 -- The game answers with a red flag on the map. This catches that flag, puts the arrow on it as the next stop whether the
 -- plan is on or off, and clears it again when you arrive. A new question replaces the last answer.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -102,7 +103,7 @@ tick:SetScript("OnUpdate", function(_, dt)
         if C_Timer then
             C_Timer.After(1, function()
                 local cur = DB().waypoints[1]
-                if cur == w then addon:RemoveWaypoint(1); Print("arrived at " .. tostring(w.name)) end
+                if cur == w then addon:RemoveWaypoint(1); Print(L("arrived at ") .. tostring(w.name)) end
             end)
         else
             addon:RemoveWaypoint(1)

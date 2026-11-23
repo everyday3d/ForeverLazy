@@ -7,6 +7,7 @@
 -- Spots and directions are from the Forever guides (method.gg, kami-labs.fr); the guides disagree a little on
 -- the Stonetalon camp, so that one has its trail start listed too.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local Print = addon.Print
@@ -203,8 +204,8 @@ local function Refresh()
         lastIdx = idx
         local step = idx and Steps()[idx]
         if step then
-            Print(string.format("sleeping bag, step %d of 6: %s", idx, step.title))
-            Print("  /lazy bag  for the way there")
+            Print(string.format(L("sleeping bag, step %d of 6: %s"), idx, step.title))
+            Print(L("  /lazy bag  for the way there"))
         end
     end
     Place()
@@ -240,37 +241,37 @@ function addon:HandleExtraCommand(cmd, rest)
     if rest == "start" then
         st.started, st.done = true, nil
         lastIdx = nil
-        Print("sleeping bag chain started, I will guide you")
+        Print(L("sleeping bag chain started, I will guide you"))
         Refresh()
     elseif rest == "done" then
         st.done = true
         Place()
-        Print("sleeping bag chain marked as done")
+        Print(L("sleeping bag chain marked as done"))
     elseif rest == "reset" then
         st.started, st.done = nil, nil
         lastIdx = nil
         Place()
-        Print("sleeping bag chain reset")
+        Print(L("sleeping bag chain reset"))
     elseif rest == "off" then
         db.bagGuide = false
         Place()
-        Print("sleeping bag guide off (/lazy bag on turns it back on)")
+        Print(L("sleeping bag guide off (/lazy bag on turns it back on)"))
     elseif rest == "on" then
         db.bagGuide = true
         Refresh()
-        Print("sleeping bag guide on")
+        Print(L("sleeping bag guide on"))
     elseif rest == "all" then
-        Print("Cozy Sleeping Bag chain, " .. ((UnitFactionGroup and UnitFactionGroup("player")) or "Alliance") .. ":")
+        Print(L("Cozy Sleeping Bag chain, ") .. ((UnitFactionGroup and UnitFactionGroup("player")) or "Alliance") .. ":")
         for i, s in ipairs(steps) do Print("  " .. Describe(i, s)) end
     else
         local idx = Current()
         if not idx then
-            Print("the sleeping bag chain is not under way. /lazy bag start begins it, /lazy bag all lists the steps")
+            Print(L("the sleeping bag chain is not under way. /lazy bag start begins it, /lazy bag all lists the steps"))
             return true
         end
         local step = steps[idx]
         Print(Describe(idx, step))
-        Print("  way: " .. step.way)
+        Print(L("  way: ") .. step.way)
         Place(true)
     end
     return true

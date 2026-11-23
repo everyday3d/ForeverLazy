@@ -1,6 +1,7 @@
 -- The step window: the plan as numbered steps, one thing at a time.
 -- Split out of Extras.lua.
 local ADDON, ns = ...
+local L = ns.L
 local addon = ns.addon
 local api = ns.api
 local hbd = api.hbd
@@ -186,7 +187,7 @@ local function BuildStepWindow()
     f.content:SetPoint("TOPLEFT", 8, -28); f.content:SetSize(272, 20)
     f.empty = f:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     f.empty:SetPoint("TOPLEFT", 8, -30); f.empty:SetWidth(272); f.empty:SetJustifyH("LEFT")
-    f.empty:SetText("No plan yet. /lazy plan or /lazy level makes one.")
+    f.empty:SetText(L("No plan yet. /lazy plan or /lazy level makes one."))
     -- drag the corner to resize; the size is remembered. Shift + right-click on the title goes back to automatic height.
     local grip = CreateFrame("Button", nil, f)
     grip:SetSize(16, 16); grip:SetPoint("BOTTOMRIGHT", -2, 2)

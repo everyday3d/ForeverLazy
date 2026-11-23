@@ -4,6 +4,7 @@
 -- and at the party member who sent the step.  RestedXP does NOT need to be installed on this client.
 
 local ADDON, ns = ...
+local L = ns.L
 local PREFIX = "RXPGComms"
 -- item and bag functions: newer clients moved them into C_Item / C_Container, so bring the old names back when they are missing
 if C_Item then
@@ -621,7 +622,7 @@ function addon:SetStepText(sender, text)
 
     if sender and previous ~= state.stepText and state.stepText ~= "" then
         if db.alertChat then
-            Print(string.format("|cffffd100%s|r: %s", state.friend or "Friend", state.stepLines[1] or ""))
+            Print(string.format(L("|cffffd100%s|r: %s"), state.friend or "Friend", state.stepLines[1] or ""))
         end
         if db.alertSound then
             PlayAlert((_G.SOUNDKIT and _G.SOUNDKIT.TELL_MESSAGE) or 3081)
@@ -656,7 +657,7 @@ addon:RegisterComm(PREFIX, "OnComm")
 
 function addon:SelectFriend(name, pin)
     local f = name and state.friends[name]
-    if not f then Print("no step received from " .. tostring(name)); return end
+    if not f then Print(L("no step received from ") .. tostring(name)); return end
     state.pinned = pin and name or nil
     self:SetStepText(name, f.text)
 end
@@ -665,13 +666,13 @@ function addon:CycleFriend()
     local names = {}
     for n in pairs(state.friends) do names[#names + 1] = n end
     table.sort(names)
-    if #names < 2 then Print("only one friend has sent a step so far"); return end
+    if #names < 2 then Print(L("only one friend has sent a step so far")); return end
     local nextName = names[1]
     for i, n in ipairs(names) do
         if n == state.friend then nextName = names[i % #names + 1]; break end
     end
     self:SelectFriend(nextName, true)
-    Print("following " .. nextName)
+    Print(L("following ") .. nextName)
 end
 
 function addon:PingFriend()
@@ -828,7 +829,7 @@ local function UpdateQuestArrows(show)
     local f1 = questArrows[1]
     f1:Show()
     if not QuestieReady() then
-        f1.arrow:Hide(); f1.title:SetText("Quest arrow needs Questie"); f1.sub:SetText("")
+        f1.arrow:Hide(); f1.title:SetText(L("Quest arrow needs Questie")); f1.sub:SetText("")
         for i = 2, 3 do questArrows[i]:Hide() end
         return
     end
@@ -842,7 +843,7 @@ local function UpdateQuestArrows(show)
     local chosen = state.chosen
     if #chosen == 0 then
         f1.arrow:Hide()
-        f1.title:SetText("No map spot for this step")
+        f1.title:SetText(L("No map spot for this step"))
         f1.sub:SetText("|cffaaaaaa" .. (state.stepLines[1] or "") .. "|r")
         for i = 2, 3 do questArrows[i]:Hide() end
         return
@@ -877,7 +878,7 @@ local function UpdateFriendArrow(show)
     f:SetAlpha(db.alpha)
     local unit = FindUnit(name)
     if not unit or unit == "player" then
-        f.arrow:Hide(); f.title:SetText(name); f.sub:SetText("|cffaaaaaaNot in your party|r")
+        f.arrow:Hide(); f.title:SetText(name); f.sub:SetText(L("|cffaaaaaaNot in your party|r"))
         return
     end
     local ux, uy, uinst = hbd:GetUnitWorldPosition(unit)
@@ -888,7 +889,7 @@ local function UpdateFriendArrow(show)
             state.stuck = { x = ux, y = uy, instance = uinst, t = GetTime() }
         elseif db.stuckAlert and not s.alerted and GetTime() - s.t > 180 then
             s.alerted = true
-            Print(name .. " hasn't moved for 3 minutes")
+            Print(name .. L(" hasn't moved for 3 minutes"))
         end
         PointAt(f, uinst, ux, uy, name)
         return
@@ -900,7 +901,7 @@ local function UpdateFriendArrow(show)
         PointAt(f, lk.instance, lk.x, lk.y, name, string.format("last seen %ds ago - ", ago))
         return
     end
-    f.arrow:Hide(); f.title:SetText(name); f.sub:SetText("|cffaaaaaaToo far away to track|r")
+    f.arrow:Hide(); f.title:SetText(name); f.sub:SetText(L("|cffaaaaaaToo far away to track|r"))
 end
 
 local wpArrived
@@ -939,7 +940,7 @@ local function UpdateWaypointArrow(show)
     if db.arrowWhy ~= false and addon.arrowWhy and at then
         detail = (detail and (detail .. " ") or "") .. "|cff999999(" .. addon.arrowWhy .. ")|r"
     end
-    local dist = PointAt(f, wp.instance, wp.x, wp.y, wp.name, detail and ("|cffffffff" .. detail .. "|r\n") or nil)
+    local dist = PointAt(f, wp.instance, wp.x, wp.y, ns.LocalizeLabel(wp.name), detail and ("|cffffffff" .. detail .. "|r\n") or nil)
     if dist and dist < db.arrival and wpArrived ~= wp then
         wpArrived = wp
         if db.arrivalSound then PlayAlert((_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878) end
@@ -956,7 +957,7 @@ local function UpdateWaypointArrow(show)
                 if idx and not (addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(db.waypoints[idx])) then
                     local nm = db.waypoints[idx].name or wp.name
                     addon:RemoveWaypoint(idx)
-                    Print("arrived at " .. tostring(nm))
+                    Print(L("arrived at ") .. tostring(nm))
                 end
             end)
         end
@@ -1079,7 +1080,7 @@ function addon:CycleMode()
     for i, m in ipairs(MODES) do
         if m == db.mode then db.mode = MODES[i % #MODES + 1]; break end
     end
-    Print("mode: " .. db.mode)
+    Print(L("mode: ") .. db.mode)
     self:RefreshPins()
     self:UpdateTomTom()
     if addon.RefreshOptions then addon.RefreshOptions() end
@@ -1120,10 +1121,10 @@ local function MakeMinimapButton()
     mmb:SetScript("OnDragStop", function(self) self:SetScript("OnUpdate", nil) end)
     mmb:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-        GameTooltip:AddLine("Forever Lazy")
-        GameTooltip:AddLine("Left-click: Lazy Mode (do the next thing)", 1, 1, 1)
-        GameTooltip:AddLine("Right-click: menu    Shift-click: options", 1, 1, 1)
-        GameTooltip:AddLine("Drag: move button", 1, 1, 1)
+        GameTooltip:AddLine(L("Forever Lazy"))
+        GameTooltip:AddLine(L("Left-click: Lazy Mode (do the next thing)"), 1, 1, 1)
+        GameTooltip:AddLine(L("Right-click: menu    Shift-click: options"), 1, 1, 1)
+        GameTooltip:AddLine(L("Drag: move button"), 1, 1, 1)
         GameTooltip:Show()
     end)
     mmb:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -1148,19 +1149,19 @@ end
 
 function addon:AddWaypointZone(uiMapId, zx, zy, name)
     local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(zx, zy, uiMapId)
-    if not wx then Print("can't place a waypoint on that map"); return end
+    if not wx then Print(L("can't place a waypoint on that map")); return end
     if not name or name == "" then
         name = string.format("%s %.1f, %.1f", MapName(uiMapId), zx * 100, zy * 100)
     end
     table.insert(db.waypoints, 1, { name = name, instance = inst, x = wx, y = wy, uiMapId = uiMapId, zx = zx, zy = zy })
     wpArrived = nil
-    Print("waypoint set: " .. name)
+    Print(L("waypoint set: ") .. name)
     self:RefreshPins()
 end
 
 function addon:DropWaypointHere(name)
     local zx, zy, uiMapId = hbd:GetPlayerZonePosition()
-    if not zx then Print("can't read your position here"); return end
+    if not zx then Print(L("can't read your position here")); return end
     self:AddWaypointZone(uiMapId, zx, zy, name)
 end
 
@@ -1175,12 +1176,12 @@ function addon:ClearWaypoints()
     db.waypoints = {}
     wpArrived = nil
     self:RefreshPins()
-    Print("all waypoints cleared")
+    Print(L("all waypoints cleared"))
 end
 
 function addon:ListWaypoints()
     if #db.waypoints == 0 then
-        Print("no waypoints. /lazy way <x> <y> [name], /lazy way here [name], or Ctrl+right-click the world map")
+        Print(L("no waypoints. /lazy way <x> <y> [name], /lazy way here [name], or Ctrl+right-click the world map"))
         return
     end
     for i, w in ipairs(db.waypoints) do
@@ -1207,23 +1208,23 @@ function addon:HandleWayCommand(rest)
         self:RemoveWaypoint(1)
     elseif sub == "remove" or sub == "delete" then
         local n = tonumber(arg)
-        if n and db.waypoints[n] then self:RemoveWaypoint(n) else Print("usage: /lazy way remove <number>") end
+        if n and db.waypoints[n] then self:RemoveWaypoint(n) else Print(L("usage: /lazy way remove <number>")) end
     else
         local a, b, name = rest:match("^([%d%.]+)[%s,]+([%d%.]+)%s*(.*)$")
         a, b = tonumber(a), tonumber(b)
         if a and b then
             if a > 1 or b > 1 then a, b = a / 100, b / 100 end
             local uiMapId = hbd:GetPlayerZone()
-            if not uiMapId then Print("can't tell which zone you are in"); return end
+            if not uiMapId then Print(L("can't tell which zone you are in")); return end
             self:AddWaypointZone(uiMapId, a, b, name)
         elseif tonumber(sub) and db.waypoints[tonumber(sub)] then
             local w = table.remove(db.waypoints, tonumber(sub))
             table.insert(db.waypoints, 1, w)
             wpArrived = nil
             self:RefreshPins()
-            Print("active waypoint: " .. w.name)
+            Print(L("active waypoint: ") .. w.name)
         else
-            Print("usage: /lazy way <x> <y> [name] | here [name] | list | <number> | next | remove <n> | clear")
+            Print(L("usage: /lazy way <x> <y> [name] | here [name] | list | <number> | next | remove <n> | clear"))
         end
     end
 end
@@ -1261,7 +1262,7 @@ function _G.ForeverLazy_CycleMode() addon:CycleMode() end
 function _G.ForeverLazy_ToggleOptions() addon:OpenOptions() end
 function _G.ForeverLazy_TogglePanel()
     db.showPanel = not db.showPanel
-    Print("step panel " .. (db.showPanel and "shown" or "hidden"))
+    Print(L("step panel ") .. (db.showPanel and "shown" or "hidden"))
     if addon.RefreshOptions then addon.RefreshOptions() end
 end
 
@@ -1296,7 +1297,7 @@ init:SetScript("OnEvent", function(_, event)
     elseif event == "GROUP_ROSTER_UPDATE" then
         if state.friend and not FindUnit(state.friend) then state.friend = nil end
         if db.followName and not FindUnit(db.followName) then
-            Print(db.followName .. " is no longer in your group, the follow arrow is off")
+            Print(db.followName .. L(" is no longer in your group, the follow arrow is off"))
             db.followName = nil
         end
     end
@@ -1321,17 +1322,17 @@ SlashCmdList["FOREVERLAZY"] = function(msg)
     local cmd, rest = msg:match("^(%S+)%s*(.*)$")
     cmd = cmd and cmd:lower() or ""
     if cmd == "both" or cmd == "quest" or cmd == "friend" or cmd == "off" then
-        db.mode = cmd; Print("mode: " .. cmd); addon:RefreshPins(); addon:UpdateTomTom()
+        db.mode = cmd; Print(L("mode: ") .. cmd); addon:RefreshPins(); addon:UpdateTomTom()
     elseif cmd == "lock" then
-        db.locked = true; Print("arrows locked")
+        db.locked = true; Print(L("arrows locked"))
     elseif cmd == "unlock" then
-        db.locked = false; Print("arrows unlocked - drag them to move")
+        db.locked = false; Print(L("arrows unlocked - drag them to move"))
     elseif cmd == "scale" then
         local s = tonumber(rest)
-        if s and s >= 0.3 and s <= 3 then db.scale = s; addon:ApplyLayout(); Print("scale " .. s)
-        else Print("usage: /lazy scale 0.5 - 3") end
+        if s and s >= 0.3 and s <= 3 then db.scale = s; addon:ApplyLayout(); Print(L("scale ") .. s)
+        else Print(L("usage: /lazy scale 0.5 - 3")) end
     elseif cmd == "reset" then
-        db.pos = DeepCopy(DEFAULTS.pos); db.scale = 1; addon:ApplyLayout(); Print("positions reset")
+        db.pos = DeepCopy(DEFAULTS.pos); db.scale = 1; addon:ApplyLayout(); Print(L("positions reset"))
     elseif cmd == "way" or cmd == "waypoint" then
         addon:HandleWayCommand(rest)
     elseif cmd == "panel" then
@@ -1339,15 +1340,15 @@ SlashCmdList["FOREVERLAZY"] = function(msg)
     elseif cmd == "minimap" then
         db.minimapButton = not db.minimapButton; addon:UpdateMinimapButton()
     elseif cmd == "test" then
-        if rest == "" then Print("usage: /lazy test Accept <quest name>   or   Kill <mob>"); return end
+        if rest == "" then Print(L("usage: /lazy test Accept <quest name>   or   Kill <mob>")); return end
         state.friend = state.friend or UnitName("player")
         addon:SetStepText(nil, rest)
-        Print("simulated step: " .. rest)
+        Print(L("simulated step: ") .. rest)
     elseif cmd == "status" then
-        Print(string.format("mode=%s friend=%s questie=%s index=%d%% groups=%d chosen=%d",
+        Print(string.format(L("mode=%s friend=%s questie=%s index=%d%% groups=%d chosen=%d"),
             db.mode, tostring(state.friend), tostring(QuestieReady() and true or false),
             (state.index.progress or 0) * 100, #state.groups, #state.chosen))
-        if state.stepText then Print("step: " .. state.stepText:gsub("\n", " | ")) end
+        if state.stepText then Print(L("step: ") .. state.stepText:gsub("\n", " | ")) end
         for i, c in ipairs(state.chosen) do Print(i .. ": " .. c.label) end
     elseif cmd == "" or cmd == "options" or cmd == "config" then
         addon:OpenOptions()
@@ -1362,12 +1363,12 @@ SlashCmdList["FOREVERLAZY"] = function(msg)
             elseif lines then
                 for _, l in ipairs(lines) do Print(l) end
             end
-            if not ok then Print("|cffff5555error in /" .. tostring(cmd) .. ":|r " .. tostring(res)); return true end
+            if not ok then Print(L("|cffff5555error in /") .. tostring(cmd) .. ":|r " .. tostring(res)); return true end
             return res
         end)() then
         -- handled in Extras.lua
     else
-        Print("commands: /lazy (options) | both | quest | friend | off | lock | unlock | scale <n> | reset | panel | minimap | way | status | test <text>")
+        Print(L("commands: /lazy (options) | both | quest | friend | off | lock | unlock | scale <n> | reset | panel | minimap | way | status | test <text>"))
     end
 end
 
