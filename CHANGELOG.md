@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.1
+### Fixed
+- **Quest titles in the wrong capitals.** Seven quests showed in Title Case ("Look To The Stars"). They are spelled like the game now: "Look to the Stars" (four quests), "Plea to the Alliance", "Your Place in the World" and "Aid for the Refugees".
+
+### Changed
+- **Fresh quest data** from Questie 12.13.0 (QuestieDB 1.1.5): 3 new quests and 6 new objects, moved creature spawns (about 1,000), updated quest flags (about 150, including repeatable and daily quests), a longer hidden-quest list, and one new quest XP value.
 ## 0.19.0
 This release rolls up everything since 0.17.7.
 

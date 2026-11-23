@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.19.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.19.1-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,11 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.19.0
+## What's new in 0.19.1
+
+- **Fresh quest data** from Questie 12.13.0 (QuestieDB 1.1.5), and seven quest titles spelled the way the game spells them.
+
+## Earlier: 0.19.0
 
 - **Close hand-ins first.** The plan and the arrow hand in a finished quest nearby before anything else, and the arrow says why it points where it does.
 - **Better tracker.** Click opens the quest, shift-click does it next, ctrl-click shares it. Item buttons work again.

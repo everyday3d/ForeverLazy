@@ -277,6 +277,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.19.1", {
+        "FRESH QUEST DATA from Questie 12.13.0 (QuestieDB 1.1.5): new quests and objects, moved creature spawns, and updated quest flags (repeatable and daily quests).",
+        "Seven quest titles that showed in Title Case (Look To The Stars) are spelled like the game now (Look to the Stars).",
+    } },
     { "0.19.0", {
         "ARROW AND PLAN: a finished quest you can hand in CLOSE BY now goes first (not the ones back in town), the arrow clears the stop it points at when you arrive, and the arrow says why it points where it does. A quest you skipped still gets its hand-in when it is close.",
         "THE TRACKER: click a quest to open it in the quest log, shift-click to move the plan and arrow to it, ctrl-click to share it. Quest item buttons work again.",

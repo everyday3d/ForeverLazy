@@ -12,6 +12,10 @@ local FIELDS = {
   objects = { "name","questStarts","questEnds","spawns" },
   items = { "name","npcDrops","objectDrops","vendors" },
 }
+local NAMEFIX = {
+  [174] = "Look to the Stars", [175] = "Look to the Stars", [177] = "Look to the Stars", [181] = "Look to the Stars",
+  [634] = "Plea to the Alliance", [4641] = "Your Place in the World", [94896] = "Aid for the Refugees",
+}
 local FILE = { quests = "Quests", npcs = "Npcs", objects = "Objects", items = "Items" }
 
 local function ser(v)
@@ -53,6 +57,8 @@ for _, kind in ipairs({ "quests", "npcs", "objects", "items" }) do
   local count, bytes = 0, 0
   for _, id in ipairs(ids) do
     local rec = load("return " .. dump[kind][id])()
+    -- a few quest titles come out of the data file in Title Case; the game itself spells them properly (found by /lazy data verify)
+    if kind == "quests" and NAMEFIX[id] then rec[srcIdx.name] = NAMEFIX[id] end
     local vals, last = {}, 0
     for i, name in ipairs(FIELDS[kind]) do
       local v = rec[srcIdx[name]]
