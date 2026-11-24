@@ -1,7 +1,7 @@
 -- Gear advisor: shows which gear is an upgrade for my class and spec (the scoring is in Gear.lua).
 --   a line in item tooltips ("Upgrade: +14 over ...")
 --   a green ^ on upgrades in the bag window and at vendors
---   a small bar with a button that equips an upgrade from my bags (it only equips when I click it)
+--   an optional small bar (off until /lazy gear bar on) with a button that equips an upgrade from my bags (it only equips when I click it)
 --   optional: a chat note when I loot or buy an upgrade
 --   /lazy gear on|off   /lazy gear bar on|off   /lazy gear note on|off
 local ADDON, ns = ...
@@ -11,7 +11,7 @@ local Print = addon.Print
 
 local function DB() return addon.GetDB() end
 local function On() local d = DB(); return d and d.gearAdvisor ~= false and addon.ModuleOn("gear") end
-local function BarOn() local d = DB(); return d and d.gearAdvisor ~= false and d.gearBar ~= false and addon.ModuleOn("gear") end
+local function BarOn() local d = DB(); return d and d.gearAdvisor ~= false and d.gearBar == true and addon.ModuleOn("gear") end
 
 --------------------------------------------------------------------------------
 -- Is this item an upgrade? (cached until my gear or talents change)
@@ -305,8 +305,8 @@ function addon:HandleExtraCommand(cmd, rest)
             db.gearAdvisor = Flag(a) and nil or false
             Print(L("gear advisor: ") .. (db.gearAdvisor == false and "OFF" or "on")); Refresh(); return true
         elseif which == "bar" and Flag(val) ~= nil then
-            db.gearBar = Flag(val) and nil or false
-            Print(L("gear advisor bar: ") .. (db.gearBar == false and "OFF" or "on")); Refresh(); return true
+            db.gearBar = Flag(val) and true or nil
+            Print(L("gear advisor bar: ") .. (db.gearBar == true and "on" or "OFF")); Refresh(); return true
         elseif which == "note" and Flag(val) ~= nil then
             db.gearNote = Flag(val) and true or nil
             Print(L("gear advisor chat note: ") .. (db.gearNote and "on" or "OFF")); return true

@@ -20,7 +20,7 @@
 
 ### A GEAR ADVISOR
 - **Hover any item** and a green line says if it is an upgrade for your class and spec, and by how much. Stat priorities come from the WoW Forever lists for all 27 specs.
-- **A green ^** on upgrades in the bag window and at vendors, and a small **gear bar** with a button that equips an upgrade from your bags when you click it. It never equips by itself.
+- **A green ^** on upgrades in the bag window and at vendors, and an optional **gear bar** (off until you turn it on) with a button that equips an upgrade from your bags when you click it. It never equips by itself.
 - **Quest rewards** get a star on the best pick, scored the same way.
 - **Quest item sparkles** keep the game's own sparkle on quest items you can loot, even after a graphics preset.
 - **Range colours:** action buttons turn red out of range, blue without mana, grey when unusable.

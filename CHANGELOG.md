@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.2
+### Changed
+- **The gear bar is off by default.** Tick Gear bar in the options, or type `/lazy gear bar on`, to bring it back. The green ^ arrows in the bags and at vendors and the Upgrade line in tooltips stay on.
+
 ## 0.22.1
 ### Fixed
 - **The pedometer never counted.** The game was asked for your position in a way that kept only the first of its three values, so no step was ever added. The same mistake is fixed in four quest and map spots (the arrow's spot choice in another zone, quest items, the quest map and quest search), where a missing value could cause errors or odd results.

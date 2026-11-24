@@ -36,7 +36,7 @@ local STEPS = {
       target = function() local p = _G.ForeverLazy_HuntPanel; return p and p:IsShown() and p or nil end },
     { text = "|cffffd100Extras that are off until you want them.|r The craft planner (a plan beside your profession window), our own bag window, the quest item bar and the damage meter tab are all in the options, along with range colours and quest item sparkles. Tick the ones you like. /lazy commands lists every command and /lazy report makes a bug report.",
       target = nil },
-    { text = "|cffffd100Gear.|r Hover any item you could wear: a green Upgrade line says how much better it is for your class and spec. Upgrades in your bags get a button on the gear bar (click it to equip) and a green ^ in the bag window. /lazy gear says what you are scored as.",
+    { text = "|cffffd100Gear.|r Hover any item you could wear: a green Upgrade line says how much better it is for your class and spec. Upgrades in your bags get a green ^ in the bag window, and an optional gear bar (off until you turn it on in the options or with /lazy gear bar on) has a button that equips one when you click it. /lazy gear says what you are scored as.",
       target = function() local b = _G.ForeverLazyGearBar; return b and b:IsShown() and b or nil end },
     { text = "|cffffd100The options.|r /lazy opens them. At the top: Start here (Just point me, Leveler, Duo, Everything) and the extras you can tick on or off. It shows only the basics; press Show all options for the rest. Switching a module off hides its options.",
       target = nil, onShow = function() if addon.OpenOptions then addon:OpenOptions() end end },
@@ -280,6 +280,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.22.2", {
+        "The GEAR BAR is off until you turn it on (tick Gear bar in the options, or /lazy gear bar on). The green ^ arrows in the bags and at vendors and the Upgrade line in tooltips are not affected.",
+    } },
     { "0.22.1", {
         "GROUP FINDER FILTER: open the Browse tab, search, then click Filter groups (or /lazy groups). Drop-down lists pick groups or lone players, a role a started group still needs (a healer, say), how new the listing is and the sort order, and you can search words and fit your level. Click a row to whisper the leader.",
         "PALADIN BLESSINGS now work with other paladins who have Forever Lazy: if two of you give the same blessing to a class, the one first in the alphabet casts it. A Split button gives every class a blessing the others are not giving, /lazy blessings team shows everyone's choices, and the button covers a class when the other paladin is dead or far away. The Blessings button casts now.",

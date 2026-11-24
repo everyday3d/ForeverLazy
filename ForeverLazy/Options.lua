@@ -300,7 +300,7 @@ local function BuildControls(parent)
     Check(content, L("Gear advisor: upgrade line in tooltips, a green ^ on upgrades in bags and at vendors"), 16,
         function() return DB().gearAdvisor ~= false end, function(v) DB().gearAdvisor = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
     Check(content, L("Gear bar: a button that equips an upgrade from my bags"), 16,
-        function() return DB().gearBar ~= false end, function(v) DB().gearBar = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
+        function() return DB().gearBar == true end, function(v) DB().gearBar = v or nil; if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
     Check(content, L("Tell me in chat when I loot or buy an upgrade"), 16,
         function() return DB().gearNote == true end, function(v) DB().gearNote = v or nil end)
     Check(content, L("The arrow goes to the closest stop first"), 16,
@@ -396,7 +396,7 @@ local function BuildControls(parent)
     Check(content, L("A green ^ on upgrades in the bag window and at vendors"), 16,
         function() return DB().gearArrows ~= false end, function(v) DB().gearArrows = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
     Check(content, L("Gear bar: a button that equips an upgrade from my bags"), 16,
-        function() return DB().gearBar ~= false end, function(v) DB().gearBar = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
+        function() return DB().gearBar == true end, function(v) DB().gearBar = v or nil; if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
     Check(content, L("Tell me in chat when I loot or buy an upgrade"), 16,
         function() return DB().gearNote == true end, function(v) DB().gearNote = v or nil end)
     Radio(content, L("Score gear as:"), "rewardRole", {
