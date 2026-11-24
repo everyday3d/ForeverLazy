@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.22.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.22.1-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,12 +26,17 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.22.0
+## What's new in 0.22.1
 
-- **Pedometer:** how far you walk, today, this level and in total.
-- **Paladin blessings:** one button blesses the next player who needs it, with a blessing you pick for each class.
-- **Nameplate colours** (off until you turn them on): red when a mob attacks you, yellow when it fights someone else, purple for quest mobs.
-- **Group finder report** (/lazy lfg) to see what a group finder filter could do.
+- **Group finder filter:** a Filter groups button on the group finder (or /lazy groups). Drop-down lists for groups or lone players, the role a started group still needs (a healer, say), how new the listing is and the sort order, plus word search and ight level for me. Click a row to whisper the leader.
+- **Paladins work together:** blessings are shared with other paladins who have Forever Lazy, a Split button picks blessings the others are not giving, and the button covers a class when the other paladin is dead or far away. The Blessings button casts now.
+- **Nameplates:** an aggressive mob is red before it attacks you, and orange when it fights someone else.
+- **Gear advisor:** green ^ arrows in the standard bags too, and /lazy gear why explains each piece of gear.
+- **Fixes:** the pedometer counts, the quest tracker in a dungeon shows only that dungeon's quests, item tooltips no longer list you twice, and an update now says so with one line in chat.
+
+## Earlier: 0.22.0
+
+- **Pedometer, paladin blessings and nameplate colours** (off until you turn them on), plus a group finder report (/lazy lfg).
 
 ## Earlier: 0.21.0
 

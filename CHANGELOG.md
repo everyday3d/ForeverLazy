@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.22.1
+### Fixed
+- **The pedometer never counted.** The game was asked for your position in a way that kept only the first of its three values, so no step was ever added. The same mistake is fixed in four quest and map spots (the arrow's spot choice in another zone, quest items, the quest map and quest search), where a missing value could cause errors or odd results.
+- **Nameplate colours:** an aggressive mob is red before it attacks you (not only in a fight), and a mob fighting someone else is orange instead of yellow.
+- **The Blessings button did nothing when clicked.** It casts through a macro now, and it listens for both the press and the release of the click.
+- **The blessings panel hid without saying why.** It now says whether it is switched off, you are not a paladin, you are not in a group, you are in combat, or no blessing spells were found, and it no longer says everyone is blessed when no blessing is chosen.
+- **The quest tracker listed every quest inside a dungeon** on this server, because it does not label The Stockade as a dungeon. The dungeon is now found by its zone name too, so the tracker, the dungeon arrow, the quest popup and /lazy dungeons here work there. The tracker's title shows the dungeon name.
+- **Item tooltips listed your own character twice** when an old copy was saved under another realm name.
+- **Green gear arrows were missing** in the standard bag windows (they only showed in the Forever Lazy bag window and at vendors).
+
+### New
+- **Group finder filter.** A Filter groups button under the group finder (or /lazy groups) lists what your search found with drop-down filters: groups or lone players, a role a started group still needs, how new the listing is, the sort order, word search and right level for me. Click a row to whisper the leader. /lazy groups button off hides the button.
+- **Paladins work together.** Paladins with Forever Lazy share what blessing they give each class. When two give the same one, the one first in the alphabet casts it and the other's button skips that class. A Split button picks, for every class, a blessing the others are not giving (/lazy blessings split), /lazy blessings team shows everyone's choices, and your button covers a class when the paladin who has it is dead, offline or far away. /lazy blessings share on|off.
+- **/lazy gear why** lists every piece of gear in your bags and why it is or is not marked as an upgrade.
+- **/lazy steps debug** shows what the pedometer reads (position, on foot, yards counted).
+
+### Changed
+- **After an update you get one line in chat** instead of the What's new window opening. /lazy new opens it, and /lazy new test shows the chat line.
+- **The newer-version line tells you to update on CurseForge** (curseforge.com/wow/addons/foreverlazy).
+
 ## 0.22.0
 ### New
 - **Pedometer.** It adds up the distance you cover on foot (not mounted, not on a flight, not teleported): this session, today, this level, the level before, and in total, plus the zones you walk the most and the last seven days. `/lazy steps` opens the numbers, `/lazy steps show` puts a small movable readout on the screen, `/lazy steps reset` starts again. The unit follows the distance setting in the options (yards, meters or steps).

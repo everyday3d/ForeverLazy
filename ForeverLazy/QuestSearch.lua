@@ -35,7 +35,7 @@ local function PointAt(id, name)
     if api.AddObjects then pcall(api.AddObjects, list, by[2]) end
     if #list == 0 then Print(L("no place known for ") .. tostring(name)) return end
     local hbd = api.hbd
-    local px, py, pinst = hbd and hbd:GetPlayerWorldPosition()
+    local px, py, pinst; if hbd then px, py, pinst = hbd:GetPlayerWorldPosition() end
     local best, bd
     for _, s in ipairs(list) do
         local d = (px and s.instance == pinst) and api.D2(s.x, s.y, px, py) or 1e18

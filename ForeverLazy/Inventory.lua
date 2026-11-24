@@ -264,6 +264,8 @@ local function AddCounts(tt, id)
         local c = inv[k]
         -- an old half-saved copy of a character (saved while the realm name was still empty): the real one is listed instead
         local ghost = (c.realm or "") == "" and c.name and inv[c.name .. "-" .. RealmNow()] ~= nil and k ~= c.name .. "-" .. RealmNow()
+        -- an old copy of this same character saved under another realm string (the server name, before the name part was known)
+        if not ghost and k ~= myKey and c.name == UnitName("player") and c.class == select(2, UnitClass("player")) then ghost = true end
         if not ghost and (k == myKey or db.itemTooltipAlts ~= false) then
             local parts, total = CountsFor(c, id, k == myKey)
             if total > 0 then

@@ -280,6 +280,15 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.22.1", {
+        "GROUP FINDER FILTER: open the Browse tab, search, then click Filter groups (or /lazy groups). Drop-down lists pick groups or lone players, a role a started group still needs (a healer, say), how new the listing is and the sort order, and you can search words and fit your level. Click a row to whisper the leader.",
+        "PALADIN BLESSINGS now work with other paladins who have Forever Lazy: if two of you give the same blessing to a class, the one first in the alphabet casts it. A Split button gives every class a blessing the others are not giving, /lazy blessings team shows everyone's choices, and the button covers a class when the other paladin is dead or far away. The Blessings button casts now.",
+        "NAMEPLATES: an aggressive mob is red BEFORE it attacks you, not just in a fight; a mob fighting someone else is orange.",
+        "GEAR ADVISOR: green ^ arrows now show in the standard bag windows too, and /lazy gear why explains each piece of gear in your bags.",
+        "The quest tracker inside a dungeon lists only that dungeon's quests, and /lazy dungeons here now finds a dungeon this server does not label as one.",
+        "The PEDOMETER counts now (it was reading only part of your position), and so do a few quest and map spots that had the same mistake.",
+        "Item tooltips no longer list your own character twice, and after an update you get one line in chat instead of a window.",
+    } },
     { "0.22.0", {
         "PEDOMETER! It adds up how far you walk on foot (not mounted, not on a flight): this session, today, this level and in total, plus the zones you walk the most. /lazy steps shows it, /lazy steps show puts a small readout on the screen. The unit follows your distance setting (yards, meters or steps).",
         "PALADIN BLESSINGS: for a paladin in a group, one button blesses the next player who needs it, and you pick the blessing for each class by clicking it (Might for fighters and Wisdom for casters to start with). /lazy blessings shows or hides the panel, /lazy blessings debug shows what it sees.",
@@ -614,7 +623,8 @@ ev:SetScript("OnEvent", function(self)
             Print(L("a quick tour of the buttons: /lazy tour"))
         end
         if root.seenVersion and root.seenVersion ~= current and root.welcomed then
-            ShowNew(current, nil, nil, true)
+            -- a line in chat, not a window that gets in the way (the full list is one command away)
+            Print(string.format(L("Updated to v%s: type /lazy new to see what's new, or use the What's new button in the options."), (tostring(current):gsub("^v", ""))))
         end
         root.seenVersion = current
     end)
@@ -626,7 +636,12 @@ function addon:HandleExtraCommand(cmd, rest)
     if word == "tour" then addon.StartTour(); return true
     elseif word == "export" then addon.ExportSettings(); return true
     elseif word == "import" then addon.ImportSettings(); return true
-    elseif word == "new" or word == "whatsnew" then addon.ShowWhatsNew(); return true
+    elseif word == "new" or word == "whatsnew" then
+        if ((rest or ""):lower():gsub("%s", "")) == "test" then
+            -- shows the line a player gets after an update, so it can be seen without updating
+            Print(string.format(L("Updated to v%s: type /lazy new to see what's new, or use the What's new button in the options."), (tostring(Version()):gsub("^v", ""))))
+        else addon.ShowWhatsNew() end
+        return true
     elseif word == "welcome" then if addon.ShowWelcome then addon.ShowWelcome() end; return true end
     if prev then return prev(self, cmd, rest) end
 end

@@ -12,7 +12,8 @@ local scripts = {}
 function CreateFrame() local f = setmetatable({}, { __index = function() return function() end end }); f.SetScript = function(_, n, fn) scripts[#scripts + 1] = { name = n, fn = fn } end; return f end
 
 -- a mob, as the game would answer
-local mob = { player = false, attackable = true, tapped = false, tanking = false, targetsMe = false, combat = false }
+local mob = { player = false, attackable = true, tapped = false, tanking = false, targetsMe = false, combat = false, reaction = 2 }
+function UnitReaction() return mob.reaction end
 function UnitIsPlayer() return mob.player end
 function UnitCanAttack() return mob.attackable end
 function UnitIsTapDenied() return mob.tapped end
@@ -36,7 +37,7 @@ local function Frame()
     f.healthBar.SetStatusBarColor = function(self, r, g, b) self.color = { r, g, b } end
     return f
 end
-local function reset() mob.player, mob.attackable, mob.tapped, mob.tanking, mob.targetsMe, mob.combat = false, true, false, false, false, false end
+local function reset() mob.player, mob.attackable, mob.tapped, mob.tanking, mob.targetsMe, mob.combat, mob.reaction = false, true, false, false, false, false, 2 end
 
 test("a mob attacking me is red, even if another addon painted it green", function()
     reset(); mob.tanking = true; mob.combat = true
@@ -51,30 +52,54 @@ test("a mob that targets me counts as attacking me", function()
     eq(f.healthBar.color[1], 1); eq(f.healthBar.color[2], 0)
 end)
 
-test("a mob fighting someone else is yellow", function()
+test("a mob fighting someone else is orange, not the neutral yellow", function()
     reset(); mob.combat = true
     local f = Frame(); hookFn(f)
-    eq(f.healthBar.color[1], 1); eq(f.healthBar.color[2], 0.82)
+    eq(f.healthBar.color[1], 1); eq(f.healthBar.color[2], 0.55)
 end)
 
-test("a quest mob that is not in a fight is purple", function()
-    reset()
-    addon.PlateQuestKind = function() return "kill" end
-    local f = Frame(); hookFn(f)
-    eq(f.healthBar.color[1], 0.75)
-    addon.PlateQuestKind = nil
+test("an AGGRESSIVE mob is red before any fight, so you can tell", function()
+    reset(); mob.reaction = 2
+    local f = Frame(); f.healthBar.color = { 1, 0.82, 0.1 }
+    hookFn(f)
+    eq(f.healthBar.color[1], 1); eq(f.healthBar.color[2], 0); eq(f.healthBar.color[3], 0)
 end)
 
-test("a quest mob that is attacking me stays red, not purple", function()
-    reset(); mob.tanking = true; mob.combat = true
+test("an aggressive quest mob stays red, the quest tint does not cover it", function()
+    reset(); mob.reaction = 3
     addon.PlateQuestKind = function() return "kill" end
     local f = Frame(); hookFn(f)
     eq(f.healthBar.color[1], 1); eq(f.healthBar.color[2], 0)
     addon.PlateQuestKind = nil
 end)
 
+test("a NEUTRAL quest mob that is not in a fight is purple", function()
+    reset(); mob.reaction = 4
+    addon.PlateQuestKind = function() return "loot" end
+    local f = Frame(); hookFn(f)
+    eq(f.healthBar.color[1], 0.75)
+    addon.PlateQuestKind = nil
+end)
+
+test("a neutral mob that is not a quest mob keeps the game's yellow", function()
+    reset(); mob.reaction = 4
+    local f = Frame(); hookFn(f)
+    eq(f.healthBar.color, nil)
+end)
+
+test("a neutral mob attacking me turns red", function()
+    reset(); mob.reaction = 4; mob.targetsMe = true; mob.combat = true
+    local f = Frame(); hookFn(f)
+    eq(f.healthBar.color[2], 0)
+end)
+
+test("the old yellow default for 'someone else' is changed to orange", function()
+    db.plateColorOthers = { 1, 0.82, 0.1 }
+    addon.PlateColorsRefresh()
+    eq(db.plateColorOthers[2], 0.55)
+end)
 test("a quest starter is not tinted", function()
-    reset()
+    reset(); mob.reaction = 4
     addon.PlateQuestKind = function() return "start" end
     local f = Frame(); hookFn(f)
     eq(f.healthBar.color, nil)
@@ -90,11 +115,6 @@ test("players, friendly mobs and tapped mobs keep the game's colour", function()
     local f = Frame(); hookFn(f); eq(f.healthBar.color, nil, "friendly")
 end)
 
-test("an idle mob that is no quest mob keeps the game's colour", function()
-    reset()
-    local f = Frame(); hookFn(f); eq(f.healthBar.color, nil)
-end)
-
 test("nothing happens when it is switched off, or for a frame that is not a nameplate", function()
     reset(); mob.combat = true
     db.plateColors = nil
@@ -107,7 +127,7 @@ test("the two parts can be switched off one by one", function()
     reset(); mob.combat = true; db.plateThreat = false
     local f = Frame(); hookFn(f); eq(f.healthBar.color, nil)
     db.plateThreat = nil
-    reset(); db.plateQuest = false
+    reset(); mob.reaction = 4; db.plateQuest = false
     addon.PlateQuestKind = function() return "kill" end
     local g = Frame(); hookFn(g); eq(g.healthBar.color, nil)
     addon.PlateQuestKind = nil; db.plateQuest = nil

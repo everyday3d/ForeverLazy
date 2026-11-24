@@ -1,10 +1,10 @@
--- Nameplate colours: a hostile mob's health bar shows who it is attacking.
---   red     it is attacking ME (the usual look: aggressive mobs stay red)
---   yellow  it is in a fight with someone else
---   purple  my quests need it (kill or loot) and it is not in a fight
--- Nothing else is touched: players, friendly and tapped mobs and mobs out of combat keep the game's own colour. It is off until you
+-- Nameplate colours: a hostile mob's health bar says at a glance what it will do.
+--   red     it is AGGRESSIVE (it will attack you on sight), before the fight and during it, and always when it is attacking ME
+--   orange  it is in a fight with someone else
+--   purple  a NEUTRAL mob that my quests need (kill or loot) and that is not in a fight (an aggressive quest mob stays red)
+-- Nothing else is touched: players, friendly and tapped mobs and idle neutral mobs keep the game's own colour. It is off until you
 -- turn it on in the options (Nameplates). If another nameplate addon colours the same bars, the one that loads last wins; this one
--- loads after BetterBlizzPlates, so a mob attacking you stays red even when that addon turns it green.
+-- loads after BetterBlizzPlates, so an aggressive mob stays red even when that addon turns it green.
 --   /lazy platecolors on|off
 local ADDON, ns = ...
 local L = ns.L
@@ -16,24 +16,30 @@ local function On() local d = DB(); return d and d.plateColors == true end
 
 local DEFAULTS = {
     plateColorMe = { 1, 0, 0 },
-    plateColorOthers = { 1, 0.82, 0.1 },
+    plateColorOthers = { 1, 0.55, 0 },
     plateColorQuest = { 0.75, 0.3, 1 },
 }
 local function Defaults()
     local db = DB()
     if not db then return end
     for k, v in pairs(DEFAULTS) do if type(db[k]) ~= "table" then db[k] = { v[1], v[2], v[3] } end end
+    -- the first version used yellow for "someone else", which is the game's colour for a neutral mob: orange tells them apart
+    local o = db.plateColorOthers
+    if o and o[1] == 1 and o[2] == 0.82 and o[3] == 0.1 then db.plateColorOthers = { 1, 0.55, 0 } end
 end
 
--- which colour a mob gets (pure, tested offline). info: { hostileNpc, tapped, tankingMe, targetsMe, inCombat, questKind }
--- returns "me", "others", "quest" or nil (leave the game's own colour)
+-- which colour a mob gets (pure, tested offline).
+-- info: { hostileNpc, tapped, reaction (the game's 1 to 8: 1 to 3 hostile, 4 neutral), tankingMe, targetsMe, inCombat, questKind }
+-- returns "me" (red), "others" (orange), "quest" (purple) or nil (leave the game's own colour)
 function addon.PlateColorState(info, useThreat, useQuest)
     if not info or not info.hostileNpc or info.tapped then return nil end
+    local aggressive = type(info.reaction) == "number" and info.reaction <= 3
     if useThreat ~= false then
         if info.tankingMe or info.targetsMe then return "me" end
+        if aggressive and not info.inCombat then return "me" end              -- aggressive before the fight: red, so you know
         if info.inCombat then return "others" end
     end
-    if useQuest ~= false and not info.inCombat and (info.questKind == "kill" or info.questKind == "loot") then return "quest" end
+    if useQuest ~= false and not aggressive and not info.inCombat and (info.questKind == "kill" or info.questKind == "loot") then return "quest" end
     return nil
 end
 
@@ -48,6 +54,7 @@ local function InfoFor(unit)
     local info = {}
     info.hostileNpc = (Safe(UnitIsPlayer, unit) ~= true) and (Safe(UnitCanAttack, "player", unit) == true)
     info.tapped = Safe(UnitIsTapDenied, unit) == true
+    info.reaction = Safe(UnitReaction, "player", unit)
     local tanking = Safe(UnitDetailedThreatSituation, "player", unit)
     info.tankingMe = tanking == true
     info.targetsMe = Safe(UnitIsUnit, unit .. "target", "player") == true
@@ -121,7 +128,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
         if a == "on" then db.plateColors = true elseif a == "off" then db.plateColors = nil else db.plateColors = (not db.plateColors) or nil end
-        Print(L("nameplate colours: ") .. (db.plateColors and L("on (red = attacking me, yellow = someone else, purple = a quest mob)") or L("off")))
+        Print(L("nameplate colours: ") .. (db.plateColors and L("on (red = aggressive or attacking me, orange = fighting someone else, purple = a neutral quest mob)") or L("off")))
         addon.PlateColorsRefresh()
         if addon.RefreshOptions then addon.RefreshOptions() end
         return true

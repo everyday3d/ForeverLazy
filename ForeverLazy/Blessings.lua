@@ -1,6 +1,7 @@
 -- Paladin blessings, simply: ONE button buffs the next party member who needs a blessing, and for every class in the group you
 -- choose which blessing it should get (click a class to change it).
---   /lazy blessings          show or hide the panel     /lazy blessings debug   what the addon sees (spells, buffs, range)
+--   /lazy blessings on|off   show or hide the panel     /lazy blessings debug   what the addon sees (spells, buffs, range)
+--   /lazy blessings solo     also show it when you are alone (type it again to undo)
 --   /lazy blessings reset    back to the usual choices (Might for fighters, Wisdom for casters)
 -- It only shows for a paladin who is in a group. The button casts by clicking it (a game rule: a spell needs a click), and its target
 -- changes between fights, never during one.
@@ -98,11 +99,13 @@ end
 -- members: { { unit =, class =, name =, alive =, connected = , inRange = }, ... } (me first)
 -- buffsOf(unit) -> list of { name =, left = seconds (or nil for no end) } ; a unit whose buffs cannot be read returns nil
 -- returns the member who is next, the blessing to cast on them, and how many still need one
-function addon.BlessNext(members, available, buffsOf)
+-- skip(class, shortName) -> true when another paladin gives that blessing to that class (see BlessCovered)
+function addon.BlessNext(members, available, buffsOf, skip)
     local pick, pickBless, count = nil, nil, 0
     for _, m in ipairs(members) do
         if m.alive ~= false and m.connected ~= false then
             local bless = addon.BlessingFor(m.class, available)
+            if bless and skip and skip(m.class, Short(bless)) then bless = nil end
             if bless then
                 local short = Short(bless)
                 local buffs = buffsOf(m.unit)
@@ -121,6 +124,54 @@ function addon.BlessNext(members, available, buffsOf)
         end
     end
     return pick, pickBless, count
+end
+
+--------------------------------------------------------------------------------
+-- Sharing with the other paladins (pure logic, tested offline)
+--------------------------------------------------------------------------------
+-- What I give each class, as a small text for the other paladins: "DRUID=Wisdom;WARRIOR=Might"
+function addon.BlessEncode(map)
+    local classes = {}
+    for c in pairs(map or {}) do classes[#classes + 1] = c end
+    table.sort(classes)
+    local parts = {}
+    for _, c in ipairs(classes) do parts[#parts + 1] = c .. "=" .. map[c] end
+    return table.concat(parts, ";")
+end
+
+function addon.BlessDecode(text)
+    local map = {}
+    for class, bless in tostring(text or ""):gmatch("(%u+)=(%a+)") do map[class] = bless end
+    return map
+end
+
+-- Two paladins who both give the same blessing to a class would only waste mana, so the one who comes first in the alphabet
+-- casts it and the other skips that class. Both clients work this out the same way, so no talking is needed.
+-- others: { [name] = { map = { CLASS = "Might" } } }. Returns the name of the paladin who covers it, or nil when I cast it.
+function addon.BlessCovered(class, short, me, others)
+    local mine = (me or ""):lower()
+    local best
+    for name, o in pairs(others or {}) do
+        local n = name:lower()
+        -- a paladin who is dead, offline or too far away can not do it: then I cast it (o.active == false)
+        if o.active ~= false and o.map and o.map[class] == short and n < mine and (not best or n < best:lower()) then best = name end
+    end
+    return best
+end
+
+-- The blessing to give a class so it does not repeat what the other paladins already give it.
+-- shorts: the blessings I can cast (short names, in my usual order); taken: { Might = true, ... } for that class; want: the usual one.
+function addon.BlessSplitFor(shorts, taken, want)
+    taken = taken or {}
+    local function Free(s) return s and not taken[s] end
+    local has = {}
+    for _, s in ipairs(shorts) do has[s] = true end
+    if has[want] and Free(want) then return want end
+    for _, s in ipairs({ "Kings", "Might", "Wisdom", "Light", "Sanctuary", "Salvation" }) do
+        if has[s] and Free(s) then return s end
+    end
+    for _, s in ipairs(shorts) do if Free(s) then return s end end
+    return nil
 end
 
 --------------------------------------------------------------------------------
@@ -209,6 +260,7 @@ local function Cycle(class, step)
     idx = ((idx - 1 + step) % #list) + 1
     db.blessings[class] = list[idx]
     lastSig = ""
+    if addon.BlessSend then addon.BlessSend("U") end                 -- tell the other paladins what I changed
     if addon.BlessingsRefresh then addon.BlessingsRefresh() end
 end
 
@@ -244,8 +296,11 @@ local function Build()
     local b = CreateFrame("Button", "ForeverLazyBlessButton", f, "SecureActionButtonTemplate")
     b:SetSize(180, 26)
     b:SetPoint("TOPLEFT", 5, -18)
-    b:RegisterForClicks("AnyUp")
+    -- secure buttons fire on the key-down or key-up edge depending on the ActionButtonUseKeyDown setting, so listen for both
+    b:RegisterForClicks("AnyUp", "AnyDown")
     b:SetAttribute("type", "spell")
+    b:SetAttribute("type1", "spell")
+    b:SetAttribute("useOnKeyDown", false)
     b.bg = b:CreateTexture(nil, "BACKGROUND")
     b.bg:SetAllPoints(); b.bg:SetColorTexture(0.1, 0.35, 0.1, 0.9)
     b.icon = b:CreateTexture(nil, "ARTWORK")
@@ -263,6 +318,11 @@ local function Build()
         GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    b:HookScript("OnClick", function(self)
+        if DB().blessDebug then
+            Print("blessings click: " .. tostring(self:GetAttribute("type")) .. " | " .. tostring(self:GetAttribute("macrotext")))
+        end
+    end)
     button = b
     f:Hide()
     return f
@@ -286,6 +346,15 @@ local function Row(i)
     r:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine(L("Click: the next blessing. Right-click: the one before."), 1, 1, 1)
+        -- what the other paladins in the group give this class
+        local o = addon.BlessLastOthers and addon.BlessLastOthers() or {}
+        for name, e in pairs(o) do
+            local b = self.class and e.map and e.map[self.class]
+            GameTooltip:AddLine(string.format("%s: %s", name, b or L("none")), 0.6, 0.8, 1)
+        end
+        if self.coveredBy then
+            GameTooltip:AddLine(string.format(L("%s gives this blessing to this class, so your button skips them."), self.coveredBy), 0.8, 0.8, 0.5, true)
+        end
         GameTooltip:Show()
     end)
     r:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -305,23 +374,121 @@ local function IsPaladin()
     return class == "PALADIN"
 end
 
+--------------------------------------------------------------------------------
+-- Talking to the other paladins in the group
+--------------------------------------------------------------------------------
+local PREFIX = "FLBLS"
+local others = {}                 -- paladin name -> { map = { CLASS = "Might" }, t = time heard }
+local lastOthers = {}             -- the ones that are in the group right now (set by Refresh)
+function addon.BlessLastOthers() return lastOthers end
+
+local function MyClaims(avail)
+    local map = {}
+    for class in pairs(DEFAULT) do
+        local b = addon.BlessingFor(class, avail)
+        if b then map[class] = Short(b) end
+    end
+    return map
+end
+
+-- kind "H": hello (I joined or the group changed, please tell me yours); "U": here is mine
+function addon.BlessSend(kind)
+    local db = DB()
+    if not db or db.blessShare == false then return end
+    if not IsPaladin() or not (IsInGroup and IsInGroup()) then return end
+    if not addon.SendCommMessage then return end
+    local avail = addon.BlessingsAvailable()
+    if #avail == 0 then return end
+    local channel = (IsInRaid and IsInRaid()) and "RAID" or "PARTY"
+    pcall(addon.SendCommMessage, addon, PREFIX, "1|" .. kind .. "|" .. addon.BlessEncode(MyClaims(avail)), channel)
+end
+
+function addon:OnBlessSync(prefix, message, distribution, sender)
+    if prefix ~= PREFIX or type(message) ~= "string" or #message > 250 then return end
+    local who = (sender or "?"):match("^([^%-]+)") or sender
+    if who == UnitName("player") then return end
+    local ver, kind, body = message:match("^(%d+)|(%a)|(.*)$")
+    if not ver then return end
+    others[who] = { map = addon.BlessDecode(body), t = GetTime and GetTime() or 0 }
+    if kind == "H" then addon.BlessSend("U") end
+    if addon.BlessingsRefresh then pcall(addon.BlessingsRefresh) end
+end
+if addon.RegisterComm then pcall(addon.RegisterComm, addon, PREFIX, "OnBlessSync") end
+
+local helloPending
+local function HelloSoon()
+    if helloPending or not (C_Timer and C_Timer.After) then return end
+    helloPending = true
+    C_Timer.After(4, function() helloPending = false; addon.BlessSend("H") end)
+end
+
+-- the other paladins that are really in my group now (anyone who left is forgotten)
+local function OthersNow(members)
+    local out = {}
+    local db = DB()
+    if db and db.blessShare == false then return out end
+    for _, m in ipairs(members) do
+        local o = m.class == "PALADIN" and m.name and others[m.name]
+        if o and m.name ~= UnitName("player") then
+            -- active: alive, online and near enough to reach people with me (if not, the blessing falls back to my button)
+            out[m.name] = { map = o.map, t = o.t, active = m.alive ~= false and m.connected ~= false and m.inRange ~= false }
+        end
+    end
+    return out
+end
+
+-- one click: for every class in the group, take a blessing the other paladins are not giving it
+function addon.BlessSplit()
+    local db = DB()
+    if not db then return false end
+    local avail = addon.BlessingsAvailable()
+    if #avail == 0 then return false end
+    local shorts, fullOf = {}, {}
+    for _, f in ipairs(avail) do local s = Short(f); shorts[#shorts + 1] = s; fullOf[s] = f end
+    db.blessings = db.blessings or {}
+    local changed = 0
+    for _, m in ipairs(Members(avail[1])) do
+        local class = m.class
+        if class and not (db.blessings[class] == "none") then
+            local taken = {}
+            for _, o in pairs(lastOthers) do if o.map and o.map[class] then taken[o.map[class]] = true end end
+            local pickShort = addon.BlessSplitFor(shorts, taken, DEFAULT[class])
+            if pickShort and fullOf[pickShort] and db.blessings[class] ~= fullOf[pickShort] then
+                db.blessings[class] = fullOf[pickShort]
+                changed = changed + 1
+            end
+        end
+    end
+    if addon.BlessSend then addon.BlessSend("U") end
+    if addon.BlessingsRefresh then addon.BlessingsRefresh() end
+    return changed
+end
+
 local function Refresh()
     local db = DB()
     if not db then return end
-    if not (On() and IsPaladin()) or not (IsInGroup and IsInGroup() or db.blessSolo == true) then
+    addon.blessWhy = nil
+    if not On() then addon.blessWhy = "the panel is switched off (/lazy blessings turns it on)"
+    elseif not IsPaladin() then addon.blessWhy = "you are not a paladin"
+    elseif not (IsInGroup and IsInGroup() or db.blessSolo == true) then addon.blessWhy = "you are not in a group (/lazy blessings solo shows it when you are alone)" end
+    if addon.blessWhy then
         if frame then frame:Hide() end
         return
     end
-    if InCombatLockdown() then waiting = true; return end
+    if InCombatLockdown() then waiting = true; addon.blessWhy = "you are in combat, it shows after the fight"; return end
     waiting = false
-    if not frame then frame = Build(); Place() end
     local avail = addon.BlessingsAvailable()
     if #avail == 0 then
+        addon.blessWhy = "no blessing spells were found in your spellbook (/lazy blessings debug lists what it sees)"
         if frame then frame:Hide() end
         return
     end
+    if not frame then frame = Build(); Place() end
     local members = Members(avail[1])
-    local pick, bless, count = addon.BlessNext(members, avail, BuffsOf)
+    lastOthers = OthersNow(members)
+    local myName = UnitName("player")
+    local function Covered(class, short) return addon.BlessCovered(class, short, myName, lastOthers) end
+    local pick, bless, count = addon.BlessNext(members, avail, BuffsOf, function(class, short) return Covered(class, short) ~= nil end)
     -- the class rows: the classes that are in the group
     local present, seen = {}, {}
     for _, m in ipairs(members) do if m.class and not seen[m.class] then seen[m.class] = true end end
@@ -336,16 +503,51 @@ local function Refresh()
                 r.cls:SetText(ClassName(present[i]))
                 r.cls:SetTextColor(cr, cg, cb)
                 local b = addon.BlessingFor(present[i], avail)
-                r.bless:SetText(b and Short(b) or L("none"))
+                local who = b and Covered(present[i], Short(b))
+                r.coveredBy = who
+                if who then
+                    r.bless:SetText("|cff888888" .. Short(b) .. " (" .. who .. ")|r")           -- another paladin gives this one
+                else
+                    r.bless:SetText(b and Short(b) or L("none"))
+                end
                 r:Show()
             else
                 r:Hide()
             end
         end
     end
-    frame:SetHeight(48 + #present * 19)
+    local hasOthers = next(lastOthers) ~= nil
+    frame:SetHeight(48 + #present * 19 + (hasOthers and 22 or 0))
+    -- with another paladin in the group: one click gives every class a blessing the others are not giving
+    if hasOthers then
+        if not frame.split then
+            local sb = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
+            sb:SetSize(180, 18)
+            sb:SetText(L("Split with the other paladins"))
+            sb:SetScript("OnClick", function()
+                local n = addon.BlessSplit()
+                Print(n and n > 0 and string.format(L("blessings: %d classes changed so you do not repeat the other paladins"), n) or L("blessings: nothing to change, you already give different blessings"))
+            end)
+            sb:SetScript("OnEnter", function(self)
+                GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+                GameTooltip:AddLine(L("Picks, for each class, a blessing the other paladins are not giving it."), 1, 1, 1, true)
+                GameTooltip:Show()
+            end)
+            sb:SetScript("OnLeave", function() GameTooltip:Hide() end)
+            frame.split = sb
+        end
+        frame.split:ClearAllPoints()
+        frame.split:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, -48 - #present * 19)
+        frame.split:Show()
+    elseif frame.split then
+        frame.split:Hide()
+    end
     -- the button
     if pick and bless then
+        -- a macro cast is the most dependable way to aim a spell at a unit from a secure button
+        button:SetAttribute("type", "macro")
+        button:SetAttribute("type1", "macro")
+        button:SetAttribute("macrotext", "/cast [@" .. tostring(pick.unit) .. ",help,nodead] " .. bless)
         button:SetAttribute("spell", bless)
         button:SetAttribute("unit", pick.unit)
         local icon = (C_Spell and C_Spell.GetSpellTexture and C_Spell.GetSpellTexture(bless)) or (GetSpellTexture and GetSpellTexture(bless))
@@ -357,7 +559,17 @@ local function Refresh()
         button:SetAttribute("spell", nil)
         button:SetAttribute("unit", nil)
         button.icon:SetShown(false)
-        button.text:SetText(count > 0 and L("someone is out of range") or L("everyone is blessed"))
+        -- "everyone is blessed" is only true when somebody has a blessing chosen: with every class set to none there is nothing to do
+        local assigned, covered = 0, 0
+        for _, m in ipairs(members) do
+            local b = addon.BlessingFor(m.class, avail)
+            if b then
+                if Covered(m.class, Short(b)) then covered = covered + 1 else assigned = assigned + 1 end
+            end
+        end
+        if assigned == 0 and covered > 0 then button.text:SetText(L("the other paladins have everyone"))
+        elseif assigned == 0 then button.text:SetText(L("no blessing chosen: click a class below"))
+        else button.text:SetText(count > 0 and L("someone is out of range") or L("everyone is blessed")) end
         button.bg:SetColorTexture(0.2, 0.2, 0.2, 0.9)
     end
     Place()
@@ -385,6 +597,7 @@ ev:SetScript("OnEvent", function(_, event, unit)
         if not frame or not frame:IsShown() then return end
     end
     if event == "PLAYER_REGEN_ENABLED" and not waiting then Soon(); return end
+    if event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_ENTERING_WORLD" then HelloSoon() end       -- ask the other paladins for theirs
     Soon()
 end)
 local acc = 0
@@ -430,7 +643,41 @@ function addon.BlessingsDebug()
             Add("     buffs: " .. (#parts > 0 and table.concat(parts, ", ") or "none"))
         end
     end
+    Add("")
+    Add("Sharing with other paladins: " .. ((DB() and DB().blessShare == false) and "OFF" or "on"))
+    local any = false
+    for name, e in pairs(lastOthers) do
+        any = true
+        Add("   " .. name .. " gives: " .. addon.BlessEncode(e.map))
+    end
+    if not any then Add("   no other paladin has told us what they give (they need Forever Lazy too)") end
     addon.ReportWindow(L("Forever Lazy: blessings"), lines)
+end
+
+-- /lazy blessings team: every paladin's blessing for every class, in one table
+function addon.BlessTeam()
+    local avail = addon.BlessingsAvailable()
+    local members = Members(avail[1])
+    local others = OthersNow(members)
+    local lines = {}
+    local names = { UnitName("player") }
+    local rowsBy = { [UnitName("player")] = MyClaims(avail) }
+    for name, o in pairs(others) do names[#names + 1] = name; rowsBy[name] = o.map end
+    table.sort(names, function(a, b) return a:lower() < b:lower() end)
+    local seen, classes = {}, {}
+    for _, m in ipairs(members) do if m.class and not seen[m.class] then seen[m.class] = true; classes[#classes + 1] = m.class end end
+    lines[#lines + 1] = "Paladins: " .. table.concat(names, ", ") .. ((#names == 1) and "   (no other paladin has told us theirs)" or "")
+    lines[#lines + 1] = ""
+    for _, class in ipairs(classes) do
+        local parts, gaps = {}, true
+        for _, n in ipairs(names) do
+            local b = rowsBy[n] and rowsBy[n][class]
+            if b then gaps = false end
+            parts[#parts + 1] = n .. ": " .. (b or "-")
+        end
+        lines[#lines + 1] = string.format("%-12s %s%s", ClassName(class), table.concat(parts, "    "), gaps and "     <- nobody blesses this class" or "")
+    end
+    addon.ReportWindow(L("Forever Lazy: paladin blessings in the group"), lines)
 end
 
 local prev = addon.HandleExtraCommand
@@ -439,15 +686,26 @@ function addon:HandleExtraCommand(cmd, rest)
     if c == "blessings" or c == "bless" then
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
-        if a == "debug" then addon.BlessingsDebug(); return true end
-        if a == "reset" then db.blessings = nil; Print(L("blessings: back to the usual choices (Might for fighters, Wisdom for casters)"))
+        if a == "debug" then db.blessDebug = true; addon.BlessingsDebug(); return true end
+        if a == "on" then db.blessPanel = nil; Print(L("blessings: panel on (it shows for a paladin in a group, or when alone after /lazy blessings solo)"))
+        elseif a == "off" then db.blessPanel = false; Print(L("blessings: panel off"))
+        elseif a == "reset" then db.blessings = nil; Print(L("blessings: back to the usual choices (Might for fighters, Wisdom for casters)"))
+        elseif a == "share off" then db.blessShare = false; Print(L("blessings: not sharing with other paladins (each paladin then casts what they chose)"))
+        elseif a == "share on" or a == "share" then db.blessShare = nil; Print(L("blessings: sharing with other paladins who have Forever Lazy (the one first in the alphabet casts a blessing two paladins both chose)")); addon.BlessSend("H")
+        elseif a == "split" then
+            local n = addon.BlessSplit()
+            Print(n and n > 0 and string.format(L("blessings: %d classes changed so you do not repeat the other paladins"), n) or L("blessings: nothing to change (no other paladin has told us theirs, or you already give different blessings)"))
+        elseif a == "team" then addon.BlessTeam(); return true
         elseif a == "solo" then db.blessSolo = not db.blessSolo or nil; Print(L("blessings: the panel also shows when you are alone: ") .. tostring(db.blessSolo == true))
         else
             db.blessPanel = (db.blessPanel == false) and nil or false
             if db.blessPanel == false then Print(L("blessings: panel hidden")) else Print(L("blessings: panel on (it shows for a paladin in a group)")) end
         end
         if addon.RefreshOptions then addon.RefreshOptions() end
-        Refresh()
+        local ok, err = pcall(Refresh)
+        if not ok then Print(L("blessings: an error stopped the panel: ") .. tostring(err))
+        elseif addon.blessWhy then Print(L("blessings: the panel is not showing because ") .. addon.blessWhy)
+        elseif frame and frame:IsShown() then Print(L("blessings: the panel is showing (left side of the screen, drag its title to move it)")) end
         return true
     end
     if prev then return prev(self, cmd, rest) end

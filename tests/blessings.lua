@@ -97,5 +97,45 @@ test("a class set to none is never blessed", function()
     db.blessings = nil
 end)
 
+test("the blessings I give are sent as short text and read back", function()
+    local text = addon.BlessEncode({ WARRIOR = "Might", PRIEST = "Wisdom" })
+    eq(text, "PRIEST=Wisdom;WARRIOR=Might")
+    local map = addon.BlessDecode(text)
+    eq(map.WARRIOR, "Might"); eq(map.PRIEST, "Wisdom")
+    eq(next(addon.BlessDecode("")), nil, "empty text is no claims")
+end)
+test("two paladins giving the same blessing: the one first in the alphabet casts it", function()
+    local others = { Adam = { map = { WARRIOR = "Might" } } }
+    eq(addon.BlessCovered("WARRIOR", "Might", "Zed", others), "Adam", "Zed skips")
+    eq(addon.BlessCovered("WARRIOR", "Might", "Aaron", others), nil, "Aaron comes first, he casts")
+end)
+test("a different blessing for the same class is not covered", function()
+    local others = { Adam = { map = { WARRIOR = "Kings" } } }
+    eq(addon.BlessCovered("WARRIOR", "Might", "Zed", others), nil)
+    eq(addon.BlessCovered("PRIEST", "Might", "Zed", others), nil, "a class he does not bless")
+end)
+test("the button skips a class another paladin covers", function()
+    local members = { member("player", "PALADIN"), member("party1", "WARRIOR"), member("party2", "PRIEST") }
+    local skip = function(class, short) return class == "WARRIOR" and short == "Might" end
+    local pick, bless = addon.BlessNext(members, avail, buffsFrom({}), skip)
+    eq(pick.unit, "player"); eq(bless, "Blessing of Might")
+    members = { member("party1", "WARRIOR"), member("party2", "PRIEST") }
+    pick = addon.BlessNext(members, avail, buffsFrom({}), skip)
+    eq(pick.unit, "party2", "the warrior is left to the other paladin")
+end)
+test("a paladin who is dead or far away does not cover a class: my button does it", function()
+    local others = { Adam = { map = { WARRIOR = "Might" }, active = false } }
+    eq(addon.BlessCovered("WARRIOR", "Might", "Zed", others), nil)
+    others.Adam.active = true
+    eq(addon.BlessCovered("WARRIOR", "Might", "Zed", others), "Adam")
+end)
+test("splitting picks a blessing the others are not giving", function()
+    local shorts = { "Might", "Wisdom", "Kings" }
+    eq(addon.BlessSplitFor(shorts, {}, "Might"), "Might", "the usual one when free")
+    eq(addon.BlessSplitFor(shorts, { Might = true }, "Might"), "Kings", "Kings is next")
+    eq(addon.BlessSplitFor(shorts, { Might = true, Kings = true }, "Might"), "Wisdom")
+    eq(addon.BlessSplitFor(shorts, { Might = true, Kings = true, Wisdom = true }, "Might"), nil, "nothing left to give")
+    eq(addon.BlessSplitFor({ "Might" }, { Might = true }, "Might"), nil)
+end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 if failed > 0 then os.exit(1) end

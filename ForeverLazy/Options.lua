@@ -412,15 +412,15 @@ local function BuildControls(parent)
     Check(content, L("Interrupt marker when a mob casts (green ready, red on cooldown, grey none)"), 16,
         function() return DB().nameplateCasts ~= false end, function(v) DB().nameplateCasts = OffFlag(v) end)
 
-    Check(content, L("Colour hostile plates by who the mob is attacking (red = me, yellow = someone else)"), 16,
+    Check(content, L("Colour hostile plates: red = aggressive or attacking me, orange = fighting someone else"), 16,
         function() return DB().plateColors == true end, function(v) DB().plateColors = v or nil; if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
-    Check(content, L("... colour by who it is attacking"), 40,
+    Check(content, L("... colour aggressive mobs red before the fight, and by who is being attacked"), 40,
         function() return DB().plateThreat ~= false end, function(v) DB().plateThreat = OffFlag(v); if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
-    Check(content, L("... tint quest mobs that are not in a fight (purple)"), 40,
+    Check(content, L("... tint neutral quest mobs that are not in a fight (purple)"), 40,
         function() return DB().plateQuest ~= false end, function(v) DB().plateQuest = OffFlag(v); if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
-    ColorRow(content, L("A mob attacking me"), "plateColorMe")
-    ColorRow(content, L("A mob fighting someone else"), "plateColorOthers")
-    ColorRow(content, L("A quest mob"), "plateColorQuest")
+    ColorRow(content, L("An aggressive mob, or one attacking me"), "plateColorMe")
+    ColorRow(content, L("A mob fighting someone else (not the neutral yellow)"), "plateColorOthers")
+    ColorRow(content, L("A neutral quest mob"), "plateColorQuest")
 
     Header(content, "Action bars")
     Check(content, L("Swap in the newest spell rank on my action bars when I learn it"), 16,

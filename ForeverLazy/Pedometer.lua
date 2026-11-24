@@ -25,7 +25,7 @@ local function Data()
     if not db then return nil end
     local p = db.pedo
     if type(p) ~= "table" then
-        p = { total = 0, level = 0, lastLevel = 0, levelNo = UnitLevel and UnitLevel() or 1, days = {}, zones = {} }
+        p = { total = 0, level = 0, lastLevel = 0, levelNo = UnitLevel and UnitLevel("player") or 1, days = {}, zones = {} }
         db.pedo = p
     end
     p.days = p.days or {}
@@ -190,16 +190,23 @@ end
 -- Driving it
 --------------------------------------------------------------------------------
 local acc = 0
+local dbg                          -- the last reading, for /lazy steps debug
 local driver = CreateFrame("Frame")
 driver:SetScript("OnUpdate", function(_, dt)
     acc = acc + dt
     if acc < TICK then return end
     acc = 0
     if not On() then lx = nil; return end
-    local x, y, inst = hbd and hbd:GetPlayerWorldPosition()
-    local zone = hbd and hbd:GetPlayerZone()
-    addon.PedometerFeed(x, y, inst, OnFoot(), zone)
-    UpdateBox()
+    -- (an "a and f()" would keep only the first of the three values f returns)
+    local x, y, inst, zone
+    if hbd then
+        x, y, inst = hbd:GetPlayerWorldPosition()
+        zone = hbd:GetPlayerZone()
+    end
+    local foot = OnFoot()
+    local ok, counted = pcall(addon.PedometerFeed, x, y, inst, foot, zone)
+    dbg = { x = x, y = y, inst = inst, zone = zone, foot = foot, counted = ok and counted or nil, err = (not ok) and counted or nil, ticks = (dbg and dbg.ticks or 0) + 1 }
+    pcall(UpdateBox)
 end)
 
 local ev = CreateFrame("Frame")
@@ -212,7 +219,7 @@ ev:SetScript("OnEvent", function(_, event, newLevel)
         for k in pairs(p.days) do keys[#keys + 1] = k end
         table.sort(keys)
         while #keys > 60 do p.days[table.remove(keys, 1)] = nil end
-        local lvl = UnitLevel and UnitLevel() or 1
+        local lvl = UnitLevel and UnitLevel("player") or 1
         if p.levelNo ~= lvl then p.levelNo = lvl; p.level = 0 end
     elseif event == "PLAYER_ENTERING_WORLD" then
         lx = nil                                           -- a loading screen is not a walk
@@ -234,6 +241,21 @@ function addon:HandleExtraCommand(cmd, rest)
             db.pedo = nil
             sessionYards = 0
             Print(L("pedometer: started again from zero"))
+        elseif a == "debug" then
+            local d = dbg or {}
+            local lines = {
+                "counting is on: " .. tostring(On()),
+                "HereBeDragons found: " .. tostring(hbd ~= nil),
+                "readings taken since login: " .. tostring(d.ticks or 0) .. "  (about two a second while the game is running)",
+                string.format("position: x=%s y=%s world=%s zone=%s", tostring(d.x), tostring(d.y), tostring(d.inst), tostring(d.zone)),
+                "on foot: " .. tostring(d.foot) .. "  (not mounted, not on a flight, not in a vehicle)",
+                "yards counted by the last reading: " .. tostring(d.counted),
+                "error on the last reading: " .. tostring(d.err),
+                "this session: " .. tostring(sessionYards) .. " yards   total: " .. tostring((db.pedo and db.pedo.total) or 0),
+                "",
+                "Walk a few steps with this window closed, then open it again.",
+            }
+            addon.ReportWindow(L("Forever Lazy: pedometer check"), lines)
         elseif a == "off" then db.pedometer = false; Print(L("pedometer: off, the distance is not counted"))
         elseif a == "on" then db.pedometer = nil; Print(L("pedometer: on, it counts the distance you walk"))
         elseif a == "show" then db.pedoShow = true; Print(L("pedometer: readout on the screen (drag it to move it)")); UpdateBox()

@@ -470,7 +470,7 @@ local function WorldSpots(ids, pinst)
     -- stay in the zone I am in: a spot in another zone only counts when it is right next to me (the arrow must not hop around the world)
     local db = DB()
     local zone = db and db.arrowSameZone ~= false and hbd and hbd:GetPlayerZone() or nil
-    local px, py = hbd and hbd:GetPlayerWorldPosition()
+    local px, py; if hbd then px, py = hbd:GetPlayerWorldPosition() end
     for _, g in ipairs(addon.QuestLogSpawns()) do
         if g.id and want[g.id] and not g.complete then
             for _, s in ipairs(g.spawns) do

@@ -40,8 +40,9 @@ Skulls where you kill it, diamonds where it drops, a yellow **!** for quests to 
 - **Quest item bar** (off until you tick it): stand where a quest wants an item used and a button with the item pops up.
 - **New spell rank?** It takes the old rank's place on your action bars, by itself.
 - **Tooltips that talk:** hover a mob, item or NPC to see which quest it is for, how far along you are, and the real drop chances.
-- **Nameplate colours** (off until you turn them on): a mob attacking you is red, one fighting someone else yellow, and a quest mob that is idle purple.
-- **Paladin blessings:** one button blesses the next player who needs it, and you choose the blessing for each class.
+- **Nameplate colours** (off until you turn them on): an aggressive mob is red even before it attacks you, one fighting someone else orange, and a quest mob that is idle purple.
+- **Paladin blessings:** one button blesses the next player who needs it, and you choose the blessing for each class. Paladins with Forever Lazy share their choices so you do not double up, and a Split button picks blessings the others are not giving.
+- **Group finder filter:** a button on the group finder opens a list of what your search found, with drop-downs for groups or lone players, the role a group still needs (find the group that only needs a healer), how new it is and the sort order, plus word search. Click a row to whisper the leader.
 - **A pedometer** that counts how far you walk on foot: today, this level, in total.
 - **A damage meter** in its own chat tab laid out like Details: class icon, rank, name, a bar, and total, per second and percent. It uses the game's built-in meter, with every move a player used when you hover.
 - **Tell the party** when you finish a quest, job's done sounds, couch mode, talent reminders, ore and herb node memory, an item protector so you never sell your sleeping bag, and chat tweaks (all off until you turn them on).

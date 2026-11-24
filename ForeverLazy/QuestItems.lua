@@ -66,7 +66,7 @@ local function Wanted()
     local out = {}
     if not (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo) then return out end
     local hbd = api and api.hbd
-    local px, py, pinst = hbd and hbd:GetPlayerWorldPosition()
+    local px, py, pinst; if hbd then px, py, pinst = hbd:GetPlayerWorldPosition() end
     local tn = TargetNpc()
     for i = 1, (C_QuestLog.GetNumQuestLogEntries() or 0) do
         local ok, info = pcall(C_QuestLog.GetInfo, i)

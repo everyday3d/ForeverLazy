@@ -61,7 +61,7 @@ function addon:OnVersion(prefix, message, distribution, sender)
         end
         if not warned[message] then
             warned[message] = true
-            Print(string.format(L("%s runs a newer Forever Lazy (%s, you have %s). Click the button at the top of the screen, or /lazy new, for what's new and where to get it."), who, message, MyVersion()))
+            Print(string.format(L("%s runs a newer Forever Lazy (%s, you have %s). Update it on CurseForge: curseforge.com/wow/addons/foreverlazy (or in the CurseForge app). /lazy new shows what changed."), who, message, MyVersion()))
         end
     end
 end

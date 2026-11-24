@@ -113,6 +113,38 @@ local function MarkMerchant()
     end
 end
 
+-- the standard bag windows (the Forever Lazy bag window marks its own buttons)
+local function MarkItem(b, bag)
+    if not (b and b.CreateFontString) then return end
+    local slot = b.GetID and b:GetID()
+    local bagId = (b.GetBagID and b:GetBagID()) or bag
+    local link = bagId and slot and C_Container and C_Container.GetContainerItemLink and C_Container.GetContainerItemLink(bagId, slot)
+    addon.GearMark(b, link)
+end
+
+local function MarkBags()
+    for i = 1, 13 do
+        local f = _G["ContainerFrame" .. i]
+        if f and f:IsShown() then
+            if f.EnumerateValidItems then
+                for _, b in f:EnumerateValidItems() do MarkItem(b) end
+            else
+                local bag = f.GetID and f:GetID()
+                for j = 1, (f.size or 40) do MarkItem(_G["ContainerFrame" .. i .. "Item" .. j], bag) end
+            end
+        end
+    end
+    local c = _G.ContainerFrameCombinedBags
+    if c and c:IsShown() and c.EnumerateValidItems then
+        for _, b in c:EnumerateValidItems() do MarkItem(b) end
+    end
+end
+
+local function MarkBagsSoon()
+    pcall(MarkBags)
+    if C_Timer and C_Timer.After then C_Timer.After(0.15, function() pcall(MarkBags) end) end
+end
+
 --------------------------------------------------------------------------------
 -- The bag scan: upgrades I carry
 --------------------------------------------------------------------------------
@@ -224,6 +256,7 @@ local function Refresh()
     ClearCache()
     if C_Timer then C_Timer.After(0.2, function() pcall(Apply) end) else pcall(Apply) end
     MarkMerchant()
+    MarkBagsSoon()
     if addon.BagWindowRefresh then pcall(addon.BagWindowRefresh) end
 end
 
@@ -237,6 +270,14 @@ ev:SetScript("OnEvent", function(_, event)
         if not holder then pcall(Build) end
         pcall(HookTooltips)
         if _G.MerchantFrame_UpdateMerchantInfo then pcall(hooksecurefunc, "MerchantFrame_UpdateMerchantInfo", function() pcall(MarkMerchant) end) end
+        for _, fn in ipairs({ "ContainerFrame_Update", "ContainerFrame_UpdateAll", "ContainerFrame_GenerateFrame", "OpenAllBags", "OpenBag", "ToggleBag", "ToggleAllBags", "ToggleBackpack" }) do
+            if _G[fn] then pcall(hooksecurefunc, fn, MarkBagsSoon) end
+        end
+        for i = 1, 13 do
+            local f = _G["ContainerFrame" .. i]
+            if f and f.HookScript then pcall(f.HookScript, f, "OnShow", MarkBagsSoon) end
+        end
+        if _G.ContainerFrameCombinedBags and _G.ContainerFrameCombinedBags.HookScript then pcall(_G.ContainerFrameCombinedBags.HookScript, _G.ContainerFrameCombinedBags, "OnShow", MarkBagsSoon) end
         if C_Timer then C_Timer.After(3, Refresh) end
         return
     end
@@ -247,6 +288,7 @@ ev:SetScript("OnEvent", function(_, event)
     end
     pcall(Apply)
     if event == "MERCHANT_SHOW" then pcall(MarkMerchant) end
+    if event == "BAG_UPDATE_DELAYED" or event == "PLAYER_EQUIPMENT_CHANGED" then MarkBagsSoon() end
 end)
 
 -- options and commands call this
@@ -268,6 +310,38 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif which == "note" and Flag(val) ~= nil then
             db.gearNote = Flag(val) and true or nil
             Print(L("gear advisor chat note: ") .. (db.gearNote and "on" or "OFF")); return true
+        elseif a == "why" then
+            -- every piece of gear in the bags, and the reason it is or is not flagged
+            local spec = addon.GearSpec and addon.GearSpec()
+            local lines = { "Spec: " .. (spec and (spec.name .. " (" .. tostring(spec.kind) .. ")") or "?") .. "   gear advisor on: " .. tostring(On() and true or false), "" }
+            local n = 0
+            for bag = 0, 4 do
+                for slot = 1, ((C_Container and C_Container.GetContainerNumSlots(bag)) or 0) do
+                    local info = C_Container.GetContainerItemInfo(bag, slot)
+                    local link = info and info.hyperlink
+                    if link then
+                        local _, _, _, ilvl, minLevel, _, _, _, loc = GetItemInfo(link)
+                        local slots = loc and addon.GearSlots[loc]
+                        if slots then
+                            n = n + 1
+                            local why
+                            if IsEquippableItem and not IsEquippableItem(link) then why = "not equippable"
+                            elseif (minLevel or 0) > (UnitLevel("player") or 1) then why = "needs level " .. tostring(minLevel)
+                            elseif IsUsableItem and IsUsableItem(link) == false then why = "you cannot use it"
+                            else
+                                local gain, _, _, worn = addon.GearGain(link, slots, loc, ilvl)
+                                local score = addon.GearScore(link, spec)
+                                if not gain then why = "no comparison (a tank does not use two-handers)"
+                                else why = string.format("score %s, wearing %s, gain %.1f (needs %.1f and at least %d)", score and string.format("%.1f", score) or "no stats", string.format("%.1f", worn or 0), gain, (worn or 0) * MARGIN, MIN_GAIN) end
+                            end
+                            lines[#lines + 1] = string.format("%s  [%s]: %s", GetItemInfo(link) or link, loc, why)
+                        end
+                    end
+                end
+            end
+            if n == 0 then lines[#lines + 1] = "No gear in your bags." end
+            addon.ReportWindow("Forever Lazy: gear check", lines)
+            return true
         elseif a == "list" then
             local list = Scan()
             if #list == 0 then Print(L("gear: no upgrades in your bags")) end

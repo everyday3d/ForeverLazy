@@ -368,7 +368,7 @@ local function Draw(force)
     lastSig = sig
 
     Clear()
-    local px, py, pinst = hbd and hbd:GetPlayerWorldPosition()
+    local px, py, pinst; if hbd then px, py, pinst = hbd:GetPlayerWorldPosition() end
     -- nearest first for the minimap
     local byDistance = {}
     for _, c in ipairs(order) do

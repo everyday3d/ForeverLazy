@@ -73,6 +73,32 @@ local function Build()
     return true
 end
 
+-- The dungeon I am inside, by name (nil when I am not in one). The game's instance info is trusted first; when it says "not an
+-- instance" the name of the zone I am standing in is matched against the dungeon list (some dungeons here report no instance type).
+function addon.CurrentDungeon()
+    local name, itype = GetInstanceInfo and GetInstanceInfo()
+    if name and (itype == "party" or itype == "raid") then return name end
+    if Build() then
+        local texts = {}
+        for _, fn in ipairs({ GetRealZoneText, GetZoneText, GetMinimapZoneText }) do
+            local ok, t = pcall(fn)
+            if ok and type(t) == "string" and t ~= "" then texts[#texts + 1] = Key(t) end
+        end
+        if name and name ~= "" then texts[#texts + 1] = Key(name) end
+        for _, t in ipairs(texts) do
+            local rec = byKey[t]
+            if rec then return rec.name end
+            for k, r in pairs(byKey) do
+                if #k >= 6 and (t:find(k, 1, true) or k:find(t, 1, true)) and #t >= 6 then
+                    -- a city name that merely contains a dungeon's name is not a dungeon: needs the instance flag or an exact end match
+                    if (IsInInstance and IsInInstance()) or t:sub(-#k) == k then return r.name end
+                end
+            end
+        end
+    end
+    return nil
+end
+
 local function MapName(id)
     local info = id and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(id)
     return info and info.name or "?"
@@ -440,9 +466,13 @@ end
 
 -- /lazy dungeons here: what my quests need in the dungeon I am in (any time, group or not)
 function addon.DungeonHere(auto)
-    local name, itype = GetInstanceInfo and GetInstanceInfo()
-    if not name or (itype ~= "party" and itype ~= "raid") then
-        if not auto then Print(L("you are not inside a dungeon")) end
+    local name = addon.CurrentDungeon()
+    if not name then
+        if not auto then
+            local iname, itype = GetInstanceInfo and GetInstanceInfo()
+            Print(L("you are not inside a dungeon") .. string.format(" (the game says: instance '%s', type '%s', zone '%s' / '%s')",
+                tostring(iname), tostring(itype), tostring(GetRealZoneText and GetRealZoneText()), tostring(GetZoneText and GetZoneText())))
+        end
         return
     end
     local quests = addon.DungeonQuestsHere(name)
@@ -530,8 +560,7 @@ local dungeonKey = {}
 local daCache = { name = nil, t = 0, ids = {} }
 
 local function InDungeonName()
-    local name, itype = GetInstanceInfo and GetInstanceInfo()
-    if name and (itype == "party" or itype == "raid") then return name end
+    return addon.CurrentDungeon()
 end
 
 -- the arrow's target while I am inside a dungeon with quests that need something here (nil otherwise)
@@ -580,8 +609,9 @@ dEv:SetScript("OnEvent", function()
         local db = addon.GetDB()
         if not db or db.dungeonQuestPopup == false then return end
         if not (IsInGroup and IsInGroup()) then return end                      -- only with a group
-        local name, itype, _, _, _, _, _, instanceId = GetInstanceInfo and GetInstanceInfo()
-        if not name or (itype ~= "party" and itype ~= "raid") then return end
+        local _, _, _, _, _, _, _, instanceId = GetInstanceInfo and GetInstanceInfo()
+        local name = addon.CurrentDungeon()
+        if not name then return end
         local key = tostring(instanceId or name)
         if shownIn[key] and GetTime() - shownIn[key] < 900 then return end      -- once per visit
         shownIn[key] = GetTime()

@@ -42,8 +42,8 @@ end
 -- needs this dungeon counts even when it is not tagged as a dungeon quest).
 local dcache = { name = nil, t = 0, ids = {} }
 local function DungeonIds()
-    local name, itype = GetInstanceInfo and GetInstanceInfo()
-    if not name or (itype ~= "party" and itype ~= "raid") then return nil end
+    local name = addon.CurrentDungeon and addon.CurrentDungeon()
+    if not name then return nil end
     if dcache.name == name and GetTime() - dcache.t < 10 then return dcache.ids end
     local ids = {}
     if addon.DungeonQuestsHere then
@@ -489,7 +489,12 @@ local function Layout()
     for _, e in ipairs(list) do byId[e.q.id] = e end
 
     local maxQuests = 40        -- the quest log holds 40 (the game's own limit call says 145 here, which is wrong for this client)
-    win.title:SetText(string.format("Quests |cffaaaaaa(%d/%d)|r", #list, maxQuests))
+    local inDungeon = addon.CurrentDungeon and addon.CurrentDungeon()
+    if inDungeon then
+        win.title:SetText(string.format("Quests |cffaaaaaa(%d)|r |cffffd100%s|r", #list, inDungeon))
+    else
+        win.title:SetText(string.format("Quests |cffaaaaaa(%d/%d)|r", #list, maxQuests))
+    end
     win.empty:SetWidth(width)
     win.empty:SetShown(#list == 0 and not db.trackerCollapsed)
 
