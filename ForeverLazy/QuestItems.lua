@@ -72,6 +72,7 @@ local function Wanted()
         local ok, info = pcall(C_QuestLog.GetInfo, i)
         if ok and type(info) == "table" and not info.isHeader and info.questID then
             local link, icon, _, showWhenComplete = SpecialItem(i)
+            if link and addon.IsKeyItem and addon.IsKeyItem(link) then link = nil end
             if link then
                 local complete = C_QuestLog.IsComplete and select(2, pcall(C_QuestLog.IsComplete, info.questID))
                 if not complete or showWhenComplete then

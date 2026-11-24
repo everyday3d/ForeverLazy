@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.22.4", {
+        "The BLESSINGS button moves on to the next person after each click, so it no longer blesses the same player again and again, and it moves on when a cast did not land.",
+        "KEYS no longer get an item button: a key that a quest gives you (like the Dalaran Sewer Key) opens a gate when you walk up to it. /lazy keys show brings the buttons back.",
+    } },
     { "0.22.3", {
         "Item tooltips list each of your characters once. A character that had been saved under several realm spellings showed up as extra lines (for example Bad, Bad Altitude and Bad-CAMWOW) and was counted twice.",
     } },

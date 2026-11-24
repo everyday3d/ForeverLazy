@@ -137,5 +137,18 @@ test("splitting picks a blessing the others are not giving", function()
     eq(addon.BlessSplitFor(shorts, { Might = true, Kings = true, Wisdom = true }, "Might"), nil, "nothing left to give")
     eq(addon.BlessSplitFor({ "Might" }, { Might = true }, "Might"), nil)
 end)
+test("a blessing just cast counts as given, so the button moves on to the next person", function()
+    local members = { member("party1", "SHAMAN"), member("party2", "DRUID"), member("party3", "WARRIOR") }
+    local recent = {}
+    local function wasRecent(m, short) return recent[m.unit .. ":" .. short] end
+    local pick, bless = addon.BlessNext(members, avail, buffsFrom({}), nil, wasRecent)
+    eq(pick.unit, "party1", "first the shaman")
+    recent["party1:Wisdom"] = true                      -- I clicked: the buff has not shown on him yet
+    pick = addon.BlessNext(members, avail, buffsFrom({}), nil, wasRecent)
+    eq(pick.unit, "party2", "then the druid, not the shaman again")
+    recent["party2:Wisdom"] = true
+    pick = addon.BlessNext(members, avail, buffsFrom({}), nil, wasRecent)
+    eq(pick.unit, "party3", "then the warrior")
+end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 if failed > 0 then os.exit(1) end

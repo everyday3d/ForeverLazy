@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.22.4
+### Fixed
+- **The Blessings button blessed the same player over and over.** A new blessing takes a moment to show on the player, so the button kept pointing at them (and a quick second click blessed them twice). A blessing you just cast now counts as given for 8 seconds and the button moves on to the next person at once. It also moves on when a cast did not land, and comes back to that player later.
+- **A quest key got an item button.** The Dalaran Sewer Key (quest Key to the City) showed a button in the quest item button, the tracker and the quest-giver panel, although it opens a gate when you walk up to it. Keys get no button now (the game's Key items, and quest items named ... Key or Key to ...).
+
+### New
+- **/lazy keys show|hide** brings the key buttons back, or hides them again.
+
+### Changed
+- **/lazy blessings debug** prints what the button does when you click it only until the next reload, in plain words, and not for good.
+
 ## 0.22.3
 ### Fixed
 - **Item tooltips listed one character several times.** A character saved under different realm spellings showed up as extra lines (Bad, Bad Altitude and Bad-CAMWOW US1 Realm 7 PvE) and the total counted it again. Characters are matched by first name and class now, and one copy is listed: yours, or else the one with the full name.

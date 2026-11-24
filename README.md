@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.22.3-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.22.4-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,12 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.22.3
+## What's new in 0.22.4
+
+- **The Blessings button moves on to the next person** after each click, instead of blessing the same player again and again.
+- **Keys get no item button.** A key a quest gives you (like the Dalaran Sewer Key) opens a gate when you walk up to it. /lazy keys show brings the buttons back.
+
+## Earlier: 0.22.3
 
 - **Item tooltips list each of your characters once,** instead of repeating one saved under different realm spellings.
 

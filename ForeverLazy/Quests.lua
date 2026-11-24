@@ -94,6 +94,8 @@ local function QuestItems()
     local currentQuest
     local function add(link)
         local itemStr = link and link:match("item:%d+")
+        -- a key opens a gate or door when I walk up to it: no button for it (this covers the "item the quest gives me" fallback too)
+        if itemStr and addon.IsKeyItem and addon.IsKeyItem(link) then return end
         if itemStr and currentQuest and addon.IsStarterOnlyItem(currentQuest, tonumber(itemStr:match("%d+"))) then return end
         if itemStr and not seen[itemStr] then
             seen[itemStr] = true
@@ -109,7 +111,7 @@ local function QuestItems()
                 local okT, _, _, _, isHeader, _, _, _, qid = pcall(GetQuestLogTitle, i)
                 if okT and not isHeader and qid and qid ~= 0 then currentQuest = qid end
             end
-            if ok and link then add(link) end
+            if ok and link and not (addon.IsKeyItem and addon.IsKeyItem(link)) then add(link) end
             currentQuest = nil
         end
     end

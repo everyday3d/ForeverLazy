@@ -100,7 +100,8 @@ end
 -- buffsOf(unit) -> list of { name =, left = seconds (or nil for no end) } ; a unit whose buffs cannot be read returns nil
 -- returns the member who is next, the blessing to cast on them, and how many still need one
 -- skip(class, shortName) -> true when another paladin gives that blessing to that class (see BlessCovered)
-function addon.BlessNext(members, available, buffsOf, skip)
+-- recent(member, shortName) -> true when I cast that blessing on that player a moment ago (the new buff may not show yet)
+function addon.BlessNext(members, available, buffsOf, skip, recent)
     local pick, pickBless, count = nil, nil, 0
     for _, m in ipairs(members) do
         if m.alive ~= false and m.connected ~= false then
@@ -115,6 +116,7 @@ function addon.BlessNext(members, available, buffsOf, skip)
                         local bs = b.name and Short(b.name)
                         if bs == short and (b.left == nil or b.left > REFRESH) then has = true; break end
                     end
+                    if not has and recent and recent(m, short) then has = true end
                     if not has then
                         count = count + 1
                         if not pick and m.inRange ~= false then pick, pickBless = m, bless end
@@ -318,9 +320,15 @@ local function Build()
         GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    -- after the click (the cast itself is the secure part): remember who was just blessed and move on to the next person
+    b:HookScript("PostClick", function(self)
+        if addon.BlessNoteCast then addon.BlessNoteCast(self:GetAttribute("unit"), self:GetAttribute("spell")) end
+    end)
     b:HookScript("OnClick", function(self)
-        if DB().blessDebug then
-            Print("blessings click: " .. tostring(self:GetAttribute("type")) .. " | " .. tostring(self:GetAttribute("macrotext")))
+        -- only after /lazy blessings debug, and only until the next reload
+        if addon.blessClickDebug then
+            local macro = self:GetAttribute("macrotext")
+            Print("blessings click: " .. (macro and ("casts: " .. macro) or "nothing to cast (everyone is blessed, or nobody can be reached)"))
         end
     end)
     button = b
@@ -380,6 +388,23 @@ end
 local PREFIX = "FLBLS"
 local others = {}                 -- paladin name -> { map = { CLASS = "Might" }, t = time heard }
 local lastOthers = {}             -- the ones that are in the group right now (set by Refresh)
+
+-- A blessing I just cast counts as given for a few seconds: the buff takes a moment to show on the player, and until it does the
+-- button would point at the same person again (and a quick second click would bless them twice). It also lets the button move on
+-- to the next person when a cast did not land (out of sight, out of range) instead of hanging on one player.
+local recent = {}
+local RECENT = 8
+function addon.BlessRecently(m, short)
+    local t = recent[tostring(m.name or m.unit) .. ":" .. tostring(short)]
+    return t ~= nil and GetTime() - t < RECENT
+end
+function addon.BlessNoteCast(unit, spell)
+    if not (unit and spell) then return end
+    local name = UnitName and UnitName(unit)
+    if not name then return end
+    recent[name .. ":" .. Short(spell)] = GetTime()
+    if addon.BlessingsRefresh then pcall(addon.BlessingsRefresh) end          -- point the button at the next person at once
+end
 function addon.BlessLastOthers() return lastOthers end
 
 local function MyClaims(avail)
@@ -488,7 +513,7 @@ local function Refresh()
     lastOthers = OthersNow(members)
     local myName = UnitName("player")
     local function Covered(class, short) return addon.BlessCovered(class, short, myName, lastOthers) end
-    local pick, bless, count = addon.BlessNext(members, avail, BuffsOf, function(class, short) return Covered(class, short) ~= nil end)
+    local pick, bless, count = addon.BlessNext(members, avail, BuffsOf, function(class, short) return Covered(class, short) ~= nil end, addon.BlessRecently)
     -- the class rows: the classes that are in the group
     local present, seen = {}, {}
     for _, m in ipairs(members) do if m.class and not seen[m.class] then seen[m.class] = true end end
@@ -686,7 +711,7 @@ function addon:HandleExtraCommand(cmd, rest)
     if c == "blessings" or c == "bless" then
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
-        if a == "debug" then db.blessDebug = true; addon.BlessingsDebug(); return true end
+        if a == "debug" then db.blessDebug = nil; addon.blessClickDebug = true; addon.BlessingsDebug(); return true end
         if a == "on" then db.blessPanel = nil; Print(L("blessings: panel on (it shows for a paladin in a group, or when alone after /lazy blessings solo)"))
         elseif a == "off" then db.blessPanel = false; Print(L("blessings: panel off"))
         elseif a == "reset" then db.blessings = nil; Print(L("blessings: back to the usual choices (Might for fighters, Wisdom for casters)"))

@@ -141,6 +141,21 @@ local function LogIndex(id)
     return ok and idx and idx > 0 and idx or nil
 end
 
+-- A key opens a door or a gate when you walk up to it: it never needs a button of its own. (/lazy keys show brings them back.)
+function addon.IsKeyItem(linkOrId)
+    local d = addon.GetDB and addon.GetDB()
+    if d and d.keyButtons == true then return false end
+    local id = type(linkOrId) == "number" and linkOrId or tonumber(tostring(linkOrId or ""):match("item:(%d+)"))
+    if not id then return false end
+    local inst = (C_Item and C_Item.GetItemInfoInstant) or GetItemInfoInstant
+    if inst then
+        local ok, _, _, _, _, _, classId = pcall(inst, id)
+        if ok and classId == 13 then return true end                      -- the game's "Key" item class
+    end
+    local name = GetItemInfo and GetItemInfo(id)
+    return (name and (name:find(" Key$") or name:find("^Key to ") or name:find(" Key %(")) and true) or false
+end
+
 local function SpecialItem(id)
     local idx = LogIndex(id)
     if not (idx and GetQuestLogSpecialItemInfo) then return nil end
@@ -148,6 +163,7 @@ local function SpecialItem(id)
     if not (ok and link) then return nil end
     local itemStr = link:match("item:%d+")
     if not itemStr then return nil end
+    if addon.IsKeyItem(link) then return nil end
     -- an item that only started the quest (it is in the quest's "started by" and is not one of its objectives) has done its job
     local itemId = tonumber(itemStr:match("%d+"))
     local data = ns and ns.data
@@ -748,6 +764,14 @@ end)
 
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
+    if (cmd or ""):lower() == "keys" then
+        local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
+        if a == "show" then DB().keyButtons = true; Print(L("keys: a key that a quest gives you gets an item button again"))
+        elseif a == "hide" then DB().keyButtons = nil; Print(L("keys: no item button for keys (they open a gate or door when you walk up to it)"))
+        else Print(L("keys: item buttons for keys are ") .. (DB().keyButtons == true and "shown" or "hidden") .. L(" (/lazy keys show or hide)")) end
+        dirty = true
+        return true
+    end
     if (cmd or ""):lower() == "tracker" then
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         if a == "on" then addon.TrackerSet(true)
