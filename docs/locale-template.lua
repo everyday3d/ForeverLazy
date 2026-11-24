@@ -1,4 +1,4 @@
--- Every text of Forever Lazy that can be translated (938 of them). Fill in the right-hand side, leave "" for English.
+-- Every text of Forever Lazy that can be translated (982 of them). Fill in the right-hand side, leave "" for English.
 -- Keep every %d, %s and |c...|r code exactly as it is in the English text, and keep the line breaks (\n).
 -- Save the file as ForeverLazy/Locales/<code>.lua (deDE, esES, esMX, frFR, itIT, koKR, ptBR, ruRU, zhCN, zhTW).
 local ADDON, ns = ...
@@ -34,6 +34,22 @@ ns.locales["xxXX"] = {
     ["off = the game's own bags (/lazy bags opens this window)"] = "",
     ["the bag window hit an error: "] = "",
     ["the game's Combine Bags is on now (one bag with everything), since the Forever Lazy bag window is off"] = "",
+
+    -- Blessings.lua
+    ["Blessings"] = "",
+    ["Click a class below to choose its blessing."] = "",
+    ["Click: bless the next player who needs it."] = "",
+    ["Click: the next blessing. Right-click: the one before."] = "",
+    ["Forever Lazy: blessings"] = "",
+    ["One button for the whole group"] = "",
+    ["blessings: back to the usual choices (Might for fighters, Wisdom for casters)"] = "",
+    ["blessings: panel closed. /lazy blessings brings it back."] = "",
+    ["blessings: panel hidden"] = "",
+    ["blessings: panel on (it shows for a paladin in a group)"] = "",
+    ["blessings: the panel also shows when you are alone: "] = "",
+    ["everyone is blessed"] = "",
+    ["none"] = "",
+    ["someone is out of range"] = "",
 
     -- Boats.lua
     ["I can't read your position here"] = "",
@@ -543,8 +559,13 @@ ns.locales["xxXX"] = {
     ["(10 means show everything)"] = "",
     ["... and draw lines between them"] = "",
     ["... and how many my other characters have"] = "",
+    ["... colour by who it is attacking"] = "",
+    ["... tint quest mobs that are not in a fight (purple)"] = "",
     ["A damage meter in its own chat tab called Meter, laid out like Details: class icon, rank, name, a class-coloured bar, and total, per second and percent. Hover a name for that player's moves. It reads the game's built-in meter (the same source Details uses on this client). In combat the game hides the numbers, so the window keeps the last picture until the fight ends."] = "",
     ["A green ^ on upgrades in the bag window and at vendors"] = "",
+    ["A mob attacking me"] = "",
+    ["A mob fighting someone else"] = "",
+    ["A quest mob"] = "",
     ["Accept and hand in quests by myself (not dungeon, skipped or grey ones, and never choosing a reward)"] = "",
     ["Accept waypoints my party sends me"] = "",
     ["Add a new quest to the plan where it costs the least walking"] = "",
@@ -580,6 +601,7 @@ ns.locales["xxXX"] = {
     ["Closest first: the arrow goes to the nearest of my next stops, not strictly plan order"] = "",
     ["Collapse all"] = "",
     ["Colour action buttons: red out of range, blue no mana, grey cannot use"] = "",
+    ["Colour hostile plates by who the mob is attacking (red = me, yellow = someone else)"] = "",
     ["Coloured areas where the quest mobs are (world map)"] = "",
     ["Commands: /lazy hive on|off, /lazy hive, /lazy pace, /lazy drops <item>, /lazy session, /lazy hive who, /lazy hive rares."] = "",
     ["Compact: objectives only for the quest I am on, the others take one line"] = "",
@@ -679,6 +701,8 @@ ns.locales["xxXX"] = {
     ["Only remind when it is unhappy (not when it is just content)"] = "",
     ["Our bag window instead of the game's bags"] = "",
     ["Outline the chat font"] = "",
+    ["Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"] = "",
+    ["Pedometer: count how far I walk on foot"] = "",
     ["Photo: The World Famous Comedy Store, CC BY-SA 2.0 (via Wikimedia Commons)"] = "",
     ["Pin size"] = "",
     ["Ping when I am near someone I can hand a quest in to"] = "",
@@ -742,6 +766,7 @@ ns.locales["xxXX"] = {
     ["Show quest objectives on the map and minimap"] = "",
     ["Show reported rares as pins on the world map"] = "",
     ["Show the name under the arrow"] = "",
+    ["Show the pedometer readout on the screen (click it for all the numbers)"] = "",
     ["Show the stats it reads from my gear"] = "",
     ["Show the step window while a plan is running"] = "",
     ["Shows where your quests' mobs, items and objects are, on the world map and minimap. Skull = kill, purple diamond = collect, green triangle = use, yellow ! = quest to pick up, yellow ? = ready to hand in. Hover a pin for the quest."] = "",
@@ -823,6 +848,26 @@ ns.locales["xxXX"] = {
     ["sent your plan (%d stops) to the group. Players with the addon can follow it with /lazy acceptplan"] = "",
     ["you are not in a group"] = "",
     ["you have no plan to share. /lazy plan builds one"] = "",
+
+    -- Pedometer.lua
+    ["Click for all the numbers. Drag to move."] = "",
+    ["Distance walked"] = "",
+    ["Forever Lazy: distance walked"] = "",
+    ["In total:"] = "",
+    ["It counts the distance you cover on foot. Mounted travel, flights and teleports are left out. /lazy steps reset starts again."] = "",
+    ["The last days:"] = "",
+    ["The level before:"] = "",
+    ["This level:"] = "",
+    ["This session:"] = "",
+    ["Today:"] = "",
+    ["Where you walk the most:"] = "",
+    ["level"] = "",
+    ["pedometer: off, the distance is not counted"] = "",
+    ["pedometer: on, it counts the distance you walk"] = "",
+    ["pedometer: readout hidden"] = "",
+    ["pedometer: readout on the screen (drag it to move it)"] = "",
+    ["pedometer: started again from zero"] = "",
+    ["steps"] = "",
 
     -- Pet.lua
     ["%s needs feeding (%s)%s"] = "",
@@ -914,6 +959,11 @@ ns.locales["xxXX"] = {
     ["No plan yet. /lazy plan builds one."] = "",
     ["XP hot spots on the world map "] = "",
     ["|cff888888click: do next  right-click: skip|r"] = "",
+
+    -- PlateColors.lua
+    ["nameplate colours: "] = "",
+    ["off"] = "",
+    ["on (red = attacking me, yellow = someone else, purple = a quest mob)"] = "",
 
     -- Protect.lua
     [" was sold and I could not buy it back. Do it from the Buyback tab.|r"] = "",

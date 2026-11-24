@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.0
+### New
+- **Pedometer.** It adds up the distance you cover on foot (not mounted, not on a flight, not teleported): this session, today, this level, the level before, and in total, plus the zones you walk the most and the last seven days. `/lazy steps` opens the numbers, `/lazy steps show` puts a small movable readout on the screen, `/lazy steps reset` starts again. The unit follows the distance setting in the options (yards, meters or steps).
+- **Paladin blessings.** For a paladin in a group, one button blesses the next player who is missing their blessing (it skips the dead, the offline and anyone out of range, and rebuffs when under 90 seconds are left). Every class in the group has its own blessing, which you change by clicking the class (right-click goes back): Might for fighters and Wisdom for casters to start with. The button's target changes between fights, never during one. `/lazy blessings` shows or hides the panel, `/lazy blessings debug` shows the blessing spells, the group and the buffs it sees, `/lazy blessings reset` goes back to the usual choices.
+- **Nameplate colours** (off until you turn them on, in the options under Nameplates, or `/lazy platecolors on`). A hostile mob that is attacking you is red, one that is fighting someone else is yellow, and a quest mob that is not in a fight is purple. The colours are yours to change, and each part can be switched off. Players, friendly mobs, tapped mobs and idle mobs keep the game's own colour. A mob attacking you stays red even when another nameplate addon colours it green.
+- **Group finder report.** `/lazy lfg` shows what the Forever group finder gives to addons, so we can see what a group finder filter could do.
+
 ## 0.21.0
 ### New
 - **Translations.** Every text the addon shows now goes through one lookup, so a language file only has to list the texts (about 940 are ready: the options, the tour, what's new, the chat messages and the windows). Nothing is translated yet; everything stays English until a language file is added. `docs/LOCALIZATION.md` says how, `docs/locale-template.lua` lists every text, `/lazy l10n` shows what is translated, `/lazy l10n missing` lists what still is not, and the options have a Language button. Plan stop labels (Turn in, Pick up, Class quest) are translated for showing while the rules still work on the English words.

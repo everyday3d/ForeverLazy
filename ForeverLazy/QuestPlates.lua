@@ -249,11 +249,8 @@ local function IconFor(plate)
     return f
 end
 
-local function Update(unit)
-    local plate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit)
-    if not plate then return end
-    local f = icons[plate]
-    if not On() then if f then f:Hide() end return end
+-- what a mob is to my quests: "kill", "loot" (it drops something a quest needs), "start" (it drops a quest starter) or nil
+local function KindOf(unit)
     if dirty then Rebuild() end
     local kind
     local okU, guid = pcall(UnitGUID, unit)
@@ -273,6 +270,16 @@ local function Update(unit)
         end
         if not kind and StartsQuest(id) then kind = "start" end
     end
+    return kind
+end
+addon.PlateQuestKind = function(unit) if not addon.ModuleOn("quests") then return nil end return KindOf(unit) end
+
+local function Update(unit)
+    local plate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit(unit)
+    if not plate then return end
+    local f = icons[plate]
+    if not On() then if f then f:Hide() end return end
+    local kind = KindOf(unit)
     if not kind then if f then f:Hide() end return end
     f = f or IconFor(plate)
     f.tex:SetTexture(kind == "kill" and SWORD or BAG)

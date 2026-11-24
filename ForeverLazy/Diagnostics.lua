@@ -95,6 +95,105 @@ function addon.ApisReport()
 end
 
 --------------------------------------------------------------------------------
+-- /lazy lfg: what the group finder hands to addons (to see what a group finder filter could do)
+--------------------------------------------------------------------------------
+local function ShortValue(v)
+    if issecretvalue and issecretvalue(v) then return "<hidden from addons>" end
+    local t = type(v)
+    if t == "string" then return '"' .. (v:sub(1, 40)) .. '"' end
+    if t == "table" then
+        local n = 0
+        for _ in pairs(v) do n = n + 1 end
+        return "table (" .. n .. " entries)"
+    end
+    if t == "function" then return "function" end
+    return tostring(v)
+end
+
+local function SortedKeys(t, limit)
+    local keys = {}
+    for k in pairs(t) do keys[#keys + 1] = tostring(k) end
+    table.sort(keys)
+    if limit and #keys > limit then
+        local n = #keys
+        for i = n, limit + 1, -1 do keys[i] = nil end
+        keys[#keys + 1] = "... and " .. (n - limit) .. " more"
+    end
+    return keys
+end
+
+function addon.LfgReport()
+    local lines = { "What the group finder gives to addons. Open the group finder and run a search first, then run /lazy lfg again.", "" }
+    local function Add(s) lines[#lines + 1] = s end
+    -- the functions
+    for _, name in ipairs({ "C_LFGList", "C_LFGInfo", "C_LFGBrowse", "C_PartyInfo" }) do
+        local tbl = _G[name]
+        if type(tbl) == "table" then
+            local keys = SortedKeys(tbl)
+            Add(name .. " has " .. #keys .. " functions:")
+            Add("   " .. table.concat(keys, ", "))
+        else
+            Add(name .. ": not in this client")
+        end
+        Add("")
+    end
+    -- the windows
+    for _, name in ipairs({ "LFGParentFrame", "LFGBrowseFrame", "LFGListFrame", "GroupFinderFrame", "PVEFrame" }) do
+        local f = _G[name]
+        if f then
+            Add(string.format("%s: exists, %s", name, (f.IsShown and f:IsShown()) and "open now" or "closed"))
+            if type(f) == "table" then
+                local keys = SortedKeys(f, 70)
+                Add("   fields and methods: " .. table.concat(keys, ", "))
+            end
+        else
+            Add(name .. ": not in this client")
+        end
+    end
+    Add("")
+    -- global names that look like group finder code
+    local found = {}
+    for k in pairs(_G) do
+        if type(k) == "string" and (k:find("^LFGBrowse") or k:find("^LFGParent") or k:find("^LFGList") or k:find("^GroupFinder") or k:find("^LFGVanilla")) then found[#found + 1] = k end
+    end
+    table.sort(found)
+    Add(#found .. " global names that start with LFGBrowse, LFGParent, LFGList, GroupFinder or LFGVanilla:")
+    Add("   " .. table.concat(found, ", "))
+    Add("")
+    -- what a search gives
+    local api = _G.C_LFGList
+    if api and api.GetSearchResults then
+        local ok, count, results = pcall(api.GetSearchResults)
+        Add("GetSearchResults: " .. (ok and ("count " .. ShortValue(count) .. ", results " .. ShortValue(results)) or ("ERROR " .. tostring(count))))
+        local ids = type(results) == "table" and results or nil
+        if ids and api.GetSearchResultInfo then
+            for i = 1, math.min(3, #ids) do
+                local okI, info = pcall(api.GetSearchResultInfo, ids[i])
+                Add("   result " .. i .. " (id " .. tostring(ids[i]) .. "): " .. (okI and "" or ("ERROR " .. tostring(info))))
+                if okI and type(info) == "table" then
+                    for _, k in ipairs(SortedKeys(info)) do Add("      " .. k .. " = " .. ShortValue(info[k])) end
+                end
+                if api.GetSearchResultMemberInfo then
+                    local okM, m = pcall(api.GetSearchResultMemberInfo, ids[i], 1)
+                    Add("      first member: " .. (okM and (type(m) ~= "table" and ShortValue(m) or table.concat(SortedKeys(m), ", ")) or ("ERROR " .. tostring(m))))
+                end
+            end
+            if #ids == 0 then Add("   no results right now: open the group finder, search for a dungeon, and run this again") end
+        end
+    else
+        Add("C_LFGList.GetSearchResults: not in this client")
+    end
+    -- the Browse window's own results, if it keeps them
+    local browse = _G.LFGBrowseFrame
+    if browse then
+        for _, key in ipairs({ "results", "searchResults", "SearchResults", "ScrollBox", "ScrollFrame", "List", "listings" }) do
+            if browse[key] ~= nil then Add("LFGBrowseFrame." .. key .. " = " .. ShortValue(browse[key])) end
+        end
+    end
+    addon.ReportWindow("Forever Lazy: group finder", lines)
+end
+
+--------------------------------------------------------------------------------
 -- /lazy report
 --------------------------------------------------------------------------------
 local function Version()
@@ -178,6 +277,10 @@ local COMMANDS = {
         { "/lazy report", "A bug report you can copy" },
         { "/lazy apis", "Which game functions the newer features need" },
         { "/lazy commands", "This list" },
+        { "/lazy lfg", "What the group finder gives to addons (for bug reports and filter ideas)" },
+        { "/lazy steps, steps reset, steps show|hide, steps on|off", "The pedometer: how far you have walked" },
+        { "/lazy platecolors on|off", "Colour hostile nameplates: red attacking me, yellow someone else, purple a quest mob" },
+        { "/lazy blessings, blessings debug, blessings reset", "Paladin blessings: one button for the group, a blessing for each class" },
         { "/lazy l10n, l10n use <code>, l10n missing", "Languages: what is translated, pick one, list what needs translating" } } },
     { "Finding things", {
         { "/lazy go <place>", "Plan and follow a whole trip" },
@@ -282,6 +385,7 @@ function addon:HandleExtraCommand(cmd, rest)
     local c = (cmd or ""):lower()
     if c == "report" then addon.BugReport(); return true end
     if c == "apis" then addon.ApisReport(); return true end
+    if c == "lfg" then addon.LfgReport(); return true end
     if c == "commands" or c == "cmds" then addon.CommandsReport(); return true end
     if c == "l10n" or c == "language" then
         local a = ((rest or ""):gsub("^%s+", ""):gsub("%s+$", ""))

@@ -280,6 +280,12 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.22.0", {
+        "PEDOMETER! It adds up how far you walk on foot (not mounted, not on a flight): this session, today, this level and in total, plus the zones you walk the most. /lazy steps shows it, /lazy steps show puts a small readout on the screen. The unit follows your distance setting (yards, meters or steps).",
+        "PALADIN BLESSINGS: for a paladin in a group, one button blesses the next player who needs it, and you pick the blessing for each class by clicking it (Might for fighters and Wisdom for casters to start with). /lazy blessings shows or hides the panel, /lazy blessings debug shows what it sees.",
+        "NAMEPLATE COLOURS (off until you turn them on, in the options under Nameplates): a hostile mob attacking you is RED, one fighting someone else is yellow, and a quest mob that is not in a fight is purple. You pick the colours. /lazy platecolors on|off.",
+        "/lazy lfg shows what the group finder gives to addons, to see what a group finder filter could do.",
+    } },
     { "0.21.0", {
         "TRANSLATIONS are possible now: every text goes through one lookup, so a language file only has to list the texts. About 940 are ready to translate (docs/LOCALIZATION.md). Until a language is added, everything stays English. /lazy l10n shows the state, and the options have a Language button.",
         "Stop labels like Turn in: and Pick up: are shown in your language once translated, while the rules that use them keep working on the English words.",

@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.21.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.22.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,14 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.21.0
+## What's new in 0.22.0
+
+- **Pedometer:** how far you walk, today, this level and in total.
+- **Paladin blessings:** one button blesses the next player who needs it, with a blessing you pick for each class.
+- **Nameplate colours** (off until you turn them on): red when a mob attacks you, yellow when it fights someone else, purple for quest mobs.
+- **Group finder report** (/lazy lfg) to see what a group finder filter could do.
+
+## Earlier: 0.21.0
 
 - **Ready for translations.** Every text goes through one lookup, about 940 texts are listed in docs/locale-template.lua, and docs/LOCALIZATION.md says how to add a language. Nothing is translated yet, so it all stays English for now.
 

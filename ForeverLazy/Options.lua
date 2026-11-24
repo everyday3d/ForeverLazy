@@ -291,6 +291,12 @@ local function BuildControls(parent)
         function() return DB().rangeColor ~= false end, function(v) DB().rangeColor = OffFlag(v); if addon.RangeColorRefresh then addon.RangeColorRefresh() end end)
     Check(content, L("Put the newest spell rank on my action bars when I learn it"), 16,
         function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
+    Check(content, L("Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"), 16,
+        function() return DB().blessPanel ~= false end, function(v) DB().blessPanel = OffFlag(v); if addon.BlessingsRefresh then addon.BlessingsRefresh() end end)
+    Check(content, L("Pedometer: count how far I walk on foot"), 16,
+        function() return DB().pedometer ~= false end, function(v) DB().pedometer = OffFlag(v); if addon.PedometerRefresh then addon.PedometerRefresh() end end)
+    Check(content, L("Show the pedometer readout on the screen (click it for all the numbers)"), 16,
+        function() return DB().pedoShow == true end, function(v) DB().pedoShow = v or nil; if addon.PedometerRefresh then addon.PedometerRefresh() end end)
     Check(content, L("Gear advisor: upgrade line in tooltips, a green ^ on upgrades in bags and at vendors"), 16,
         function() return DB().gearAdvisor ~= false end, function(v) DB().gearAdvisor = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
     Check(content, L("Gear bar: a button that equips an upgrade from my bags"), 16,
@@ -405,6 +411,16 @@ local function BuildControls(parent)
         function() return DB().huntPanel ~= false end, function(v) DB().huntPanel = OffFlag(v); if addon.HuntPanelRefresh then addon.HuntPanelRefresh() end end)
     Check(content, L("Interrupt marker when a mob casts (green ready, red on cooldown, grey none)"), 16,
         function() return DB().nameplateCasts ~= false end, function(v) DB().nameplateCasts = OffFlag(v) end)
+
+    Check(content, L("Colour hostile plates by who the mob is attacking (red = me, yellow = someone else)"), 16,
+        function() return DB().plateColors == true end, function(v) DB().plateColors = v or nil; if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
+    Check(content, L("... colour by who it is attacking"), 40,
+        function() return DB().plateThreat ~= false end, function(v) DB().plateThreat = OffFlag(v); if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
+    Check(content, L("... tint quest mobs that are not in a fight (purple)"), 40,
+        function() return DB().plateQuest ~= false end, function(v) DB().plateQuest = OffFlag(v); if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
+    ColorRow(content, L("A mob attacking me"), "plateColorMe")
+    ColorRow(content, L("A mob fighting someone else"), "plateColorOthers")
+    ColorRow(content, L("A quest mob"), "plateColorQuest")
 
     Header(content, "Action bars")
     Check(content, L("Swap in the newest spell rank on my action bars when I learn it"), 16,
