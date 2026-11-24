@@ -260,12 +260,20 @@ local function AddCounts(tt, id)
         if a == myKey then return true elseif b == myKey then return false end
         return (inv[a].name or a) < (inv[b].name or b)
     end)
+    -- One character can have been saved more than once under different realm spellings (a half-saved copy, the server name, the
+    -- name part). Those copies are the same character: list one of them. Mine wins, then the copy that has the full name.
+    local keep, groupOf = {}, {}
     for _, k in ipairs(keys) do
         local c = inv[k]
-        -- an old half-saved copy of a character (saved while the realm name was still empty): the real one is listed instead
-        local ghost = (c.realm or "") == "" and c.name and inv[c.name .. "-" .. RealmNow()] ~= nil and k ~= c.name .. "-" .. RealmNow()
-        -- an old copy of this same character saved under another realm string (the server name, before the name part was known)
-        if not ghost and k ~= myKey and c.name == UnitName("player") and c.class == select(2, UnitClass("player")) then ghost = true end
+        local first = ((c.full or c.name or k):match("^(%S+)") or k):match("^([^%-]+)") or k
+        local group = first .. "|" .. tostring(c.class)
+        local cur = groupOf[group]
+        if not cur or k == myKey or (cur ~= myKey and c.full and not inv[cur].full) then groupOf[group] = k end
+    end
+    for _, k in pairs(groupOf) do keep[k] = true end
+    for _, k in ipairs(keys) do
+        local c = inv[k]
+        local ghost = not keep[k]
         if not ghost and (k == myKey or db.itemTooltipAlts ~= false) then
             local parts, total = CountsFor(c, id, k == myKey)
             if total > 0 then

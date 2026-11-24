@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.22.2-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.22.3-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,11 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.22.2
+## What's new in 0.22.3
+
+- **Item tooltips list each of your characters once,** instead of repeating one saved under different realm spellings.
+
+## Earlier: 0.22.2
 
 - **The gear bar is off by default.** Tick Gear bar in the options (or /lazy gear bar on) to use it. The green ^ arrows and the tooltip line stay on.
 

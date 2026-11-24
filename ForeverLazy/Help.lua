@@ -280,6 +280,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.22.3", {
+        "Item tooltips list each of your characters once. A character that had been saved under several realm spellings showed up as extra lines (for example Bad, Bad Altitude and Bad-CAMWOW) and was counted twice.",
+    } },
     { "0.22.2", {
         "The GEAR BAR is off until you turn it on (tick Gear bar in the options, or /lazy gear bar on). The green ^ arrows in the bags and at vendors and the Upgrade line in tooltips are not affected.",
     } },

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.3
+### Fixed
+- **Item tooltips listed one character several times.** A character saved under different realm spellings showed up as extra lines (Bad, Bad Altitude and Bad-CAMWOW US1 Realm 7 PvE) and the total counted it again. Characters are matched by first name and class now, and one copy is listed: yours, or else the one with the full name.
+
 ## 0.22.2
 ### Changed
 - **The gear bar is off by default.** Tick Gear bar in the options, or type `/lazy gear bar on`, to bring it back. The green ^ arrows in the bags and at vendors and the Upgrade line in tooltips stay on.
