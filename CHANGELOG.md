@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.1
+### Changed
+- **Fresh quest data** from QuestieDB 1.1.6: 1 new quest, about 65 quests changed (quest chains, quest spots, the starter for Tattered Journal), about 1,170 creatures with moved spawns, 4 new objects and 266 changed ones, two corrected drop chances (Thunder Lizard Blood, Super Reaper 6000 Blueprints), faction fixes for Arille Azuregaze, Alfred Copperworth, Paige and Angelique Butler, and 5 new quest XP values. The data files are rebuilt without the game (see tools/README.md).
+
 ## 0.23.0
 ### New
 - **Live meter bars in a fight** (off until you turn them on: Live bars while I fight under Damage meter in the options, or `/lazy meter live on`). The game hides damage numbers from addons while you fight, so the Meter tab could only keep its last picture. A game bar can still be handed a hidden number, so for the length of a fight a window of real bars sits over the Meter tab (rank, class colour, name, amount) and moves as you fight. When the fight ends it goes away and the tab shows the full list again. `/lazy meter debug` says what it is doing.

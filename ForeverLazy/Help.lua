@@ -280,6 +280,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.23.1", {
+        "FRESH QUEST DATA from QuestieDB 1.1.6: one new quest, fixes to about 65 quests (chains, quest spots, the Tattered Journal starter), moved creature spawns, new objects, two corrected drop chances, faction fixes for four NPCs and five new quest XP values.",
+    } },
     { "0.23.0", {
         "LIVE METER BARS (off until you turn them on: the Live bars tickbox under Damage meter, or /lazy meter live on). The game hides damage numbers from addons while you fight, so the Meter tab could only show its last picture. For the length of a fight a window of real bars now sits over the Meter tab and moves as you fight, then the tab shows the full list again.",
         "RANGE COLOURS are off until you turn them on (the Colour action buttons tickbox in the options, or /lazy range on).",

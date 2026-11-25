@@ -1,5 +1,5 @@
 -- build the data files of our own from the in-game export
-local SRC = "C:/claude/questie-export/offline/new-export.lua"
+local SRC = "C:/claude/questie-export/offline/export-1.1.6.lua"
 local OUT = "C:/claude/questie-export/offline/staged-data/"
 ForeverLazyDB = nil
 dofile(SRC)
