@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.23.0", {
+        "LIVE METER BARS (off until you turn them on: the Live bars tickbox under Damage meter, or /lazy meter live on). The game hides damage numbers from addons while you fight, so the Meter tab could only show its last picture. For the length of a fight a window of real bars now sits over the Meter tab and moves as you fight, then the tab shows the full list again.",
+        "RANGE COLOURS are off until you turn them on (the Colour action buttons tickbox in the options, or /lazy range on).",
+    } },
     { "0.22.4", {
         "The BLESSINGS button moves on to the next person after each click, so it no longer blesses the same player again and again, and it moves on when a cast did not land.",
         "KEYS no longer get an item button: a key that a quest gives you (like the Dalaran Sewer Key) opens a gate when you walk up to it. /lazy keys show brings the buttons back.",

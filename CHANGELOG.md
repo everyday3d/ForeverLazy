@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.23.0
+### New
+- **Live meter bars in a fight** (off until you turn them on: Live bars while I fight under Damage meter in the options, or `/lazy meter live on`). The game hides damage numbers from addons while you fight, so the Meter tab could only keep its last picture. A game bar can still be handed a hidden number, so for the length of a fight a window of real bars sits over the Meter tab (rank, class colour, name, amount) and moves as you fight. When the fight ends it goes away and the tab shows the full list again. `/lazy meter debug` says what it is doing.
+
+### Changed
+- **Range colours are off by default.** The red, blue and grey colouring of action buttons now starts off. Tick Colour action buttons in the options, or type `/lazy range on`, to use it. If you had switched it off yourself, nothing changes for you.
+
 ## 0.22.4
 ### Fixed
 - **The Blessings button blessed the same player over and over.** A new blessing takes a moment to show on the player, so the button kept pointing at them (and a quick second click blessed them twice). A blessing you just cast now counts as given for 8 seconds and the button moves on to the next person at once. It also moves on when a cast did not land, and comes back to that player later.

@@ -288,7 +288,7 @@ local function BuildControls(parent)
     Check(content, L("Quest item sparkles: the game's own sparkle on quest items you can loot"), 16,
         function() return DB().questSparkles ~= false end, function(v) DB().questSparkles = OffFlag(v); if addon.QuestSparklesRefresh then addon.QuestSparklesRefresh() end end)
     Check(content, L("Colour action buttons: red out of range, blue no mana, grey cannot use"), 16,
-        function() return DB().rangeColor ~= false end, function(v) DB().rangeColor = OffFlag(v); if addon.RangeColorRefresh then addon.RangeColorRefresh() end end)
+        function() return DB().rangeColor == true end, function(v) DB().rangeColor = v or nil; if addon.RangeColorRefresh then addon.RangeColorRefresh() end end)
     Check(content, L("Put the newest spell rank on my action bars when I learn it"), 16,
         function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
     Check(content, L("Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"), 16,
@@ -851,6 +851,8 @@ local function BuildControls(parent)
         { "hps", "Healing per second" }, { "interrupts", "Interrupts" }, { "deaths", "Deaths" } })
     Radio(content, "Fight:", "meterSegment", { { "current", "This fight" }, { "overall", "Everything since the last reset" } })
     Slider(content, L("Players listed"), 3, 20, 1, "%d", function() return DB().meterRows or 8 end, function(v) DB().meterRows = v end)
+    Check(content, L("Live bars while I fight (a window over the Meter tab; the numbers are hidden from addons in a fight, so this is a try)"), 16,
+        function() return DB().meterLive == true end, function(v) DB().meterLive = v or nil; if not v and addon.MeterLiveOff then addon.MeterLiveOff() end end)
     Header(content, "My waypoints")
     Label(content, L("Set one with /lazy way <x> <y> [name], /lazy way here, or Ctrl + right-click on the world map."))
     y = y - 26

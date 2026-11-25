@@ -15,7 +15,7 @@ local function Handled()
 end
 local function On()
     local db = DB()
-    return db and db.rangeColor ~= false and not Handled()
+    return db and db.rangeColor == true and not Handled()
 end
 
 -- r, g, b, a, desaturate
@@ -122,8 +122,8 @@ function addon:HandleExtraCommand(cmd, rest)
     if (cmd or ""):lower() == "range" then
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
-        if a == "off" then db.rangeColor = false elseif a == "on" then db.rangeColor = nil end
-        Print(L("action button range colours: ") .. (db.rangeColor == false and "OFF" or "on") .. L("  (/lazy range on|off): red = out of range, blue = no mana, grey = cannot use.")
+        if a == "off" then db.rangeColor = nil elseif a == "on" then db.rangeColor = true end
+        Print(L("action button range colours: ") .. (db.rangeColor == true and "on" or "OFF") .. L("  (/lazy range on|off): red = out of range, blue = no mana, grey = cannot use.")
             .. (Handled() and " tullaRange is installed, so it does this job." or ""))
         addon.RangeColorRefresh()
         return true

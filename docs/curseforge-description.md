@@ -23,7 +23,7 @@
 - **A green ^** on upgrades in the bag window and at vendors, and an optional **gear bar** (off until you turn it on) with a button that equips an upgrade from your bags when you click it. It never equips by itself.
 - **Quest rewards** get a star on the best pick, scored the same way.
 - **Quest item sparkles** keep the game's own sparkle on quest items you can loot, even after a graphics preset.
-- **Range colours:** action buttons turn red out of range, blue without mana, grey when unusable.
+- **Range colours** (off until you turn them on): action buttons turn red out of range, blue without mana, grey when unusable.
 
 ### THE QUEST MAP
 Skulls where you kill it, diamonds where it drops, a yellow **!** for quests to pick up and a yellow **?** for hand-ins, plus coloured areas so you can SEE where to go. Click a pin and the arrow goes THERE. Works on OpenMap's big map too.
@@ -44,7 +44,7 @@ Skulls where you kill it, diamonds where it drops, a yellow **!** for quests to 
 - **Paladin blessings:** one button blesses the next player who needs it, and you choose the blessing for each class. Paladins with Forever Lazy share their choices so you do not double up, and a Split button picks blessings the others are not giving.
 - **Group finder filter:** a button on the group finder opens a list of what your search found, with drop-downs for groups or lone players, the role a group still needs (find the group that only needs a healer), how new it is and the sort order, plus word search. Click a row to whisper the leader.
 - **A pedometer** that counts how far you walk on foot: today, this level, in total.
-- **A damage meter** in its own chat tab laid out like Details: class icon, rank, name, a bar, and total, per second and percent. It uses the game's built-in meter, with every move a player used when you hover.
+- **A damage meter** in its own chat tab laid out like Details: class icon, rank, name, a bar, and total, per second and percent. It uses the game's built-in meter, with every move a player used when you hover. Optional live bars (off until you turn them on) move over the tab while you fight.
 - **Tell the party** when you finish a quest, job's done sounds, couch mode, talent reminders, ore and herb node memory, an item protector so you never sell your sleeping bag, and chat tweaks (all off until you turn them on).
 
 ---

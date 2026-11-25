@@ -370,8 +370,113 @@ local function Refresh()
 end
 
 --------------------------------------------------------------------------------
--- Keeping it fresh
+-- Live bars in a fight (optional: /lazy meter live on)
 --------------------------------------------------------------------------------
+-- In a fight the game hides the numbers from addons, so the Meter tab can only keep its last picture. A game bar can still be handed
+-- a hidden number and draw it, so for the length of a fight a window of real bars sits over the Meter tab. It goes away when the
+-- fight ends and the tab shows the full list again. The order is the game's own (highest first): hidden numbers cannot be sorted.
+local ROWH = 16
+local live
+local liveWhy = "not tried yet"
+
+local function LiveFrame()
+    if live then return live end
+    if not frame then return nil end
+    local f = CreateFrame("Frame", "ForeverLazy_MeterLive", frame)
+    f:SetPoint("TOPLEFT", frame, "TOPLEFT", -2, 4)
+    f:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 2, -4)
+    f:EnableMouse(false)
+    local bg = f:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(); bg:SetColorTexture(0.04, 0.04, 0.06, 0.94)
+    f.head = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    f.head:SetPoint("TOPLEFT", 6, -3)
+    f.bars = {}
+    f:Hide()
+    live = f
+    return f
+end
+
+local function LiveRow(f, i)
+    local r = f.bars[i]
+    if r then return r end
+    r = CreateFrame("StatusBar", nil, f)
+    r:SetStatusBarTexture("Interface\\Buttons\\WHITE8X8")
+    r:SetHeight(ROWH)
+    r:SetPoint("TOPLEFT", f, "TOPLEFT", 4, -18 - (i - 1) * (ROWH + 1))
+    r:SetPoint("RIGHT", f, "RIGHT", -4, 0)
+    r.bg = r:CreateTexture(nil, "BACKGROUND")
+    r.bg:SetAllPoints(); r.bg:SetColorTexture(0.2, 0.2, 0.22, 0.8)
+    r.rank = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.rank:SetPoint("LEFT", 3, 0)
+    r.val = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.val:SetPoint("RIGHT", -3, 0)
+    r.name = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    r.name:SetPoint("LEFT", 18, 0); r.name:SetPoint("RIGHT", r.val, "LEFT", -4, 0)
+    r.name:SetJustifyH("LEFT"); r.name:SetWordWrap(false)
+    f.bars[i] = r
+    return r
+end
+
+local function HideLive()
+    if live then live:Hide() end
+end
+
+function addon.MeterLiveOff() HideLive() end
+
+local function LiveOn()
+    local db = DB()
+    return db and db.meterOn == true and db.meterLive == true
+end
+
+local function UpdateLive()
+    if not (LiveOn() and inCombat) then HideLive(); return end
+    local f = LiveFrame()
+    if not f then liveWhy = "no Meter tab or window to sit over"; return end
+    local s, err, metric = GetSession()
+    if not s or type(s.combatSources) ~= "table" then liveWhy = tostring(err or "no data yet"); HideLive(); return end
+    local db = DB()
+    local list = s.combatSources
+    local fit = math.max(1, math.floor(((f:GetHeight() or 120) - 22) / (ROWH + 1)))
+    local n = math.min(#list, fit, math.min(20, math.max(3, tonumber(db.meterRows) or 8)))
+    local drawn, failed = 0, 0
+    for i = 1, n do
+        local src, row = list[i], LiveRow(f, i)
+        local ok = pcall(function()
+            -- the biggest number sets the bar length: the game's own maximum, else the first player (the list comes highest first)
+            row:SetMinMaxValues(0, s.maxAmount or list[1].totalAmount)
+            row:SetValue(src.totalAmount)
+            row.name:SetText(src.name)
+            local text = src.totalAmount
+            if _G.AbbreviateNumbers then text = _G.AbbreviateNumbers(src.totalAmount) end
+            row.val:SetText(text)
+        end)
+        if ok then
+            -- the class colour, when the class can be read (it can be hidden too)
+            local okC = pcall(function()
+                local c = RAID_CLASS_COLORS[src.classFilename]
+                row:SetStatusBarColor(c.r, c.g, c.b)
+            end)
+            if not okC then row:SetStatusBarColor(0.35, 0.55, 0.9) end
+            row.rank:SetText(tostring(i))
+            row:Show()
+            drawn = drawn + 1
+        else
+            failed = failed + 1
+            row:Hide()
+        end
+    end
+    for i = n + 1, #f.bars do f.bars[i]:Hide() end
+    if drawn == 0 then
+        -- nothing could be drawn live on this client: step aside so the tab shows its last picture
+        liveWhy = failed > 0 and "this client would not draw the hidden numbers on a bar" or "nobody to show yet"
+        HideLive()
+        return
+    end
+    liveWhy = string.format("drawing %d bars (%d could not be drawn)", drawn, failed)
+    f.head:SetText((metric and metric.label or "") .. "  |cff888888live|r")
+    f:Show()
+end
+
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "DAMAGE_METER_COMBAT_SESSION_UPDATED",
                      "DAMAGE_METER_CURRENT_SESSION_UPDATED", "DAMAGE_METER_RESET" }) do
@@ -398,6 +503,7 @@ ev:SetScript("OnEvent", function(_, event)
     elseif event == "PLAYER_ENTERING_WORLD" then
         -- zoning: a stale picture and a stuck hover go away; a NEW dungeon or raid starts a fresh meter (switch off: /lazy meter autoreset off)
         inCombat = false
+        HideLive()
         ForgetPicture()
         if db then
             local name, itype, _, _, _, _, _, instId = GetInstanceInfo and GetInstanceInfo()
@@ -416,16 +522,21 @@ ev:SetScript("OnEvent", function(_, event)
         if db and db.meterOn == true and C_Timer then C_Timer.After(5, function() pcall(Refresh) end) end
     elseif event == "PLAYER_REGEN_DISABLED" then
         inCombat = true
+        if LiveOn() then pcall(UpdateLive) end
     elseif event == "PLAYER_REGEN_ENABLED" then
         inCombat = false
+        HideLive()
         if C_Timer then C_Timer.After(0.6, function() pcall(Refresh) end) end
     elseif db and db.meterOn == true and C_Timer then
         C_Timer.After(0.3, function() pcall(Refresh) end)
+        if inCombat then pcall(UpdateLive) end
     end
 end)
 
-local acc = 0
+local acc, liveAcc = 0, 0
 ev:SetScript("OnUpdate", function(_, dt)
+    liveAcc = liveAcc + dt
+    if liveAcc >= 0.25 then liveAcc = 0; if inCombat and LiveOn() then pcall(UpdateLive) end end
     acc = acc + dt
     if acc < 1.5 then return end
     acc = 0
@@ -458,6 +569,7 @@ local function Debug()
     Print(L("meter debug: C_DamageMeter ") .. (DM and "present" or "MISSING") .. L(", tab frame ") .. (FindTab() and "found" or "not found")
         .. L(", drawing in ") .. (frame and (usingTab and "a chat tab" or "the fallback window") or "nothing yet"))
     if problems.tab then Print(L("  tab problem: ") .. problems.tab) end
+    Print(L("  live bars in combat: ") .. (LiveOn() and "on" or "off") .. " (" .. tostring(liveWhy) .. ")")
     local s, err = GetSession()
     if not s then Print(L("  session: ") .. tostring(err)); return end
     local list = s.combatSources
@@ -480,6 +592,8 @@ function addon:HandleExtraCommand(cmd, rest)
         if a == "" or a == "on" then addon.MeterSet(true)
         elseif a == "off" then addon.MeterSet(false)
         elseif a == "debug" then Debug()
+        elseif a == "live on" or a == "live" then db.meterLive = true; Print(L("meter: live bars in a fight are on (a window of bars over the Meter tab while you fight; it goes away when the fight ends)"))
+        elseif a == "live off" then db.meterLive = nil; HideLive(); Print(L("meter: live bars in a fight are off"))
         elseif a:match("^autoreset") then
             local v = a:match("^autoreset%s+(%a+)")
             if v == "off" then db.meterAutoReset = false elseif v == "on" then db.meterAutoReset = nil end
@@ -494,7 +608,7 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a:match("^rows%s*(%d+)$") then
             db.meterRows = tonumber(a:match("^rows%s*(%d+)$")); Print(L("meter: listing ") .. db.meterRows .. L(" players")); Refresh()
         else
-            Print(L("/lazy meter on|off|reset|debug, dps|damage|healing|hps|taken|interrupts|dispels|deaths, current|overall, rows <n>"))
+            Print(L("/lazy meter on|off|reset|debug|live on|live off, dps|damage|healing|hps|taken|interrupts|dispels|deaths, current|overall, rows <n>"))
         end
         if addon.RefreshOptions then addon.RefreshOptions() end
         return true
