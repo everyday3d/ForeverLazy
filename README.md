@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.24.2-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.24.3-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,12 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.24.2
+## What's new in 0.24.3
+
+- **The chat input box on top no longer covers the tabs.** It sits above the tab row, so the tabs stay clickable.
+- **Chat tabs never fade** (off until you turn it on): /lazy chat tabs solid keeps General, Combat Log and the other tabs fully visible.
+
+## Earlier: 0.24.2
 
 - **The bank window counts the right containers** (it said 32 free when the bank was full) and redraws when a slot is bought.
 - **Bank bag slots button** under the bank window brings the game's own bank window forward, to buy slots and put bags in them.

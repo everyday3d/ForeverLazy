@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.24.3", {
+        "The CHAT INPUT BOX ON TOP no longer covers the chat tabs: it sits above the row of tabs now, so General, Combat Log and the others stay clickable.",
+        "CHAT TABS NEVER FADE (off until you turn it on: /lazy chat tabs solid, or the tickbox under Chat in the options): General, Combat Log and the other tabs stay fully visible instead of dimming when the mouse is away. /lazy chat tabs default puts the game's own fading back.",
+    } },
     { "0.24.2", {
         "THE BANK WINDOW counts the right containers now: it said 32 free when the game said the bank was full. It redraws when a bank slot is bought, and the item counts never count your bags as bank.",
         "BANK BAG SLOTS: a button under the bank window brings the game's own bank window forward, where you buy slots and put bags in them. /lazy bankslots says what this client offers.",

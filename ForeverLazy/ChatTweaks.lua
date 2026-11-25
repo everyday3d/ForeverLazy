@@ -400,6 +400,50 @@ local COLOUR = { "SAY", "EMOTE", "YELL", "GUILD", "OFFICER", "GUILD_ACHIEVEMENT"
                  "PARTY_LEADER", "RAID", "RAID_LEADER", "RAID_WARNING", "BATTLEGROUND", "BATTLEGROUND_LEADER", "INSTANCE_CHAT",
                  "INSTANCE_CHAT_LEADER" }
 
+-- Tabs that never fade: whatever dims a tab (the game's own fade, another addon), it is put back to full at once.
+local solidHooked = {}
+local function KeepSolid(obj)
+    if not obj or solidHooked[obj] or not hooksecurefunc or not obj.SetAlpha then return end
+    solidHooked[obj] = true
+    local busy = false
+    pcall(hooksecurefunc, obj, "SetAlpha", function(self, a)
+        local db = DB()
+        if busy or not (db and db.chatTabsSolid == true) then return end
+        if (tonumber(a) or 1) < 1 then busy = true; pcall(self.SetAlpha, self, 1); busy = false end
+    end)
+end
+-- a tab is a frame with parts (its textures, its text, small child frames), and it sits inside frames that hold the tabs: any of them
+-- can be the one that fades, so all of them are kept at full strength
+local function SolidTree(obj, depth)
+    if not obj or depth > 3 then return end
+    KeepSolid(obj)
+    if obj.SetAlpha then pcall(obj.SetAlpha, obj, 1) end
+    if obj.GetRegions then
+        for _, reg in ipairs({ obj:GetRegions() }) do KeepSolid(reg); if reg.SetAlpha then pcall(reg.SetAlpha, reg, 1) end end
+    end
+    if obj.GetChildren then
+        for _, kid in ipairs({ obj:GetChildren() }) do SolidTree(kid, depth + 1) end
+    end
+end
+local function SolidTabs()
+    for i = 1, (_G.NUM_CHAT_WINDOWS or 10) do
+        local tab = _G["ChatFrame" .. i .. "Tab"]
+        if tab then
+            SolidTree(tab, 1)
+            -- the frames the tab sits in, up to (not including) the whole screen
+            local up = tab.GetParent and tab:GetParent()
+            local steps = 0
+            while up and up ~= UIParent and steps < 4 do
+                KeepSolid(up); if up.SetAlpha then pcall(up.SetAlpha, up, 1) end
+                up = up.GetParent and up:GetParent(); steps = steps + 1
+            end
+        end
+    end
+    local dock = _G.GeneralDockManager
+    if dock then SolidTree(dock, 1) end
+end
+addon.ChatSolidTabs = SolidTabs
+
 function addon.ChatApply()
     local db = DB()
     if not db then return end
@@ -412,7 +456,15 @@ function addon.ChatApply()
     if db.chatSticky == true and _G.ChatTypeInfo then
         for _, t in ipairs(STICKY) do if ChatTypeInfo[t] then ChatTypeInfo[t].sticky = 1 end end
     end
-    if db.chatTabFade == true then
+    if db.chatTabsSolid == true then
+        -- the tabs (General, Combat Log, ...) stay fully visible instead of fading when the mouse is away
+        _G.CHAT_FRAME_TAB_NORMAL_NOMOUSE_ALPHA = 1
+        _G.CHAT_FRAME_TAB_SELECTED_NOMOUSE_ALPHA = 1
+        _G.CHAT_FRAME_TAB_ALERTING_NOMOUSE_ALPHA = 1
+        _G.CHAT_FRAME_TAB_NORMAL_MOUSEOVER_ALPHA = 1
+        _G.CHAT_FRAME_TAB_SELECTED_MOUSEOVER_ALPHA = 1
+        SolidTabs()
+    elseif db.chatTabFade == true then
         _G.CHAT_FRAME_TAB_NORMAL_NOMOUSE_ALPHA = 0
         _G.CHAT_FRAME_TAB_SELECTED_NOMOUSE_ALPHA = 0
         _G.CHAT_FRAME_TAB_ALERTING_NOMOUSE_ALPHA = 0
@@ -446,9 +498,17 @@ function addon.ChatApply()
             if db.chatEditTop == true then
                 local eb = _G["ChatFrame" .. i .. "EditBox"]
                 if eb then
+                    -- above the row of tabs, never on top of it: the tabs stay clickable
+                    local tab = _G["ChatFrame" .. i .. "Tab"]
+                    local up = 30
+                    if tab and tab.GetHeight then
+                        local th = tonumber(tab:GetHeight()) or 0
+                        local scale = (tab.GetScale and tonumber(tab:GetScale())) or 1
+                        up = math.max(30, math.floor(th * scale) + 12)
+                    end
                     eb:ClearAllPoints()
-                    eb:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", -5, 30)
-                    eb:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 5, 30)
+                    eb:SetPoint("BOTTOMLEFT", frame, "TOPLEFT", -5, up)
+                    eb:SetPoint("BOTTOMRIGHT", frame, "TOPRIGHT", 5, up)
                 end
             end
             -- size and font
@@ -465,12 +525,34 @@ function addon.ChatApply()
 end
 
 -- windows made later (whisper tabs, new tabs) get the same treatment
+local solidTick, solidAcc = CreateFrame("Frame"), 0
+solidTick:SetScript("OnUpdate", function(_, dt)
+    solidAcc = solidAcc + dt
+    if solidAcc < 0.5 then return end
+    solidAcc = 0
+    local db = DB()
+    if db and db.chatTabsSolid == true then pcall(SolidTabs) end
+end)
+
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "UPDATE_CHAT_WINDOWS" }) do pcall(ev.RegisterEvent, ev, e) end
 ev:SetScript("OnEvent", function(_, event)
     if C_Timer then C_Timer.After(event == "PLAYER_LOGIN" and 2 or 0.5, function() pcall(addon.ChatApply) end) else pcall(addon.ChatApply) end
 end)
 if hooksecurefunc then
+    for _, fn in ipairs({ "FCF_FadeOutChatFrame", "FCF_FadeOutTab", "FCF_FadeOutScrollbar" }) do
+        if _G[fn] then
+            pcall(hooksecurefunc, fn, function()
+                local db = DB()
+                if db and db.chatTabsSolid == true then
+                    for i = 1, (_G.NUM_CHAT_WINDOWS or 10) do
+                        local tab = _G["ChatFrame" .. i .. "Tab"]
+                        if tab and tab.SetAlpha then pcall(tab.SetAlpha, tab, 1) end
+                    end
+                end
+            end)
+        end
+    end
     for _, fn in ipairs({ "FCF_OpenTemporaryWindow", "FCF_OpenNewWindow" }) do
         if _G[fn] then pcall(hooksecurefunc, fn, function() if C_Timer then C_Timer.After(0.2, function() pcall(addon.ChatApply) end) end end) end
     end
@@ -495,6 +577,46 @@ function addon:HandleExtraCommand(cmd, rest)
         local a, b = (rest or ""):match("^%s*(%S*)%s*(.-)%s*$")
         a = (a or ""):lower()
         local db = DB()
+        if a == "tabdebug" then
+            -- /lazy chat tabdebug, then keep the mouse off the chat: a few seconds later it says what is faded
+            Print(L("chat: keep the mouse away from the chat window, I will look in 8 seconds"))
+            if C_Timer and C_Timer.After then C_Timer.After(8, function()
+                local lines = {}
+                local function Add(s) lines[#lines + 1] = s end
+                local function A(o) return (o and o.GetAlpha) and string.format("%.2f", o:GetAlpha()) or "?" end
+                local function E(o) return (o and o.GetEffectiveAlpha) and string.format("%.2f", o:GetEffectiveAlpha()) or "?" end
+                Add("tabs never fade: " .. tostring(DB() and DB().chatTabsSolid == true))
+                for _, k in ipairs({ "CHAT_FRAME_TAB_NORMAL_NOMOUSE_ALPHA", "CHAT_FRAME_TAB_SELECTED_NOMOUSE_ALPHA", "CHAT_FRAME_TAB_NORMAL_MOUSEOVER_ALPHA" }) do
+                    Add(k .. " = " .. tostring(_G[k]))
+                end
+                for i = 1, 3 do
+                    local tab = _G["ChatFrame" .. i .. "Tab"]
+                    if tab then
+                        Add(string.format("ChatFrame%dTab: alpha %s, effective %s, shown %s", i, A(tab), E(tab), tostring(tab:IsShown())))
+                        local up, n = tab.GetParent and tab:GetParent(), 0
+                        while up and up ~= UIParent and n < 5 do
+                            Add(string.format("    parent %s: alpha %s, effective %s", tostring(up.GetName and up:GetName() or "(unnamed)"), A(up), E(up)))
+                            up = up.GetParent and up:GetParent(); n = n + 1
+                        end
+                        if tab.GetRegions then
+                            for j, reg in ipairs({ tab:GetRegions() }) do
+                                Add(string.format("    part %d (%s): alpha %s", j, tostring(reg.GetObjectType and reg:GetObjectType()), A(reg)))
+                            end
+                        end
+                    end
+                end
+                if addon.ReportWindow then addon.ReportWindow(L("Forever Lazy: chat tabs"), lines) else for _, l in ipairs(lines) do Print(l) end end
+            end) end
+            return true
+        end
+        if a == "tabs" then
+            local v = (b or ""):lower()
+            if v == "solid" or v == "on" then db.chatTabsSolid = true elseif v == "fade" or v == "default" or v == "off" then db.chatTabsSolid = nil end
+            Print(L("chat tabs never fade: ") .. (db.chatTabsSolid == true and "on" or "off") .. L("  (/lazy chat tabs solid, or /lazy chat tabs default)"))
+            pcall(addon.ChatApply)
+            if addon.RefreshOptions then addon.RefreshOptions() end
+            return true
+        end
         if a == "preset" then addon.ChatPreset(); return true
         elseif a == "copy" then addon.ChatCopy(); return true
         elseif a == "words" then

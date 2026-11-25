@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.3
+### Fixed
+- **The chat input box on top covered the chat tabs.** It was placed a fixed distance above the chat window, which put it over the row of tabs and caught the clicks, so the tabs were very hard to click. It now sits above the tab row.
+
+### New
+- **Chat tabs never fade** (off until you turn it on: `/lazy chat tabs solid`, or Chat tabs never fade under Chat in the options). General, Combat Log and the other tabs stay fully visible instead of dimming when the mouse is away. Every part of a tab, and the frames it sits in, are kept at full strength. `/lazy chat tabs default` puts the game's own fading back, and `/lazy chat tabdebug` lists what is dimmed (for a report).
+
 ## 0.24.2
 ### Fixed
 - **The bank window counted the wrong containers.** It said 32 slots were free while the game said the bank was full, because it built its list of bank containers from a fixed rule that does not fit this client (it could include empty Warband bank tabs). The bank window and the item counts now share one list, taken from the game's own names for the bank tabs, and it never includes a container you carry.
