@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.7
+### Fixed
+- **Clicking a mob in the Hunt window did nothing.** The buttons only listened for the mouse release, but secure buttons on this client can fire on the press, so the click was lost and the mob was neither targeted nor marked. They now listen for both.
+
 ## 0.24.6
 ### Fixed
 - **Questie users could not see your quest progress**, and got a red "Error reading QuestieComm message" line in their chat. When Questie is not running on your side, Forever Lazy sends your progress in Questie's format, but each changed quest went out as a message type (14) that Questie 12.14.0 does not have. It is now sent as a full list of one quest, which Questie reads.

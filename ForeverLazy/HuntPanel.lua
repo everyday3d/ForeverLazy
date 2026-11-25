@@ -64,8 +64,11 @@ local function MakeButton(i)
     local b = CreateFrame("Button", "ForeverLazy_HuntButton" .. i, frame, "SecureActionButtonTemplate")
     b:SetSize(BTN_W, BTN_H)
     b:SetPoint("TOPLEFT", frame, "TOPLEFT", 4, -18 - (i - 1) * (BTN_H + 2))
-    b:RegisterForClicks("AnyUp")
+    -- secure buttons fire on the key-down or key-up edge depending on the ActionButtonUseKeyDown setting, so listen for both
+    b:RegisterForClicks("AnyUp", "AnyDown")
+    b:SetAttribute("useOnKeyDown", false)
     b:SetAttribute("type", "macro")
+    b:SetAttribute("type1", "macro")
     local bg = b:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints(); bg:SetColorTexture(0.15, 0.15, 0.15, 0.85)
     b.bg = bg
@@ -149,8 +152,10 @@ local function Rebuild()
                 b.mob, b.quest, b.kind = h.name, h.quest, h.kind
                 -- target it, then put a skull on it (only if what I targeted really is that mob, and it has no skull yet)
                 local q = h.name:gsub("\\", "\\\\"):gsub("\"", "\\\"")
-                b:SetAttribute("macrotext", "/targetexact " .. h.name .. "\n/run if UnitExists(\"target\") and UnitName(\"target\")==\"" .. q ..
-                    "\" and GetRaidTargetIndex(\"target\")~=8 then pcall(SetRaidTarget,\"target\",8) end")
+                local mt = "/targetexact " .. h.name .. "\n/run if UnitExists(\"target\") and UnitName(\"target\")==\"" .. q ..
+                    "\" and GetRaidTargetIndex(\"target\")~=8 then pcall(SetRaidTarget,\"target\",8) end"
+                b:SetAttribute("macrotext", mt)
+                b:SetAttribute("macrotext1", mt)
                 b.icon:SetTexture(h.kind == "loot" and "Interface\\Icons\\INV_Misc_Bag_08" or "Interface\\Icons\\INV_Sword_04")
                 b.text:SetText(h.name)
                 b.prog:SetText(h.progress or "")

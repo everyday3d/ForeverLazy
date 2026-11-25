@@ -280,6 +280,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.24.7", {
+        "THE HUNT WINDOW works again: clicking a mob in it targets the mob and puts a skull on it. The buttons did not react to the click on some setups.",
+    } },
     { "0.24.6", {
         "PEOPLE WITH QUESTIE can see your quest progress again: we sent them a message type their Questie did not know, so it showed an error line in their chat and ignored it. Now it is one they read.",
         "THE ARROW goes to a finished quest you can hand in nearby (within about 450 yards) even when your plan has no stop for it, for example a plan that is only library books.",
