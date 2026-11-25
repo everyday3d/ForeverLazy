@@ -217,7 +217,7 @@ function addon.BugReport()
     table.sort(off)
     Add("Modules switched off: " .. (#off > 0 and table.concat(off, ", ") or "none"))
     local keys = { "mode", "simpleArrows", "arrowNearest", "arrowSource", "planAuto", "planZoneOnly", "planBatch", "planPaused", "bagsReplace",
-        "trackerOn", "huntPanel", "questItemReminder", "craftPanel", "meterOn", "gearAdvisor", "gearBar", "rangeColor", "questSparkles" }
+        "trackerOn", "huntPanel", "craftPanel", "meterOn", "gearAdvisor", "gearBar", "rangeColor", "questSparkles" }
     local parts = {}
     for _, k in ipairs(keys) do parts[#parts + 1] = k .. "=" .. tostring(db and db[k]) end
     Add("Settings: " .. table.concat(parts, ", "))

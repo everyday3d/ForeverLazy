@@ -1,5 +1,6 @@
 -- When you learn a new rank of a spell, put it on your action bars in place of the old rank.
--- Switch it off in Forever Lazy's options ("Newest spell rank on my action bars").
+-- Off until you turn it on in Forever Lazy's options ("Newest spell rank on my action bars"). With it off, /lazy rankup or the
+-- "Fix my bars now" button still does it once, when you ask.
 -- Bars cannot be changed in combat, so a spell learned mid-fight is swapped when the fight ends.
 local ADDON, ns = ...
 local L = ns.L
@@ -7,7 +8,8 @@ local addon = ns.addon
 local Print = addon.Print
 
 local function DB() return addon.GetDB() end
-local function Enabled() local db = DB(); return not (db and db.rankUp == false) end
+-- the automatic swap (when a spell is learned); off by default
+local function Enabled() local db = DB(); return db and db.rankUp == true end
 
 -- spells whose rank I want to keep as it is (a low rank on purpose): db.rankKeep[lower case name] = true
 local function Kept(name)
@@ -91,8 +93,9 @@ local pending, running = false, false
 local function Run(verbose)
     verbose = verbose == true                      -- only the button and the command say anything when nothing changes
     pending = false
-    if running or not Enabled() then
-        if verbose then Print(L("action bars: ") .. (running and "already busy" or "switched off in the options")) end
+    -- verbose = I asked for it (the button or the command): that works whether or not the automatic swap is on
+    if running or (not Enabled() and not verbose) then
+        if verbose then Print(L("action bars: already busy")) end
         return
     end
     if InCombatLockdown() then pending = true; if verbose then Print(L("action bars: in combat, I will do it when the fight ends")) end; return end

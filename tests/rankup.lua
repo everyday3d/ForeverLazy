@@ -37,7 +37,13 @@ function GetCursorInfo() if cursor then return "spell", cursor end end
 function ClearCursor() cursor = nil end
 function PlaceAction(slot) bars[slot] = cursor; placed[#placed + 1] = slot; cursor = nil end
 function InCombatLockdown() return false end
-function CreateFrame() return setmetatable({}, { __index = function() return function() end end }) end
+local onEvent
+function CreateFrame()
+    local f = setmetatable({}, { __index = function() return function() end end })
+    f.SetScript = function(_, n, fn) if n == "OnEvent" then onEvent = fn end end
+    return f
+end
+C_Timer = { After = function(_, fn) fn() end }
 
 assert(loadfile(root .. "/ForeverLazy/RankUp.lua"))("ForeverLazy", ns)
 
@@ -66,13 +72,29 @@ test("bars that already hold the newest rank are left alone", function()
     assert(said[1] and said[1]:find("nothing to change"), "it should say so: " .. tostring(said[1]))
 end)
 
-test("it does nothing when switched off in the options", function()
-    db.rankUp = false
+test("the automatic swap is off by default: learning a spell changes nothing", function()
+    db.rankUp = nil
+    bars = { [1] = 100 }
+    placed = {}
+    onEvent(nil, "SPELLS_CHANGED")
+    assert(bars[1] == 100 and #placed == 0, "nothing swapped on its own")
+end)
+
+test("with the automatic swap on, learning a spell swaps the bars", function()
+    db.rankUp = true
+    bars = { [1] = 100 }
+    placed = {}
+    onEvent(nil, "SPELLS_CHANGED")
+    assert(bars[1] == 101, "swapped by itself: " .. tostring(bars[1]))
+    db.rankUp = nil
+end)
+
+test("asking for it (the button or /lazy rankup) works even with the automatic swap off", function()
+    db.rankUp = nil
     bars = { [1] = 100 }
     placed = {}
     addon.RankUpRun()
-    assert(bars[1] == 100 and #placed == 0)
-    db.rankUp = nil
+    assert(bars[1] == 101, "swapped when asked: " .. tostring(bars[1]))
 end)
 
 test("it waits when you are carrying something on the cursor", function()

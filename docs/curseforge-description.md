@@ -37,8 +37,7 @@ Skulls where you kill it, diamonds where it drops, a yellow **!** for quests to 
 ### NAMEPLATES, TOOLTIPS AND MORE
 - A **sword** on mobs you need to kill, a **loot bag** on mobs that drop what you need, and a gold **!** on mobs that drop a quest starter.
 - **Interrupt marker:** a casting mob shows its spell. Green means your interrupt is ready, red means cooldown, grey means you have none.
-- **Quest item bar** (off until you tick it): stand where a quest wants an item used and a button with the item pops up.
-- **New spell rank?** It takes the old rank's place on your action bars, by itself.
+- **New spell rank?** Turn on the automatic swap (off by default) and the new rank takes the old rank's place on your action bars by itself. /lazy rankup does it once when you ask.
 - **Tooltips that talk:** hover a mob, item or NPC to see which quest it is for, how far along you are, and the real drop chances.
 - **Nameplate colours** (off until you turn them on): an aggressive mob is red even before it attacks you, one fighting someone else orange, and a quest mob that is idle purple.
 - **Paladin blessings:** one button blesses the next player who needs it, and you choose the blessing for each class. Paladins with Forever Lazy share their choices so you do not double up, and a Split button picks blessings the others are not giving.

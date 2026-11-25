@@ -1,5 +1,4 @@
--- Quest helpers: a button for quest items, what comes next in a chain, a pick for the quest reward, and where to farm.
---   (quest item buttons appear by themselves; drag the first one to move it, they follow)
+-- Quest helpers: what comes next in a chain, a pick for the quest reward, and where to farm.
 --   /lazy chain [go]     the follow-up quest after the one I just handed in
 --   /lazy farm [n]       best place to get the item my quest needs
 -- Quest and drop data come from Questie.
@@ -16,56 +15,6 @@ local function Dist(a, b) return math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2) en
 local function MapName(id)
     local info = id and C_Map and C_Map.GetMapInfo and C_Map.GetMapInfo(id)
     return info and info.name or "?"
-end
-
---------------------------------------------------------------------------------
--- 1. Quest item buttons
---------------------------------------------------------------------------------
-local MAXB = 3
-local buttons = {}
-local pendingRefresh
-
-local function MakeButton(i)
-    local b = CreateFrame("Button", "ForeverLazy_QuestItem" .. i, UIParent, "SecureActionButtonTemplate")
-    b:SetSize(40, 40)
-    b:SetFrameStrata("MEDIUM")
-    b:RegisterForClicks("AnyUp")
-    b:SetAttribute("type", "macro")
-    b.icon = b:CreateTexture(nil, "ARTWORK")
-    b.icon:SetAllPoints()
-    b.border = b:CreateTexture(nil, "OVERLAY")
-    b.border:SetPoint("TOPLEFT", -2, 2); b.border:SetPoint("BOTTOMRIGHT", 2, -2)
-    b.border:SetColorTexture(1, 0.82, 0, 0.35)
-    b.border:SetDrawLayer("BACKGROUND")
-    local hl = b:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetAllPoints(); hl:SetColorTexture(1, 1, 1, 0.2)
-    b:SetScript("OnEnter", function(self)
-        if self.link then
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            GameTooltip:SetHyperlink(self.link)
-            GameTooltip:Show()
-        end
-    end)
-    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
-    if i == 1 then
-        b:SetMovable(true)
-        b:RegisterForDrag("LeftButton")
-        b:SetScript("OnDragStart", function(self)
-            if not InCombatLockdown() and not DB().locked then self:StartMoving() end
-        end)
-        b:SetScript("OnDragStop", function(self)
-            self:StopMovingOrSizing()
-            local point, _, _, x, y = self:GetPoint()
-            DB().pos.questItem = { point = point, x = x, y = y }
-        end)
-        local p = DB() and DB().pos.questItem or { point = "BOTTOM", x = -230, y = 230 }
-        b:SetPoint(p.point, UIParent, p.point, p.x, p.y)
-    else
-        b:SetPoint("LEFT", buttons[i - 1], "RIGHT", 6, 0)
-    end
-    b:Hide()
-    buttons[i] = b
-    return b
 end
 
 -- an item that only STARTED a quest (it is in the quest's "started by" and is not one of its objectives or needed items)
@@ -89,70 +38,8 @@ function addon.IsStarterOnlyItem(questId, itemId)
     return true
 end
 
-local function QuestItems()
-    local items, seen = {}, {}
-    local currentQuest
-    local function add(link)
-        local itemStr = link and link:match("item:%d+")
-        -- a key opens a gate or door when I walk up to it: no button for it (this covers the "item the quest gives me" fallback too)
-        if itemStr and addon.IsKeyItem and addon.IsKeyItem(link) then return end
-        if itemStr and currentQuest and addon.IsStarterOnlyItem(currentQuest, tonumber(itemStr:match("%d+"))) then return end
-        if itemStr and not seen[itemStr] then
-            seen[itemStr] = true
-            items[#items + 1] = { link = link, itemStr = itemStr, icon = select(10, GetItemInfo(link)) or GetItemIcon(itemStr) }
-        end
-    end
-    local n = (GetNumQuestLogEntries and GetNumQuestLogEntries()) or 0
-    for i = 1, n do
-        if GetQuestLogSpecialItemInfo then
-            local ok, link, _, _, showWhenComplete = pcall(GetQuestLogSpecialItemInfo, i)
-            currentQuest = nil
-            if GetQuestLogTitle then
-                local okT, _, _, _, isHeader, _, _, _, qid = pcall(GetQuestLogTitle, i)
-                if okT and not isHeader and qid and qid ~= 0 then currentQuest = qid end
-            end
-            if ok and link and not (addon.IsKeyItem and addon.IsKeyItem(link)) then add(link) end
-            currentQuest = nil
-        end
-    end
-    -- fallback: the item a quest gives me to use (Questie knows it)
-    if #items == 0 and api.ReadQuestLog and api.QuestieReady and api.QuestieReady() then
-        local QDB = api.GetQuestie()
-        for _, q in ipairs(api.ReadQuestLog()) do
-            if not q.complete then
-                local itemId = QDB.QueryQuestSingle(q.id, "sourceItemId")
-                if itemId and itemId > 0 and GetItemCount(itemId) > 0 then
-                    local _, link = GetItemInfo(itemId)
-                    currentQuest = q.id
-                    add(link or ("item:" .. itemId))
-                    currentQuest = nil
-                end
-            end
-        end
-    end
-    return items
-end
-
-local function RefreshItems()
-    pendingRefresh = false
-    local db = DB()
-    if not db then return end
-    if InCombatLockdown() then pendingRefresh = true; return end
-    local items = db.questItemButton ~= false and not db.planPaused and addon.ModuleOn("quests") and QuestItems() or {}
-    for i = 1, MAXB do
-        local b = buttons[i] or MakeButton(i)
-        local it = items[i]
-        if it then
-            b.link = it.link
-            b:SetAttribute("macrotext", "/use " .. it.itemStr)
-            b.icon:SetTexture(it.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
-            b:Show()
-        else
-            b.link = nil
-            b:Hide()
-        end
-    end
-end
+-- the quest item bar is gone (the quest tracker still has an item button beside a quest); this stays so the callers need no change
+local function RefreshItems() end
 
 addon.RefreshQuestItems = RefreshItems
 

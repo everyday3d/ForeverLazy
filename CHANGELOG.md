@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.1
+### Changed
+- **Automatic spell rank upgrades are off by default.** Tick Newest spell rank on my action bars in the options to turn them on. `/lazy rankup` and the Fix my bars now button still do it once whenever you ask, whether or not the automatic part is on. If you had switched it off yourself, nothing changes for you.
+
+### Removed
+- **The quest item bar.** The strip of quest item buttons near the bottom of the screen (shown by default) and the optional pop-up bar for quest items are gone, with their options. The quest tracker still has an item button beside a quest that has one, and keys never get a button.
+
 ## 0.24.0
 ### New
 - **Sell grey loot** (off until you turn it on: Sell grey loot when a vendor opens in the options, or `/lazy sellgray on`). When a vendor opens, the grey items in your bags are sold one at a time and the total is said in chat. Items on your protect list (`/lazy keep`, which holds your sleeping bag) are never sold, nor are locked items or grey items with no sell value. `/lazy sellgray now` sells at an open vendor even with the automatic part off.

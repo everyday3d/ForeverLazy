@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.24.0-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.24.1-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,12 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.24.0
+## What's new in 0.24.1
+
+- **Spell rank upgrades are off by default.** Tick the option to turn them on, or use /lazy rankup when you want it done once.
+- **The quest item bar is gone.** The quest tracker still shows an item button beside a quest that has one.
+
+## Earlier: 0.24.0
 
 - **Sell grey loot** (off until you turn it on): grey items in your bags are sold when a vendor opens, and the total is said in chat. Protected items are never sold.
 - **Faster auto loot** (off until you turn it on): the loot window empties the moment it opens.

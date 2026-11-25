@@ -277,8 +277,6 @@ local function BuildControls(parent)
         function() return DB().huntPanel ~= false end, function(v) DB().huntPanel = OffFlag(v); if addon.HuntPanelRefresh then addon.HuntPanelRefresh() end end)
     Check(content, L("Quest markers on the nameplates"), 16,
         function() return DB().questPlates ~= false end, function(v) DB().questPlates = OffFlag(v); if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
-    Check(content, L("Quest item bar: a button for a quest item when you are at the spot"), 16,
-        function() return DB().questItemReminder == true end, function(v) DB().questItemReminder = v or nil end)
     Check(content, L("Craft planner beside the profession window"), 16,
         function() return DB().craftPanel == true end, function(v) DB().craftPanel = v or nil; if addon.CraftPanelRefresh then addon.CraftPanelRefresh() end end)
     Check(content, L("Our bag window instead of the game's bags"), 16,
@@ -290,7 +288,7 @@ local function BuildControls(parent)
     Check(content, L("Colour action buttons: red out of range, blue no mana, grey cannot use"), 16,
         function() return DB().rangeColor == true end, function(v) DB().rangeColor = v or nil; if addon.RangeColorRefresh then addon.RangeColorRefresh() end end)
     Check(content, L("Put the newest spell rank on my action bars when I learn it"), 16,
-        function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
+        function() return DB().rankUp == true end, function(v) DB().rankUp = v or nil end)
     Check(content, L("Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"), 16,
         function() return DB().blessPanel ~= false end, function(v) DB().blessPanel = OffFlag(v); if addon.BlessingsRefresh then addon.BlessingsRefresh() end end)
     Check(content, L("Sell grey loot when a vendor opens (off until you tick it; items you protect with /lazy keep are never sold)"), 16,
@@ -380,10 +378,6 @@ local function BuildControls(parent)
     Button(content, L("Find a quest"), 16, 120, function() if addon.QuestSearchOpen then addon.QuestSearchOpen() end end, false)
     Button(content, L("Quest history"), 146, 120, function() if addon.QuestHistoryOpen then addon.QuestHistoryOpen() end end, true)
 
-    Header(content, "Quest items")
-    Check(content, L("Quest item bar: a button for a quest item when I am at the spot"), 16,
-        function() return DB().questItemReminder == true end, function(v) DB().questItemReminder = v or nil end)
-
     Header(content, "Gear")
     local gearNow = Label(content, "")
     refreshers[#refreshers + 1] = function()
@@ -428,7 +422,7 @@ local function BuildControls(parent)
 
     Header(content, "Action bars")
     Check(content, L("Swap in the newest spell rank on my action bars when I learn it"), 16,
-        function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
+        function() return DB().rankUp == true end, function(v) DB().rankUp = v or nil end)
     Button(content, L("Fix my bars now"), 16, 130, function() if addon.RankUpRun then addon.RankUpRun() end end, true)
     Label(content, L("Want a low rank on purpose? /lazy rankup keep <spell name> leaves that spell alone. /lazy rankup keep lists them, /lazy rankup unkeep <spell name> undoes it."))
     y = y - 26
@@ -726,8 +720,6 @@ local function BuildControls(parent)
         function() return DB().craftPanel == true end, function(v) DB().craftPanel = v or nil; if addon.CraftPanelRefresh then addon.CraftPanelRefresh() end end)
     Check(content, L("When I open a profession window, tell me the best next craft"), 16,
         function() return DB().craftHint ~= false end, function(v) DB().craftHint = v end)
-    Check(content, L("Quest-giver panel: a button for quest items I need to use"), 16,
-        function() return DB().questItemButton ~= false end, function(v) DB().questItemButton = v; if addon.RefreshQuestItems then addon.RefreshQuestItems() end end)
     Check(content, L("Tell me what comes next after I hand in a quest in a chain"), 16,
         function() return DB().chainHint ~= false end, function(v) DB().chainHint = v end)
     Check(content, L("Mark the best quest reward (likely upgrade or best price)"), 16,

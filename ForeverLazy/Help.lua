@@ -34,7 +34,7 @@ local STEPS = {
       target = function() local q = _G.QuestLogFrame; return q and q:IsShown() and q or nil end },
     { text = "|cffffd100The hunt panel.|r When your quests need certain mobs, a small panel lists them. Click one to target it and put a skull on it. Close it with the X; the options bring it back.",
       target = function() local p = _G.ForeverLazy_HuntPanel; return p and p:IsShown() and p or nil end },
-    { text = "|cffffd100Extras that are off until you want them.|r The craft planner (a plan beside your profession window), our own bag window, the quest item bar and the damage meter tab are all in the options, along with range colours and quest item sparkles. Tick the ones you like. /lazy commands lists every command and /lazy report makes a bug report.",
+    { text = "|cffffd100Extras that are off until you want them.|r The craft planner (a plan beside your profession window), our own bag window and the damage meter tab are all in the options, along with range colours and quest item sparkles. Tick the ones you like. /lazy commands lists every command and /lazy report makes a bug report.",
       target = nil },
     { text = "|cffffd100Gear.|r Hover any item you could wear: a green Upgrade line says how much better it is for your class and spec. Upgrades in your bags get a green ^ in the bag window, and an optional gear bar (off until you turn it on in the options or with /lazy gear bar on) has a button that equips one when you click it. /lazy gear says what you are scored as.",
       target = function() local b = _G.ForeverLazyGearBar; return b and b:IsShown() and b or nil end },
@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.24.1", {
+        "SPELL RANK UPGRADES are off until you turn them on (the Newest spell rank tickbox in the options). /lazy rankup, or the Fix my bars now button, still does it once whenever you ask.",
+        "The QUEST ITEM BAR is gone: the strip of quest item buttons near the bottom of the screen and the pop-up bar for quest items. The quest tracker still shows an item button beside a quest that has one.",
+    } },
     { "0.24.0", {
         "SELL GREY LOOT (off until you turn it on: the Sell grey loot tickbox in the options, or /lazy sellgray on): when a vendor opens, the grey items in your bags are sold and the total is said in chat. Items you protect with /lazy keep are never sold. /lazy sellgray now sells at an open vendor any time.",
         "FASTER AUTO LOOT (off until you turn it on: /lazy fastloot on): the loot window empties the moment it opens, when auto loot is on in the game's options.",
@@ -450,7 +454,7 @@ local NEW = {
         "A damage meter in its own chat tab called Meter (/lazy meter). It reads the game's built-in meter, so no other addon is needed.",
         "The Hive learns how long each kind of mob takes to kill and what it costs you (/lazy grind), and where players die: you get a word when you walk into a place where people keep dying (/lazy danger).",
         "Ore and herb nodes you gather are marked on the map and minimap, and the arrow can farm them (/lazy nodes farm). /lazy nodes silver lists the zones that have it.",
-        "Turn the plan off and keep your place: /lazy plan off, /lazy plan on. The route lines, markers and quest item bar go away while it is off.",
+        "Turn the plan off and keep your place: /lazy plan off, /lazy plan on. The route lines and markers go away while it is off.",
         "Protect items from vendors: /lazy keep <item>. Your Cozy Sleeping Bag is protected from the start; a sale gets bought back.",
         "Fix: the craft plan panel no longer covers the profession window tabs.",
     } },
