@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0
+### New
+- **Sell grey loot** (off until you turn it on: Sell grey loot when a vendor opens in the options, or `/lazy sellgray on`). When a vendor opens, the grey items in your bags are sold one at a time and the total is said in chat. Items on your protect list (`/lazy keep`, which holds your sleeping bag) are never sold, nor are locked items or grey items with no sell value. `/lazy sellgray now` sells at an open vendor even with the automatic part off.
+- **Faster auto loot** (off until you turn it on: Faster auto loot in the options, or `/lazy fastloot on`). When auto loot is on in the game's options, the loot window is emptied the moment it opens instead of after its delay. If another addon does the same (Leatrix Plus has an option for it), use one or the other.
+
 ## 0.23.2
 ### Fixed
 - **The item tooltip said your bank held what was in your bags.** Twelve Strange Dust in your backpack showed as 12 in bags and 12 in bank. The bank scan counted a container you carry as part of the bank. The bank list now leaves out your backpack, bags and reagent bag, takes the bank's containers from the game's own list where it has one, and the bag count includes the reagent bag. Open your bank once on each character to refresh its saved bank.

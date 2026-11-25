@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.24.0", {
+        "SELL GREY LOOT (off until you turn it on: the Sell grey loot tickbox in the options, or /lazy sellgray on): when a vendor opens, the grey items in your bags are sold and the total is said in chat. Items you protect with /lazy keep are never sold. /lazy sellgray now sells at an open vendor any time.",
+        "FASTER AUTO LOOT (off until you turn it on: /lazy fastloot on): the loot window empties the moment it opens, when auto loot is on in the game's options.",
+    } },
     { "0.23.2", {
         "The item tooltip no longer says your bank holds what is in your bags. The bank scan counted a container you carry as bank. Open your bank once on each character to refresh its saved bank, and /lazy inventory lists what is counted as bags and bank.",
     } },

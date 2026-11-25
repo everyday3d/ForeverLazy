@@ -300,6 +300,7 @@ local COMMANDS = {
         { "/lazy gear stats", "The stats it reads from your gear (a window)" },
         { "/lazy gear list", "The upgrades in your bags" },
         { "/lazy gear on|off, gear bar on|off, gear note on|off", "Switch the parts on or off" },
+        { "/lazy sellgray on|off|now, fastloot on|off", "Sell grey loot at vendors, and empty the loot window faster (both off until you turn them on)" },
         { "/lazy range on|off", "Colour action buttons out of range, no mana, or unusable" } } },
     { "Group", {
         { "/lazy follow [name]", "Follow a group member" },

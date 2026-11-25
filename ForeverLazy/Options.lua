@@ -293,6 +293,10 @@ local function BuildControls(parent)
         function() return DB().rankUp ~= false end, function(v) DB().rankUp = OffFlag(v) end)
     Check(content, L("Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"), 16,
         function() return DB().blessPanel ~= false end, function(v) DB().blessPanel = OffFlag(v); if addon.BlessingsRefresh then addon.BlessingsRefresh() end end)
+    Check(content, L("Sell grey loot when a vendor opens (off until you tick it; items you protect with /lazy keep are never sold)"), 16,
+        function() return DB().sellGray == true end, function(v) DB().sellGray = v or nil end)
+    Check(content, L("Faster auto loot: empty the loot window the moment it opens (needs auto loot on in the game's options)"), 16,
+        function() return DB().fastLoot == true end, function(v) DB().fastLoot = v or nil end)
     Check(content, L("Pedometer: count how far I walk on foot"), 16,
         function() return DB().pedometer ~= false end, function(v) DB().pedometer = OffFlag(v); if addon.PedometerRefresh then addon.PedometerRefresh() end end)
     Check(content, L("Show the pedometer readout on the screen (click it for all the numbers)"), 16,
