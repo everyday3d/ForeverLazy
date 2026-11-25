@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.4
+### Fixed
+- **The bank bag slots button did nothing useful.** It only brought the game's own bank window forward. Buying a bank slot is something an addon cannot do by itself, so the green + now lays the game's own Purchase button over itself (the way Bagnon does), which shows the real price and the game's confirmation.
+
+### New
+- **Bank bag slots row.** A small box under the bank window shows your eight bank bag slots: click an empty slot with a bag on your cursor to put the bag in, click a filled slot to take it out, and the green + buys the next slot. /lazy bankslots window brings the game's own bank window forward, and /lazy bankslots still reports what this client offers.
+
 ## 0.24.3
 ### Fixed
 - **The chat input box on top covered the chat tabs.** It was placed a fixed distance above the chat window, which put it over the row of tabs and caught the clicks, so the tabs were very hard to click. It now sits above the tab row.

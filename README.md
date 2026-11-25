@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.24.3-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.24.4-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -25,6 +25,10 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 <p align="center">Get it on <a href="https://www.curseforge.com/wow/addons/foreverlazy">CurseForge</a>, or grab the zip from the <a href="https://github.com/everyday3d/ForeverLazy/releases/latest">latest release</a>.</p>
 
 ---
+
+## What's new in 0.24.4
+
+- **Bank bag slots row** under the bank window: put a bag in a slot, take it out, or buy the next slot with the green + (the game's own price and confirmation).
 
 ## What's new in 0.24.3
 
