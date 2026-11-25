@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.24.5
+### Fixed
+- **The blessing button could keep trying the same player.** When a cast failed (out of range, out of sight) it counted as done for a few seconds, then went straight back to that player. A failed or interrupted cast now makes it leave that player alone for 30 seconds and move on.
+
+### New
+- **Timers on the blessing rows.** Each class row shows who still needs the blessing, or the shortest time left on it (amber under 2 minutes).
+- **Left-click a class row to bless** the next person of that class who needs it.
+
+### Changed
+- **Choosing a class's blessing is now right-click** on its row (shift-right-click goes back). It used to be the left-click.
+
 ## 0.24.4
 ### Fixed
 - **The bank bag slots button did nothing useful.** It only brought the game's own bank window forward. Buying a bank slot is something an addon cannot do by itself, so the green + now lays the game's own Purchase button over itself (the way Bagnon does), which shows the real price and the game's confirmation.

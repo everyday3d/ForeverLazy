@@ -128,6 +128,36 @@ function addon.BlessNext(members, available, buffsOf, skip, recent)
     return pick, pickBless, count
 end
 
+-- How one class is doing: of the group members of that class who can be blessed, how many need the blessing (none, or about to run out),
+-- and the shortest time left on the ones who have it. Same rule as BlessNext. Returns total, missing, minLeft (seconds or nil).
+function addon.BlessClassState(members, class, short, buffsOf, recent)
+    local total, missing, minLeft = 0, 0, nil
+    for _, m in ipairs(members) do
+        if m.class == class and m.alive ~= false and m.connected ~= false then
+            local buffs = buffsOf(m.unit)
+            if buffs then
+                total = total + 1
+                local has, left = false, nil
+                for _, b in ipairs(buffs) do
+                    if b.name and Short(b.name) == short then
+                        if b.left == nil or b.left > REFRESH then has = true; left = b.left; break end
+                    end
+                end
+                if not has and recent and recent(m, short) then has = true end
+                if not has then missing = missing + 1
+                elseif left and (not minLeft or left < minLeft) then minLeft = left end
+            end
+        end
+    end
+    return total, missing, minLeft
+end
+
+function addon.BlessTimeText(left)
+    if not left then return "" end
+    if left >= 60 then return string.format("%d:%02d", math.floor(left / 60), math.floor(left % 60)) end
+    return string.format("%ds", math.max(0, math.floor(left)))
+end
+
 --------------------------------------------------------------------------------
 -- Sharing with the other paladins (pure logic, tested offline)
 --------------------------------------------------------------------------------
@@ -316,7 +346,7 @@ local function Build()
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:AddLine(L("One button for the whole group"), 1, 0.82, 0)
         GameTooltip:AddLine(L("Click: bless the next player who needs it."), 1, 1, 1)
-        GameTooltip:AddLine(L("Click a class below to choose its blessing."), 0.6, 0.6, 0.6)
+        GameTooltip:AddLine(L("Click a class below to bless it; right-click a class to choose its blessing."), 0.6, 0.6, 0.6)
         GameTooltip:Show()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
@@ -339,10 +369,11 @@ end
 local function Row(i)
     local r = rows[i]
     if r then return r end
-    r = CreateFrame("Button", nil, frame)
+    r = CreateFrame("Button", nil, frame, "SecureActionButtonTemplate")
     r:SetSize(180, 18)
     r:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, -46 - (i - 1) * 19)
-    r:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    r:RegisterForClicks("AnyUp", "AnyDown")
+    r:SetAttribute("useOnKeyDown", false)
     r.bg = r:CreateTexture(nil, "BACKGROUND")
     r.bg:SetAllPoints(); r.bg:SetColorTexture(1, 1, 1, 0.07)
     r.cls = r:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -350,10 +381,18 @@ local function Row(i)
     r.bless = r:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     r.bless:SetPoint("RIGHT", -4, 0)
     r:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
-    r:SetScript("OnClick", function(self, mouse) if self.class then Cycle(self.class, mouse == "RightButton" and -1 or 1) end end)
+    -- left-click is the secure cast set up in Refresh; right-click (on the release only) cycles the blessing, shift-right-click goes back
+    r:HookScript("OnClick", function(self, mouse, down)
+        if down or mouse ~= "RightButton" then return end
+        if self.class then Cycle(self.class, IsShiftKeyDown() and -1 or 1) end
+    end)
+    r:HookScript("PostClick", function(self, mouse, down)
+        if mouse == "LeftButton" and not down and addon.BlessNoteCast then addon.BlessNoteCast(self:GetAttribute("pickunit"), self:GetAttribute("pickspell")) end
+    end)
     r:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:AddLine(L("Click: the next blessing. Right-click: the one before."), 1, 1, 1)
+        GameTooltip:AddLine(self.shiftTarget and string.format(L("Click: bless %s (the next of this class who needs it)."), self.shiftTarget) or L("Click: bless the next of this class who needs it (nobody does right now)."), 0.6, 1, 0.6, true)
+        GameTooltip:AddLine(L("Right-click: the next blessing for this class. Shift-right-click: the one before."), 1, 1, 1, true)
         -- what the other paladins in the group give this class
         local o = addon.BlessLastOthers and addon.BlessLastOthers() or {}
         for name, e in pairs(o) do
@@ -394,6 +433,15 @@ local lastOthers = {}             -- the ones that are in the group right now (s
 -- to the next person when a cast did not land (out of sight, out of range) instead of hanging on one player.
 local recent = {}
 local RECENT = 8
+local lastCast                     -- { key, t }: the cast I just started, so a failure can be pinned on that player
+local SKIP_AFTER_FAIL = 30        -- seconds the button leaves a player alone after a cast on them failed (out of sight, out of range)
+-- A cast that failed or was interrupted did not bless anyone: step past that player for a while instead of trying them over and over.
+function addon.BlessCastFailed()
+    if not (lastCast and GetTime() - lastCast.t < 3) then return end
+    recent[lastCast.key] = GetTime() + (SKIP_AFTER_FAIL - RECENT)          -- counts as recent for the full skip time
+    lastCast = nil
+    if addon.BlessingsRefresh then pcall(addon.BlessingsRefresh) end
+end
 function addon.BlessRecently(m, short)
     local t = recent[tostring(m.name or m.unit) .. ":" .. tostring(short)]
     return t ~= nil and GetTime() - t < RECENT
@@ -402,7 +450,9 @@ function addon.BlessNoteCast(unit, spell)
     if not (unit and spell) then return end
     local name = UnitName and UnitName(unit)
     if not name then return end
-    recent[name .. ":" .. Short(spell)] = GetTime()
+    local key = name .. ":" .. Short(spell)
+    recent[key] = GetTime()
+    lastCast = { key = key, t = GetTime() }
     if addon.BlessingsRefresh then pcall(addon.BlessingsRefresh) end          -- point the button at the next person at once
 end
 function addon.BlessLastOthers() return lastOthers end
@@ -530,10 +580,30 @@ local function Refresh()
                 local b = addon.BlessingFor(present[i], avail)
                 local who = b and Covered(present[i], Short(b))
                 r.coveredBy = who
+                r.shiftTarget = nil
+                r:SetAttribute("type1", nil); r:SetAttribute("pickunit", nil); r:SetAttribute("pickspell", nil)
                 if who then
                     r.bless:SetText("|cff888888" .. Short(b) .. " (" .. who .. ")|r")           -- another paladin gives this one
+                elseif b then
+                    -- how this class is doing: who needs it, else the shortest time left
+                    local short = Short(b)
+                    local total, missing, minLeft = addon.BlessClassState(members, present[i], short, BuffsOf, addon.BlessRecently)
+                    local extra = ""
+                    if missing > 0 then extra = string.format("  |cffff6060%d %s|r", missing, L("need it"))
+                    elseif total > 0 and minLeft then extra = string.format("  |cff%s%s|r", minLeft <= 120 and "ffcc33" or "66dd66", addon.BlessTimeText(minLeft)) end
+                    r.bless:SetText(short .. extra)
+                    -- left-click casts it on the next of this class who needs it
+                    local ofClass = {}
+                    for _, m in ipairs(members) do if m.class == present[i] then ofClass[#ofClass + 1] = m end end
+                    local cp, cb = addon.BlessNext(ofClass, avail, BuffsOf, nil, addon.BlessRecently)
+                    if cp and cb then
+                        r:SetAttribute("type1", "macro")
+                        r:SetAttribute("macrotext1", "/cast [@" .. tostring(cp.unit) .. ",help,nodead] " .. cb)
+                        r:SetAttribute("pickunit", cp.unit); r:SetAttribute("pickspell", cb)
+                        r.shiftTarget = tostring(cp.name or cp.unit)
+                    end
                 else
-                    r.bless:SetText(b and Short(b) or L("none"))
+                    r.bless:SetText(L("none"))
                 end
                 r:Show()
             else
@@ -593,7 +663,7 @@ local function Refresh()
             end
         end
         if assigned == 0 and covered > 0 then button.text:SetText(L("the other paladins have everyone"))
-        elseif assigned == 0 then button.text:SetText(L("no blessing chosen: click a class below"))
+        elseif assigned == 0 then button.text:SetText(L("no blessing chosen: right-click a class below"))
         else button.text:SetText(count > 0 and L("someone is out of range") or L("everyone is blessed")) end
         button.bg:SetColorTexture(0.2, 0.2, 0.2, 0.9)
     end
@@ -613,10 +683,15 @@ local function Soon()
 end
 
 local ev = CreateFrame("Frame")
-for _, e in ipairs({ "PLAYER_LOGIN", "GROUP_ROSTER_UPDATE", "PLAYER_REGEN_ENABLED", "SPELLS_CHANGED", "PLAYER_ENTERING_WORLD", "UNIT_AURA" }) do
+for _, e in ipairs({ "PLAYER_LOGIN", "GROUP_ROSTER_UPDATE", "PLAYER_REGEN_ENABLED", "SPELLS_CHANGED", "PLAYER_ENTERING_WORLD", "UNIT_AURA",
+                     "UNIT_SPELLCAST_FAILED", "UNIT_SPELLCAST_FAILED_QUIET", "UNIT_SPELLCAST_INTERRUPTED" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event, unit)
+    if event:find("^UNIT_SPELLCAST_") then
+        if unit == "player" and addon.BlessCastFailed then addon.BlessCastFailed() end
+        return
+    end
     if event == "UNIT_AURA" then
         if not unit or not (unit == "player" or unit:find("^party") or unit:find("^raid")) then return end
         if not frame or not frame:IsShown() then return end

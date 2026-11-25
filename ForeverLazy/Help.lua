@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.24.5", {
+        "PALADIN BLESSINGS: each class row now shows who still needs the blessing, or the shortest time left on it (amber under 2 minutes). LEFT-CLICK a class row to bless the next person of that class who needs it. RIGHT-CLICK cycles that class's blessing (shift-right-click goes back), which used to be the left-click.",
+        "The blessing button no longer keeps trying a player a cast failed on (out of range, out of sight): it steps past them for 30 seconds.",
+    } },
     { "0.24.4", {
         "BANK BAG SLOTS now work from our own bank window: a small box under it shows your eight bank bag slots. Click an empty slot with a bag on your cursor to put the bag in, click a filled one to take it out, and the green + buys the next slot (the game asks you to confirm, and the price shows when you hover). /lazy bankslots window brings the game's own bank window forward if you want it.",
     } },

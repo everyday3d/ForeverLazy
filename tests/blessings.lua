@@ -150,5 +150,44 @@ test("a blessing just cast counts as given, so the button moves on to the next p
     pick = addon.BlessNext(members, avail, buffsFrom({}), nil, wasRecent)
     eq(pick.unit, "party3", "then the warrior")
 end)
+test("a class row shows who needs the blessing and the shortest time left", function()
+    local members = { member("party1", "WARRIOR"), member("party2", "WARRIOR"), member("party3", "MAGE") }
+    local buffs = buffsFrom({
+        party1 = { { name = "Blessing of Might", left = 200 } },
+        party2 = { { name = "Blessing of Might", left = 400 } },
+    })
+    local total, missing, minLeft = addon.BlessClassState(members, "WARRIOR", "Might", buffs)
+    eq(total, 2); eq(missing, 0); eq(minLeft, 200, "the shortest time")
+    buffs = buffsFrom({ party1 = { { name = "Blessing of Might", left = 200 } } })
+    total, missing, minLeft = addon.BlessClassState(members, "WARRIOR", "Might", buffs)
+    eq(missing, 1, "one warrior has none")
+    buffs = buffsFrom({ party1 = { { name = "Blessing of Might", left = 40 } }, party2 = { { name = "Blessing of Might" } } })
+    total, missing = addon.BlessClassState(members, "WARRIOR", "Might", buffs)
+    eq(missing, 1, "one is about to run out")
+    buffs = buffsFrom({ party3 = {} })
+    total, missing = addon.BlessClassState({ member("party3", "MAGE", { alive = false }) }, "MAGE", "Wisdom", buffs)
+    eq(total, 0, "the dead are not counted")
+end)
+
+test("the time left reads like 4:05 or 35s", function()
+    eq(addon.BlessTimeText(245), "4:05"); eq(addon.BlessTimeText(35), "35s"); eq(addon.BlessTimeText(nil), "")
+end)
+test("a cast that failed makes the button leave that player alone for a while", function()
+    local now = 100
+    GetTime = function() return now end
+    UnitName = function(u) return u end
+    local members = { member("party1", "SHAMAN"), member("party2", "DRUID") }
+    local function wasRecent(m, short) return addon.BlessRecently(m, short) end
+    local pick = addon.BlessNext(members, avail, buffsFrom({}), nil, wasRecent)
+    eq(pick.unit, "party1")
+    addon.BlessNoteCast("party1", "Blessing of Wisdom")
+    now = 101; addon.BlessCastFailed()                                  -- out of range: the cast failed
+    now = 115
+    pick = addon.BlessNext(members, avail, buffsFrom({}), nil, wasRecent)
+    eq(pick.unit, "party2", "still the druid 15 seconds later, not the shaman again")
+    now = 140
+    pick = addon.BlessNext(members, avail, buffsFrom({}), nil, wasRecent)
+    eq(pick.unit, "party1", "the shaman is tried again after the wait")
+end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 if failed > 0 then os.exit(1) end
