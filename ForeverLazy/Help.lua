@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.24.6", {
+        "PEOPLE WITH QUESTIE can see your quest progress again: we sent them a message type their Questie did not know, so it showed an error line in their chat and ignored it. Now it is one they read.",
+        "THE ARROW goes to a finished quest you can hand in nearby (within about 450 yards) even when your plan has no stop for it, for example a plan that is only library books.",
+    } },
     { "0.24.5", {
         "PALADIN BLESSINGS: each class row now shows who still needs the blessing, or the shortest time left on it (amber under 2 minutes). LEFT-CLICK a class row to bless the next person of that class who needs it. RIGHT-CLICK cycles that class's blessing (shift-right-click goes back), which used to be the left-click.",
         "The blessing button no longer keeps trying a player a cast failed on (out of range, out of sight): it steps past them for 30 seconds.",

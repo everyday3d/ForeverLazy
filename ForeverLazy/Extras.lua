@@ -590,6 +590,48 @@ local function BaseArrowTarget()    local db = DB()
     return (db.waypoints and db.waypoints[1]) or addon.SimpleTarget()
 end
 
+-- A finished quest whose hand-in is close by, found from the quest log itself (so it does not depend on the plan having a stop for it).
+-- Returns a spot { instance, x, y, name } or nil. Checked at most every 2 seconds.
+local HANDIN_NEAR = 450
+local handIn, handInAt = nil, -10
+local function NearbyHandIn()
+    if GetTime() - handInAt < 2 then return handIn end
+    handInAt = GetTime()
+    handIn = nil
+    if not (hbd and C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetInfo and C_QuestLog.IsComplete and ns.data and api.AddNpcs) then return nil end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px then return nil end
+    local ok, n = pcall(C_QuestLog.GetNumQuestLogEntries)
+    if not ok or not n then return nil end
+    local best, bd
+    for i = 1, n do
+        local okI, info = pcall(C_QuestLog.GetInfo, i)
+        local id = okI and type(info) == "table" and not info.isHeader and info.questID
+        if id then
+            local okC, done = pcall(C_QuestLog.IsComplete, id)
+            if okC and done then
+                local by = ns.data.Field("quests", id, "finishedBy")
+                if type(by) == "table" then
+                    local list = {}
+                    pcall(api.AddNpcs, list, by[1])
+                    if api.AddObjects then pcall(api.AddObjects, list, by[2]) end
+                    for _, s in ipairs(list) do
+                        if s.instance == pinst and s.x and s.y then
+                            local d = api.D2 and api.D2(s.x, s.y, px, py) or math.sqrt((s.x - px) ^ 2 + (s.y - py) ^ 2)
+                            if d <= HANDIN_NEAR and (not bd or d < bd) then
+                                local name = info.title or ("quest " .. id)
+                                best, bd = { instance = s.instance, x = s.x, y = s.y, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy, name = "Turn in: " .. name, handInQuest = id }, d
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    handIn = best
+    return handIn
+end
+
 function addon.ArrowTarget()
     addon.arrowWhy = nil          -- a few words on why the arrow points where it does (shown under it)
     -- inside a dungeon with quests that need something here: the spots in there come first
@@ -598,6 +640,11 @@ function addon.ArrowTarget()
     local wp = BaseArrowTarget()
     local db = DB()
     local skipped
+    -- a finished quest I can hand in close by goes first, whether or not the plan has a stop for it (a plan of only library books has none)
+    if db and db.arrowHandIn ~= false and (db.arrowSource or "auto") == "auto" and not (db.planFocus and wp and wp == (db.waypoints and db.waypoints[1])) then
+        local okH, spot = pcall(NearbyHandIn)
+        if okH and spot then addon.arrowWhy = "a hand-in close by"; return spot end
+    end
     -- the closest stop first: of the next few stops that are in this zone, the arrow goes to the nearest one (it sticks with its
     -- choice until another is a lot closer, so it does not flip back and forth)
     -- a quest I picked to do next (clicked in the tracker, or "do this next") is not overridden by closest-first

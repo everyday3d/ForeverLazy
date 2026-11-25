@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.6
+### Fixed
+- **Questie users could not see your quest progress**, and got a red "Error reading QuestieComm message" line in their chat. When Questie is not running on your side, Forever Lazy sends your progress in Questie's format, but each changed quest went out as a message type (14) that Questie 12.14.0 does not have. It is now sent as a full list of one quest, which Questie reads.
+- **The arrow ignored hand-ins right next to you.** The "hand-in close by" rule only looked at the plan's stops, so a plan with no stop for the quest (for example only library books) pointed past a finished quest. The arrow now reads your quest log and goes to a finished quest's hand-in within about 450 yards.
+
 ## 0.24.5
 ### Fixed
 - **The blessing button could keep trying the same player.** When a cast failed (out of range, out of sight) it counted as done for a few seconds, then went straight back to that player. A failed or interrupted cast now makes it leave that player alone for 30 seconds and move on.

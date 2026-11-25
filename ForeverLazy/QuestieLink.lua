@@ -427,7 +427,9 @@ local function SendChanges()
         if lastSig[qid] ~= sig then
             lastSig[qid] = sig
             sentIds[qid] = true
-            Send({ msgId = ID_UPDATE_V2, [1] = FlatQuest(qid, list, {}) }, dist)
+            -- one quest, sent as a full list of one: the "update" id 14 does not exist in every Questie (12.14.0 answers it with an error
+            -- line in the other player's chat), but 12 does, and it adds or replaces just the quests it carries
+            Send({ msgId = ID_FULL_V2, [1] = FlatQuest(qid, list, { 1 }) }, dist)
         end
     end
     for qid in pairs(sentIds) do
