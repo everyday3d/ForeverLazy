@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.24.1-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.24.2-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,13 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.24.1
+## What's new in 0.24.2
+
+- **The bank window counts the right containers** (it said 32 free when the bank was full) and redraws when a slot is bought.
+- **Bank bag slots button** under the bank window brings the game's own bank window forward, to buy slots and put bags in them.
+- **The text tabs at the top of the bag window are off by default.** The sections already name each kind of item.
+
+## Earlier: 0.24.1
 
 - **Spell rank upgrades are off by default.** Tick the option to turn them on, or use /lazy rankup when you want it done once.
 - **The quest item bar is gone.** The quest tracker still shows an item button beside a quest that has one.

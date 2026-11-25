@@ -280,6 +280,11 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.24.2", {
+        "THE BANK WINDOW counts the right containers now: it said 32 free when the game said the bank was full. It redraws when a bank slot is bought, and the item counts never count your bags as bank.",
+        "BANK BAG SLOTS: a button under the bank window brings the game's own bank window forward, where you buy slots and put bags in them. /lazy bankslots says what this client offers.",
+        "The row of text tabs at the top of the bag window (All, Quest, Equipment...) is off by default, since the sections already name each kind of item. The window's settings (the ... button) have Category tabs on top to bring it back.",
+    } },
     { "0.24.1", {
         "SPELL RANK UPGRADES are off until you turn them on (the Newest spell rank tickbox in the options). /lazy rankup, or the Fix my bars now button, still does it once whenever you ask.",
         "The QUEST ITEM BAR is gone: the strip of quest item buttons near the bottom of the screen and the pop-up bar for quest items. The quest tracker still shows an item button beside a quest that has one.",

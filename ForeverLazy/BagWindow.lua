@@ -17,6 +17,8 @@ local function DB() return addon.GetDB() end
 
 local atBank = false                 -- shared by both windows
 local function ByCat() local db = addon.GetDB(); return not (db and db.bagsByCategory == false) end
+-- the row of text tabs at the top (All, Quest, Equipment...): off by default, the sections in the window already name the kinds
+local function TabsOn() local db = addon.GetDB(); return db and db.bagsTabs == true end
 local NUMBAGS = NUM_BAG_SLOTS or 4
 
 -- Everything below (up to the end of "Open, close") is ONE bag window. At the bank there are two of them side by side:
@@ -68,6 +70,7 @@ local function BagList()
     return list
 end
 local function BankList()
+    if addon.BankContainerIds then return addon.BankContainerIds() end          -- Inventory.lua: the bank's real containers
     local list = { -1 }
     local first = NUMBAGS + (NUM_REAGENTBAG_SLOTS or 0) + 1
     for b = first, first + (NUM_BANKBAGSLOTS or 7) - 1 do list[#list + 1] = b end
@@ -246,7 +249,9 @@ local function BuildNow()
         function() if DB().bagsItemLevel == false then DB().bagsItemLevel = nil else DB().bagsItemLevel = false end end)
     Row(8, function() return "Layout: " .. (ByCat() and "by category" or "bag order") end,
         function() DB().bagsByCategory = ByCat() and false or nil end)
-    panel:SetSize(210, 8 + 8 * 26 + 26)
+    Row(9, function() return "Category tabs on top: " .. (TabsOn() and "on" or "off") end,
+        function() DB().bagsTabs = (not TabsOn()) or nil end)
+    panel:SetSize(210, 8 + 9 * 26 + 26)
     local note = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     note:SetPoint("BOTTOM", 0, 6)
     note:SetWidth(190)
@@ -782,9 +787,13 @@ Refresh = function(contentOnly)
             catFilter = nil
             for _, e in ipairs(entries) do UpdateButton(e.b, e.bag, e.slot) end
         end
+        if not TabsOn() and catFilter then
+            catFilter = nil                                           -- a filter nobody can see must not hide items
+            for _, e in ipairs(entries) do UpdateButton(e.b, e.bag, e.slot) end
+        end
         local prevTab
         for _, tb in ipairs(frame.cats) do
-            local show = tb.key == "all" or have[tb.key]
+            local show = TabsOn() and (tb.key == "all" or have[tb.key])
             tb:SetShown(show and true or false)
             if show then
                 tb:ClearAllPoints()
@@ -823,10 +832,13 @@ Refresh = function(contentOnly)
 
     if not InCombatLockdown() then
         -- at most about 60% of the screen tall; anything more scrolls
-        local maxH = math.max(120, math.floor((UIParent:GetHeight() * 0.6) / (frame:GetScale() or 1)) - 104)
+        local top = TabsOn() and 76 or 54                         -- room above the items: the title bar, and the tab row when it is on
+        local maxH = math.max(120, math.floor((UIParent:GetHeight() * 0.6) / (frame:GetScale() or 1)) - (top + 28))
         local viewH = math.min(frame.body:GetHeight(), maxH)
+        frame.scroll:ClearAllPoints()
+        frame.scroll:SetPoint("TOPLEFT", 10, -top)
         frame.scroll:SetSize(frame.body:GetWidth() + 6, viewH)
-        frame:SetSize(math.max(frame.body:GetWidth() + 26, 360), viewH + 76 + 28)
+        frame:SetSize(math.max(frame.body:GetWidth() + 26, 360), viewH + top + 28)
         if frame.scroll:GetVerticalScroll() > math.max(0, frame.body:GetHeight() - viewH) then
             frame.scroll:SetVerticalScroll(math.max(0, frame.body:GetHeight() - viewH))
         end
@@ -874,6 +886,7 @@ end   -- NewWindow
 
 local main = NewWindow(1, false)
 local bankWin = NewWindow(2, true)
+addon.BankWindowFrame = function() if bankWin.Shown() then return bankWin.Frame() end end          -- BankSlots.lua hangs its row under it
 
 -- any error is shown in chat (not everyone has Lua errors switched on)
 local function Toggle()
@@ -968,6 +981,7 @@ local function Soon()
         if bankWin.Shown() then bankWin.Refresh() end
     end)
 end
+addon.BankWindowRefresh = function() main.NeedLayout(); bankWin.NeedLayout(); Soon() end          -- BankSlots.lua asks for a redraw after a purchase
 
 -- auto sort: a moment after the bags settle, tidy them (never in combat, never while carrying something, never while searching)
 local sortPending, lastSort = false, 0
@@ -990,7 +1004,8 @@ end
 
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "BAG_UPDATE", "BAG_UPDATE_DELAYED", "ITEM_LOCK_CHANGED", "BAG_UPDATE_COOLDOWN", "PLAYER_MONEY", "BANKFRAME_OPENED",
-                     "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED", "PLAYER_REGEN_ENABLED", "PLAYER_LOGIN" }) do
+                     "BANKFRAME_CLOSED", "PLAYERBANKSLOTS_CHANGED", "PLAYER_REGEN_ENABLED", "PLAYER_LOGIN",
+                     "BANK_TAB_SETTINGS_UPDATED", "BANK_TABS_CHANGED", "PLAYERBANKBAGSLOTS_CHANGED", "PLAYER_ACCOUNT_BANK_TAB_SLOTS_CHANGED" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event)
@@ -1016,7 +1031,8 @@ ev:SetScript("OnEvent", function(_, event)
         if BankFrame then BankFrame:SetAlpha(1) end
         bankWin.Close()
         if main.Shown() and main.View().place == "bank" and not main.View().char then main.View().place = "bags"; main.NeedLayout(); main.Refresh() end
-    elseif event == "PLAYER_REGEN_ENABLED" then
+    elseif event == "PLAYER_REGEN_ENABLED" or event == "BANK_TAB_SETTINGS_UPDATED" or event == "BANK_TABS_CHANGED" or event == "PLAYERBANKBAGSLOTS_CHANGED" then
+        -- (a bought bank tab gives the bank more containers: lay it out again)
         main.NeedLayout(); bankWin.NeedLayout()
         Soon()
     elseif event == "BAG_UPDATE_DELAYED" then

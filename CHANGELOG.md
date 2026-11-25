@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.24.2
+### Fixed
+- **The bank window counted the wrong containers.** It said 32 slots were free while the game said the bank was full, because it built its list of bank containers from a fixed rule that does not fit this client (it could include empty Warband bank tabs). The bank window and the item counts now share one list, taken from the game's own names for the bank tabs, and it never includes a container you carry.
+- **The bank window did not redraw** when a bank slot was bought. It does now.
+
+### New
+- **Bank bag slots button.** Under the bank window, a button brings the game's own bank window forward, where you buy bank slots and put bags in them, with the game's own price and confirmation. Click it again to hide it. `/lazy bankslots` says what this client offers, in a window you can copy, and `/lazy bankslots on|off` shows or hides the button.
+
+### Changed
+- **The row of text tabs at the top of the bag window** (All, Quest, Equipment...) is off by default: the sections inside the window already name each kind of item. The window's settings (the ... button) have Category tabs on top to bring it back.
+
 ## 0.24.1
 ### Changed
 - **Automatic spell rank upgrades are off by default.** Tick Newest spell rank on my action bars in the options to turn them on. `/lazy rankup` and the Fix my bars now button still do it once whenever you ask, whether or not the automatic part is on. If you had switched it off yourself, nothing changes for you.

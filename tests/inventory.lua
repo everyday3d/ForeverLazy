@@ -95,5 +95,26 @@ test("the bank scan does not count my bags, even when the client numbers the ban
     assert((me.bank or {})[4] == nil, "the reagent bag I carry is not the bank")
     BANK_CONTAINER = nil
 end)
+test("with the game's own names, only my bank tabs count: the Warband tabs and my bags never do", function()
+    local contents = { [0] = { [1] = { itemID = 1, stackCount = 12 } }, [6] = { [1] = { itemID = 9, stackCount = 7 } },
+                       [7] = { [1] = { itemID = 8, stackCount = 2 } }, [12] = { [1] = { itemID = 77, stackCount = 40 } } }
+    NUM_BAG_SLOTS = 4; NUM_REAGENTBAG_SLOTS = 1; NUM_BANKBAGSLOTS = 7
+    BANK_CONTAINER = nil
+    Enum.BagIndex = { Backpack = 0, Bag_1 = 1, ReagentBag = 5, CharacterBankTab_1 = 6, CharacterBankTab_2 = 7, AccountBankTab_1 = 12 }
+    C_Container = {
+        GetContainerNumSlots = function(b) return contents[b] and 4 or 0 end,
+        GetContainerItemInfo = function(b, s) return contents[b] and contents[b][s] or nil end,
+    }
+    Load()
+    for _, fn in ipairs(onEvents) do pcall(fn, nil, "PLAYER_LOGIN"); pcall(fn, nil, "BANKFRAME_CLOSED") end
+    local me = rootDB.inv["Bad-" .. realm] or rootDB.inv["Bad-"]
+    assert((me.bank or {})[9] == 7 and (me.bank or {})[8] == 2, "both bank tabs are counted")
+    assert((me.bank or {})[77] == nil, "the Warband tab is not mine")
+    assert((me.bank or {})[1] == nil, "my backpack is not the bank")
+    local ids = addon.BankContainerIds()
+    assert(table.concat(ids, ",") == "6,7", "the bank list is " .. table.concat(ids, ","))
+    assert(table.concat(addon.BagContainerIds(), ",") == "0,1,2,3,4,5")
+    Enum.BagIndex = nil
+end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)

@@ -93,18 +93,25 @@ local function BankIds()
     local mine, seen, list = {}, {}, {}
     for _, b in ipairs(BagIds()) do mine[b] = true end
     local function Add(b) if type(b) == "number" and not mine[b] and not seen[b] then seen[b] = true; list[#list + 1] = b end end
-    Add(_G.BANK_CONTAINER or -1)
+    -- the game's own names for them, when it has them (the Warband bank tabs are not mine and are left out)
+    local named = false
     local bi = Enum and Enum.BagIndex
     if type(bi) == "table" then
         for name, v in pairs(bi) do
-            if type(name) == "string" and (name == "Bank" or name:find("^BankBag") or name:find("^CharacterBankTab")) then Add(v) end
+            if type(name) == "string" and (name == "Bank" or name:find("^BankBag") or name:find("^CharacterBankTab")) then Add(v); named = true end
         end
     end
-    local first = (_G.NUM_BAG_SLOTS or 4) + (_G.NUM_REAGENTBAG_SLOTS or 0) + 1
-    for b = first, first + (_G.NUM_BANKBAGSLOTS or 7) - 1 do Add(b) end
+    if not named then
+        Add(_G.BANK_CONTAINER or -1)
+        local first = (_G.NUM_BAG_SLOTS or 4) + (_G.NUM_REAGENTBAG_SLOTS or 0) + 1
+        for b = first, first + (_G.NUM_BANKBAGSLOTS or 7) - 1 do Add(b) end
+    end
     table.sort(list)
     return list
 end
+-- the bag window uses the same lists, so it never shows a container that is not really the bank
+addon.BagContainerIds = BagIds
+addon.BankContainerIds = BankIds
 
 local function ScanBags()
     Me().bags = ScanContainers(BagIds())
