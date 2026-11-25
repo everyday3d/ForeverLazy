@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.23.2
+### Fixed
+- **The item tooltip said your bank held what was in your bags.** Twelve Strange Dust in your backpack showed as 12 in bags and 12 in bank. The bank scan counted a container you carry as part of the bank. The bank list now leaves out your backpack, bags and reagent bag, takes the bank's containers from the game's own list where it has one, and the bag count includes the reagent bag. Open your bank once on each character to refresh its saved bank.
+
+### New
+- **/lazy inventory** lists the containers counted as your bags and as your bank, to check a wrong count.
+
 ## 0.23.1
 ### Changed
 - **Fresh quest data** from QuestieDB 1.1.6: 1 new quest, about 65 quests changed (quest chains, quest spots, the starter for Tattered Journal), about 1,170 creatures with moved spawns, 4 new objects and 266 changed ones, two corrected drop chances (Thunder Lizard Blood, Super Reaper 6000 Blueprints), faction fixes for Arille Azuregaze, Alfred Copperworth, Paige and Angelique Butler, and 5 new quest XP values. The data files are rebuilt without the game (see tools/README.md).

@@ -280,6 +280,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.23.2", {
+        "The item tooltip no longer says your bank holds what is in your bags. The bank scan counted a container you carry as bank. Open your bank once on each character to refresh its saved bank, and /lazy inventory lists what is counted as bags and bank.",
+    } },
     { "0.23.1", {
         "FRESH QUEST DATA from QuestieDB 1.1.6: one new quest, fixes to about 65 quests (chains, quest spots, the Tattered Journal starter), moved creature spawns, new objects, two corrected drop chances, faction fixes for four NPCs and five new quest XP values.",
     } },

@@ -8,12 +8,14 @@ local addon = { Print = function() end, GetDB = function() return db end, GetRoo
 local ns = { addon = addon, L = function(x) return x end }
 
 local hookFn, hookEv
+local onEvents = {}
 function CreateFrame()
     local f = setmetatable({}, { __index = function() return function() end end })
     f.RegisterEvent = function() end
-    f.SetScript = function(self, n, fn) if n == "OnEvent" then hookEv = fn end end
+    f.SetScript = function(self, n, fn) if n == "OnEvent" then hookEv = fn; onEvents[#onEvents + 1] = fn end end
     return f
 end
+C_Timer = { After = function(_, fn) fn() end }
 TooltipDataProcessor = { AddTooltipPostCall = function(_, fn) hookFn = fn end }
 Enum = { TooltipDataType = { Item = 1 } }
 GetItemCount = function() return 2 end
@@ -75,5 +77,23 @@ test("it still works when the realm name is empty at the moment", function()
     realm = "CAMWOW US1 Realm 7 PvE"
 end)
 
+-- the bank scan must never count the containers I carry
+test("the bank scan does not count my bags, even when the client numbers the bank like a bag", function()
+    local contents = { [0] = { [1] = { itemID = 1, stackCount = 12 } }, [5] = { [1] = { itemID = 4, stackCount = 3 } }, [6] = { [1] = { itemID = 9, stackCount = 7 } } }
+    NUM_BAG_SLOTS = 4; NUM_REAGENTBAG_SLOTS = 1; NUM_BANKBAGSLOTS = 7
+    BANK_CONTAINER = 0                                   -- a client that calls the backpack the bank
+    C_Container = {
+        GetContainerNumSlots = function(b) return contents[b] and 4 or 0 end,
+        GetContainerItemInfo = function(b, s) return contents[b] and contents[b][s] or nil end,
+    }
+    Load()
+    for _, fn in ipairs(onEvents) do pcall(fn, nil, "PLAYER_LOGIN"); pcall(fn, nil, "BANKFRAME_CLOSED") end
+    local me = rootDB.inv["Bad-" .. realm] or rootDB.inv["Bad-"]
+    assert(me, "my record exists")
+    assert((me.bank or {})[1] == nil, "the 12 dust in my backpack is not in the bank")
+    assert((me.bank or {})[9] == 7, "a real bank item is counted")
+    assert((me.bank or {})[4] == nil, "the reagent bag I carry is not the bank")
+    BANK_CONTAINER = nil
+end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)

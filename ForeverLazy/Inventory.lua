@@ -80,16 +80,38 @@ local function ScanContainers(list)
     return items
 end
 
-local function ScanBags()
+-- the containers I carry: the backpack, my bags and the reagent bag
+local function BagIds()
     local list = {}
-    for b = 0, (_G.NUM_BAG_SLOTS or 4) do list[#list + 1] = b end
-    Me().bags = ScanContainers(list)
+    for b = 0, (_G.NUM_BAG_SLOTS or 4) + (_G.NUM_REAGENTBAG_SLOTS or 0) do list[#list + 1] = b end
+    return list
+end
+
+-- the bank's containers. A container I carry is never part of the bank, whatever number this client gives the bank: counting one
+-- would show my bag contents as "in bank" too.
+local function BankIds()
+    local mine, seen, list = {}, {}, {}
+    for _, b in ipairs(BagIds()) do mine[b] = true end
+    local function Add(b) if type(b) == "number" and not mine[b] and not seen[b] then seen[b] = true; list[#list + 1] = b end end
+    Add(_G.BANK_CONTAINER or -1)
+    local bi = Enum and Enum.BagIndex
+    if type(bi) == "table" then
+        for name, v in pairs(bi) do
+            if type(name) == "string" and (name == "Bank" or name:find("^BankBag") or name:find("^CharacterBankTab")) then Add(v) end
+        end
+    end
+    local first = (_G.NUM_BAG_SLOTS or 4) + (_G.NUM_REAGENTBAG_SLOTS or 0) + 1
+    for b = first, first + (_G.NUM_BANKBAGSLOTS or 7) - 1 do Add(b) end
+    table.sort(list)
+    return list
+end
+
+local function ScanBags()
+    Me().bags = ScanContainers(BagIds())
 end
 
 local function ScanBank()
-    local list = { _G.BANK_CONTAINER or -1 }
-    local first = (_G.NUM_BAG_SLOTS or 4) + 1
-    for b = first, first + (_G.NUM_BANKBAGSLOTS or 7) - 1 do list[#list + 1] = b end
+    local list = BankIds()
     local me = Me()
     me.bank = ScanContainers(list)
     me.bankTime = time()
@@ -357,6 +379,17 @@ end
 
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
+    if (cmd or ""):lower() == "inventory" then
+        -- /lazy inventory: which containers are counted as my bags and as my bank (to check a wrong count)
+        local function Show(name, ids)
+            local parts = {}
+            for _, b in ipairs(ids) do parts[#parts + 1] = string.format("%d (%d slots)", b, NumSlots(b)) end
+            Print(name .. ": " .. table.concat(parts, ", "))
+        end
+        Show(L("bags are"), BagIds())
+        Show(L("bank is"), BankIds())
+        return true
+    end
     if (cmd or ""):lower() == "has" then
         local want = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         if want == "" then Print(L("/lazy has <part of an item name>, for example /lazy has cured light hide")); return true end

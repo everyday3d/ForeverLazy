@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.23.1-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.23.2-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -26,7 +26,11 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 
 ---
 
-## What's new in 0.23.1
+## What's new in 0.23.2
+
+- **Item tooltips no longer count your bags as bank.** The bank scan counted a container you carry as part of the bank. Open your bank once on each character to refresh it.
+
+## Earlier: 0.23.1
 
 - **Fresh quest data** from QuestieDB 1.1.6: a new quest, fixes to about 65 quests, moved creature spawns, two corrected drop chances and five new quest XP values.
 
