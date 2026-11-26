@@ -280,6 +280,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.29.1", {
+        "STUTTERING: the quest map does a lot less repeat work, mostly noticeable with hunting quests. If your game still skips, tell us where, and whether /lazy questmap off stops it.",
+    } },
     { "0.29.0", {
         "RESTART THE GAME after updating (not just /reload): the key bindings changed.",
         "SHAMANS: give DROP THE SET its own key. Under My class, Totems, click the button and press the key. It is also in the game's key bindings, and works with the totem bar off. One totem a press. Please tell us if it works in a fight.",

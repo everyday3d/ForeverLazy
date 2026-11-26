@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.29.1
+
+Coming from 0.28.1 or older? **Fully restart the game after updating.** From 0.29.0, `/reload` is enough.
+
+### Changed
+- **Less work from the quest map**, aimed at a report of the game skipping in Stranglethorn:
+  - It looked up the same quest and mob details again for every spot. It now does that once for each quest objective. Quests with many spots, such as hunting quests, gain the most.
+  - It redrew all its pins every 15 seconds. It now waits until you have moved about 75 yards, or about a minute. Quest changes still update it straight away.
+- It is not yet confirmed in game that this stops the skipping. If it still happens, try `/lazy questmap off` for a few minutes and tell us whether it stops (`/lazy questmap on` brings it back).
+
 ## 0.29.0
 
 **Fully restart the game after updating** (the key bindings file changed).

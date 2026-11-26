@@ -360,16 +360,18 @@ local function Build()
                         end
                         if not ref and #objs == #refs then ref = refs[i] end
                         if ref then
-                            local spawns = Spawns(ref)
-                            for _, s in ipairs(spawns) do
-                                local ql = tonumber(data.Field("quests", q.questID, "questLevel")) or tonumber(q.level)
-                                local lines = {}
-                                if ql and ql > 0 then lines[#lines + 1] = "Quest level " .. ql end
-                                local ml = MobLevelText(ref)
-                                if ml then lines[#lines + 1] = ml end
-                                lines[#lines + 1] = o.text or ""
-                                if s.object then lines[#lines + 1] = "On the ground: click it" end
-                                AddCell(cells, order, s.object and "object" or ref.kind, s, tostring(q.title), lines)
+                            -- the tooltip words are the same for every spot, so they are worked out once, not spot by spot:
+                            -- the mob levels alone can take dozens of lookups, and a hunting quest has hundreds of spots
+                            local ql = tonumber(data.Field("quests", q.questID, "questLevel")) or tonumber(q.level)
+                            local lines = {}
+                            if ql and ql > 0 then lines[#lines + 1] = "Quest level " .. ql end
+                            local ml = MobLevelText(ref)
+                            if ml then lines[#lines + 1] = ml end
+                            lines[#lines + 1] = o.text or ""
+                            local ground = { unpack(lines) }
+                            ground[#ground + 1] = "On the ground: click it"
+                            for _, s in ipairs(Spawns(ref)) do
+                                AddCell(cells, order, s.object and "object" or ref.kind, s, tostring(q.title), s.object and ground or lines)
                             end
                         end
                     end
@@ -465,6 +467,7 @@ addon.QuestMapBudget = Budget                                                -- 
 
 local lastSig = ""
 local LiftAfterDraw
+local drawnAt                   -- where I stood, and when, the last time the pins were drawn
 local function Draw(force)
     if not hbdp then return end
     local db = DB() or {}
@@ -479,6 +482,7 @@ local function Draw(force)
 
     Clear()
     local px, py, pinst; if hbd then px, py, pinst = hbd:GetPlayerWorldPosition() end
+    drawnAt = { x = px, y = py, inst = pinst, time = GetTime and GetTime() or 0 }
     -- nearest first for the minimap
     local byDistance = {}
     for _, c in ipairs(order) do
@@ -563,13 +567,22 @@ end
 ev:SetScript("OnEvent", function(_, event)
     if event == "PLAYER_ENTERING_WORLD" then Later(6, true) else Later(2) end
 end)
--- the minimap shows the pins nearest to me: refresh them now and then as I move
+-- the minimap shows the pins nearest to me: refresh them now and then as I move. Drawing everything again is the heaviest
+-- thing here, so standing about or fighting in one place does not do it (only once a minute, to be safe)
+local MOVED, STALE = 75, 60             -- yards, seconds
+local function NeedsRedraw()
+    if not drawnAt or (GetTime and GetTime() or 0) - drawnAt.time >= STALE then return true end
+    if not hbd then return true end
+    local x, y, inst = hbd:GetPlayerWorldPosition()
+    if not (x and drawnAt.x) or inst ~= drawnAt.inst then return true end
+    return (x - drawnAt.x) ^ 2 + (y - drawnAt.y) ^ 2 >= MOVED ^ 2
+end
 local acc = 0
 ev:SetScript("OnUpdate", function(_, dt)
     acc = acc + dt
     if acc < 15 then return end
     acc = 0
-    if hbdp and DB() and DB().questMap ~= false then Later(0, true) end
+    if hbdp and DB() and DB().questMap ~= false and NeedsRedraw() then Later(0, true) end
 end)
 
 -- OpenMap draws its map art over the canvas and lifts only the pins it knows by name; ours would sit under the art, so lift them
