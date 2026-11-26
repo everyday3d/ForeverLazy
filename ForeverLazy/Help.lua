@@ -280,6 +280,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.27.1", {
+        "/lazy version (or /lazy ver) tells you which version you are running.",
+    } },
     { "0.27.0", {
         "PALADINS, FIXED: the big blessing button now casts what it shows. One click could cast nothing when you were alone, or skip a player in a group.",
         "SHAMANS: point at a totem on the bar and all its totems pop out, so you click the one you want. It is set up to work in a fight too: please tell us if it does.",

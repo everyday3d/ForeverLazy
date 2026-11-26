@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.27.1
+### New
+- **`/lazy version`** (or `/lazy ver`) shows the version you are running, and says if someone in your group or guild has a newer one.
+
 ## 0.27.0
 
 ### Fixed

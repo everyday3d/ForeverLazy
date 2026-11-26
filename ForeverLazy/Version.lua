@@ -91,5 +91,21 @@ login:SetScript("OnEvent", function(self)
         Announce()
     end)
 end)
+-- /lazy version: which one I am running, and whether someone near me has a newer one
+local prev = addon.HandleExtraCommand
+function addon:HandleExtraCommand(cmd, rest)
+    local c = (cmd or ""):lower()
+    if c == "version" or c == "ver" then
+        Print(string.format(L("version %s"), MyVersion()))
+        if addon.newerVersion then
+            Print(string.format(L("%s is out (%s has it). Update on CurseForge: curseforge.com/wow/addons/foreverlazy"), addon.newerVersion, tostring(addon.newerFrom)))
+        else
+            Print(L("nobody in your group or guild has shown a newer one. The latest is always at github.com/everyday3d/ForeverLazy/releases"))
+        end
+        return true
+    end
+    if prev then return prev(self, cmd, rest) end
+end
+
 -- reached the end of the file without an error (used by /lazy check)
 do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["Version.lua"] = true end end
