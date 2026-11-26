@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.29.0
+
+**Fully restart the game after updating** (the key bindings file changed).
+
+### New
+- **Shamans: a key for Drop the set.** Open the options, **My class, Totems**, click the button and press the key you want. Shift, Ctrl, Alt, mouse side buttons and the scroll wheel work too. **Remove the key** takes it away. It is also listed in the game's key bindings under AddOns, Forever Lazy.
+  - If the key already does something else, you are told what, and you press it again to take it over.
+  - Each press drops the next totem of the set picked on the panel (Solo, Dungeon or Healing). The game needs one press per totem.
+  - It works with the totem bar switched off.
+  - It is made to work during fights, but that has not been confirmed in game yet, so please report.
+  - Keys and sets can only be changed outside combat.
+
 ## 0.28.1
 
 ### New

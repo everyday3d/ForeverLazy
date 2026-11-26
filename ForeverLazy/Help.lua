@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.29.0", {
+        "RESTART THE GAME after updating (not just /reload): the key bindings changed.",
+        "SHAMANS: give DROP THE SET its own key. Under My class, Totems, click the button and press the key. It is also in the game's key bindings, and works with the totem bar off. One totem a press. Please tell us if it works in a fight.",
+    } },
     { "0.28.1", {
         "HUNT AND TARGETING: no more blocked-action error from the addon when you target or point at a mob during a fight.",
         "CAST BAR FLASH: /lazy flash on turns it on (it is off until you do). /lazy flash check, typed while your target casts, says why nothing flashes.",

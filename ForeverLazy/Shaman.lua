@@ -426,7 +426,9 @@ local function Build()
     setButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     dropButton = Cell("ForeverLazy_TotemSet", 102, 22, function(self)
-        return { L("Drop the set"), L("Each click drops the next totem of the set. It starts over after 15 seconds or after a fight."), self.list or "" }
+        local key = GetBindingKey and GetBindingKey("CLICK ForeverLazy_DropTotems:LeftButton")
+        return { L("Drop the set"), L("Each click drops the next totem of the set. It starts over after 15 seconds or after a fight."), self.list or "",
+            key and (L("Key: ") .. key) or L("To give it a key: game key bindings, AddOns, Forever Lazy.") }
     end)
     dropButton.icon:Hide()
     dropButton.bg:SetColorTexture(0.1, 0.35, 0.1, 0.9)
@@ -638,9 +640,128 @@ local function CastMacro(button, mouse, text)
     button:SetAttribute("macrotext" .. n, text)
 end
 
+-- The key for "drop the set": set in the game's own key bindings (AddOns, Forever Lazy). It clicks a button of its own, which
+-- is never seen, so the key works with the totem bar switched off too. It drops from the same set the panel shows.
+local KEY_BINDING = "CLICK ForeverLazy_DropTotems:LeftButton"
+_G["BINDING_NAME_" .. KEY_BINDING] = "Shaman: drop the totem set (one totem a press)"
+local keyButton
+
+local function BoundKey()
+    local key = GetBindingKey and GetBindingKey(KEY_BINDING)
+    return key
+end
+
+-- a pressed key, written the way the game's bindings write it; nil for Shift, Ctrl and Alt on their own
+local MOUSE = { MiddleButton = "BUTTON3" }
+function S.KeyName(key, alt, ctrl, shift)
+    if not key or key == "UNKNOWN" or key:find("SHIFT$") or key:find("CTRL$") or key:find("ALT$") or key:find("META$") then return nil end
+    key = MOUSE[key] or key:match("^Button(%d+)$") and ("BUTTON" .. key:match("%d+")) or key
+    return (alt and "ALT-" or "") .. (ctrl and "CTRL-" or "") .. (shift and "SHIFT-" or "") .. key
+end
+
+-- give "drop the set" this key, or take its key away (nil). It goes into the game's own key bindings, so the two always agree.
+-- true, or false and why not
+function S.SetKey(key)
+    if InCombatLockdown() then return false, L("keys can be changed after the fight") end
+    if not (SetBinding and GetBindingKey) then return false, L("this client does not let an addon set keys: use the game's key bindings") end
+    local old = { GetBindingKey(KEY_BINDING) }
+    if key and not SetBinding(key, KEY_BINDING) then return false, L("the game would not take that key") end
+    for _, k in ipairs(old) do if k ~= key then SetBinding(k) end end
+    local save = SaveBindings or AttemptToSaveBindings
+    if save and GetCurrentBindingSet then save(GetCurrentBindingSet()) end
+    return true
+end
+
+-- what a key does now, when it is something else
+local function UsedFor(key)
+    local action = GetBindingAction and GetBindingAction(key)
+    if not action or action == "" or action == KEY_BINDING then return nil end
+    return _G["BINDING_NAME_" .. action] or action
+end
+
+-- turns an options button into "click me, then press a key". A key that already does something needs a second press.
+function S.KeyCatcher(button)
+    local listening, asked = false, nil
+    local function Show()
+        local key = BoundKey()
+        button:SetText(listening and L("Press a key (Esc cancels)")
+            or (key and (L("Drop the set key: ") .. key) or L("Click to set a drop the set key")))
+    end
+    local function Stop()
+        if listening then
+            listening, asked = false, nil
+            button:SetScript("OnKeyDown", nil)
+            button:SetScript("OnMouseWheel", nil)
+            button:EnableKeyboard(false)
+            button:EnableMouseWheel(false)
+        end
+        Show()
+    end
+    local function Take(raw)
+        local key = S.KeyName(raw, IsAltKeyDown and IsAltKeyDown(), IsControlKeyDown and IsControlKeyDown(), IsShiftKeyDown and IsShiftKeyDown())
+        if not key then return end
+        local used = UsedFor(key)
+        if used and asked ~= key then
+            asked = key
+            Print(string.format(L("%s is used for \"%s\". Press it again to use it for drop the set instead, or press another key."), key, used))
+            return
+        end
+        local ok, why = S.SetKey(key)
+        Print(ok and (L("drop the totem set is now on ") .. key) or why)
+        Stop()
+    end
+    button:RegisterForClicks("AnyUp")
+    button:SetScript("OnClick", function(_, mouse)
+        if listening then
+            if mouse == "LeftButton" or mouse == "RightButton" then Stop() else Take(mouse) end
+            return
+        end
+        if mouse ~= "LeftButton" then return end
+        if InCombatLockdown() then Print(L("keys can be changed after the fight")); return end
+        listening = true
+        button:SetScript("OnKeyDown", function(_, raw)
+            if raw == "ESCAPE" then Stop() else Take(raw) end
+        end)
+        button:SetScript("OnMouseWheel", function(_, delta) Take(delta > 0 and "MOUSEWHEELUP" or "MOUSEWHEELDOWN") end)
+        button:EnableKeyboard(true)
+        button:EnableMouseWheel(true)
+        if button.SetPropagateKeyboardInput then button:SetPropagateKeyboardInput(false) end    -- the key stays here
+        Show()
+    end)
+    -- never keep hold of the keyboard: closing the window or a fight starting ends it
+    button:HookScript("OnHide", Stop)
+    button:RegisterEvent("PLAYER_REGEN_DISABLED")
+    button:RegisterEvent("UPDATE_BINDINGS")
+    button:SetScript("OnEvent", function(_, event) if event == "PLAYER_REGEN_DISABLED" then Stop() else Show() end end)
+    button.Refresh = Show
+    Show()
+end
+
+local function SetSequence()
+    local choices, names = Choices(), {}
+    for _, e in ipairs(ELEMENTS) do names[#names + 1] = S.Pick(choices[e.key], e.totems, known) or "" end
+    return S.Sequence(names)
+end
+
+-- between fights only
+local function KeyButton()
+    if not keyButton then
+        keyButton = CreateFrame("Button", "ForeverLazy_DropTotems", UIParent, "SecureActionButtonTemplate")
+        keyButton:RegisterForClicks("AnyUp", "AnyDown")
+        keyButton:SetAttribute("useOnKeyDown", false)
+    end
+    local sequence = SetSequence()
+    keyButton:SetAttribute("type1", sequence and "macro" or nil)
+    keyButton:SetAttribute("macrotext1", sequence)
+end
+
 local function Refresh()
     local d = DB()
     if not d then return end
+    if IsShaman() and not InCombatLockdown() then
+        ReadSpells()
+        KeyButton()
+    end
     local showBar = Opt("shamTotemBar") or Opt("shamTotemRange")
     local showCure = Opt("shamCure")
     local wanted = IsShaman() and (showBar or Opt("shamImbue") or Opt("shamShield") or Opt("shamAnkh") or showCure)
@@ -881,6 +1002,11 @@ function addon:HandleExtraCommand(cmd, rest)
         Print(string.format(L("shaman helpers: %d of %d on (/lazy shaman all|off, or the options under My class)"), on, #KEYS))
         if not IsShaman() then Print(L("they only work on a shaman")) end
         pcall(Refresh)
+        if IsShaman() then
+            local key = BoundKey()
+            Print(key and (L("drop the totem set is on the key ") .. key)
+                or L("drop the totem set has no key yet: game key bindings, AddOns, Forever Lazy"))
+        end
         if IsShaman() and not (recallButton and recallButton.spell) then
             Print(L("no totem recall spell was found in your spellbook (the button shows once you know it, with the totem bar on)"))
         end

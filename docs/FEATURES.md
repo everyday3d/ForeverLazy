@@ -217,6 +217,7 @@ shield buttons, ankhs and Reincarnation, cure buttons for the party, a Purge mar
 on the bar for a menu of that element's totems. The panel has its own size, lock and layout, a recall button, and can hide the
 game's totem bar. Each cast takes
 its own click, and what a button casts can only change between fights. `/lazy shaman` shows what is on.
+Drop the set can have its own key (options, My class, Totems, or the game's key bindings): one totem a press, from the set picked on the panel.
 
 ## The quest map
 Your quests on the world map and the minimap: coloured areas where to kill or collect, one colour per quest (on the minimap,

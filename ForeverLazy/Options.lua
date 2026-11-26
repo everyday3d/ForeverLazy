@@ -862,6 +862,19 @@ local function BuildControls(parent)
     ShamanCheck(L("... hide the game's totem bar while mine is showing"), "shamHideGameBar", 40)
     Label(content, L("Point at an element on the bar and all its totems pop out: left-click one to drop it and keep it, right-click to only pick it. Each set (Solo, Dungeon, Healing) remembers its own. In a fight the menu drops totems, but your picks stay as they were."))
     y = y - 36
+    Label(content, L("A key for your set: click the button, then press the key (with Shift, Ctrl or Alt if you like). Each press drops the next totem of the set picked on the panel. It works with the totem bar off too."))
+    y = y - 36
+    local keySet = Button(content, L("Click to set a drop the set key"), 16, 260, function() end, false)
+    Button(content, L("Remove the key"), 282, 140, function()
+        if not (addon.Shaman and addon.Shaman.SetKey) then return end
+        local ok, why = addon.Shaman.SetKey(nil)
+        addon.Print(ok and L("drop the totem set has no key now") or why)
+        if keySet.Refresh then keySet.Refresh() end
+    end, true)
+    if addon.Shaman and addon.Shaman.KeyCatcher then
+        addon.Shaman.KeyCatcher(keySet)
+        refreshers[#refreshers + 1] = keySet.Refresh
+    end
     Button(content, L("Show my totem quests"), 16, 200, function() if addon.ClassWindow then addon.ClassWindow() end end, true)
 
     Header(content, "Shaman buffs")

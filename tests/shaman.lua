@@ -257,6 +257,78 @@ test("totem recall: a button once I know the spell, under either name, and recal
     for i = before + 1, #SaidList() do assert(not SaidList()[i]:find("is gone"), "a recalled totem was called gone") end
     C_Spell = nil
 end)
+test("the drop-the-set key button follows the picked set, with the totem bar off too, and waits out a fight", function()
+    Rebuild()
+    local k = Find("ForeverLazy_DropTotems")
+    assert(k and k.attrs.type1 == "macro" and k.attrs.macrotext1 == Find("ForeverLazy_TotemSet").attrs.macrotext1)
+    local keep = {}
+    for _, key in ipairs({ "shamTotemBar", "shamTotemRange", "shamImbue", "shamShield", "shamAnkh", "shamCure" }) do keep[key], db[key] = db[key], nil end
+    db.shamSet = "Dungeon"
+    db.shamTotems.Dungeon = { earth = "Tremor Totem", fire = "none", water = "none" }
+    Rebuild()
+    assert(k.attrs.macrotext1 == "/castsequence reset=15/combat Tremor Totem", tostring(k.attrs.macrotext1))
+    combat = true; db.shamTotems.Dungeon.earth = "Stoneskin Totem"; addon.ShamanRefresh(); combat = false
+    assert(k.attrs.macrotext1:find("Tremor"), "changed during a fight")
+    db.shamSet = nil
+    for key, v in pairs(keep) do db[key] = v end
+    Rebuild()
+end)
+-- a pretend key table, and a stand-in options button
+local binds = { W = "MOVEFORWARD" }
+local saves = 0
+GetBindingKey = function(action) local out = {}; for k, a in pairs(binds) do if a == action then out[#out + 1] = k end end return table.unpack(out) end
+GetBindingAction = function(key) return binds[key] or "" end
+SetBinding = function(key, action) assert(not combat, "keys changed during a fight"); binds[key] = action; return true end
+GetCurrentBindingSet = function() return 2 end
+SaveBindings = function(set) assert(set == 2); saves = saves + 1 end
+local held = {}
+IsShiftKeyDown = function() return held.shift end
+IsControlKeyDown = function() return held.ctrl end
+IsAltKeyDown = function() return held.alt end
+local DROP = "CLICK ForeverLazy_DropTotems:LeftButton"
+
+test("pressed keys are written the game's way; Shift on its own is not a key", function()
+    assert(S.KeyName("F") == "F" and S.KeyName("F", true, true, true) == "ALT-CTRL-SHIFT-F")
+    assert(S.KeyName("MiddleButton") == "BUTTON3" and S.KeyName("Button4", false, false, true) == "SHIFT-BUTTON4")
+    assert(S.KeyName("LSHIFT", false, false, true) == nil and S.KeyName("RCTRL") == nil and S.KeyName("LALT") == nil)
+end)
+
+test("the options button: click, press, saved; the old key is let go; Esc cancels", function()
+    local b = CreateFrame("Button", nil)
+    local keyboard
+    b.EnableKeyboard = function(_, v) keyboard = v end
+    S.KeyCatcher(b)
+    assert(b.text == "Click to set a drop the set key")
+    b.scripts.OnClick(b, "LeftButton")
+    assert(keyboard and b.text == "Press a key (Esc cancels)")
+    held.shift = true; b.scripts.OnKeyDown(b, "LSHIFT"); assert(keyboard, "Shift alone ended it")
+    b.scripts.OnKeyDown(b, "F"); held.shift = false
+    assert(binds["SHIFT-F"] == DROP and saves == 1 and not keyboard and not b.scripts.OnKeyDown)
+    assert(b.text == "Drop the set key: SHIFT-F")
+    b.scripts.OnClick(b, "LeftButton"); b.scripts.OnKeyDown(b, "G")
+    assert(binds.G == DROP and binds["SHIFT-F"] == nil, "two keys left")
+    b.scripts.OnClick(b, "LeftButton"); b.scripts.OnKeyDown(b, "ESCAPE")
+    assert(binds.G == DROP and not keyboard)
+end)
+
+test("a key in use needs a second press, and nothing changes during a fight", function()
+    local b = CreateFrame("Button", nil)
+    S.KeyCatcher(b)
+    b.scripts.OnClick(b, "LeftButton")
+    b.scripts.OnKeyDown(b, "W")
+    assert(binds.W == "MOVEFORWARD" and Said("Press it again"))
+    b.scripts.OnKeyDown(b, "W")
+    assert(binds.W == DROP)
+    assert(S.SetKey(nil) and binds.W == nil)
+    combat = true
+    b.scripts.OnClick(b, "LeftButton")
+    assert(not b.scripts.OnKeyDown and S.SetKey("H") == false and binds.H == nil)
+    combat = false
+    b.scripts.OnClick(b, "LeftButton")
+    b.scripts.OnEvent(b, "PLAYER_REGEN_DISABLED")
+    assert(not b.scripts.OnKeyDown, "kept the keyboard into a fight")
+end)
+
 test("a paladin sees no panel", function()
     class = "PALADIN"
     addon.ShamanRefresh()
