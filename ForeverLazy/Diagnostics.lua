@@ -281,6 +281,7 @@ local COMMANDS = {
         { "/lazy steps, steps reset, steps show|hide, steps on|off", "The pedometer: how far you have walked" },
         { "/lazy platecolors on|off", "Colour hostile nameplates: red attacking me, yellow someone else, purple a quest mob" },
         { "/lazy shaman, shaman all, shaman off", "Shaman helpers (off until you turn them on)" },
+        { "/lazy paladin, paladin all, paladin off", "Paladin helpers (off until you turn them on)" },
         { "/lazy version", "Which version you are running" },
         { "/lazy blessings on|off, blessings solo, blessings debug, blessings reset", "Paladin blessings: one button for the group, a blessing for each class" },
         { "/lazy l10n, l10n use <code>, l10n missing", "Languages: what is translated, pick one, list what needs translating" } } },
@@ -306,6 +307,7 @@ local COMMANDS = {
         { "/lazy sellgray on|off|now, fastloot on|off", "Sell grey loot at vendors, and empty the loot window faster (both off until you turn them on)" },
         { "/lazy range on|off", "Colour action buttons out of range, no mana, or unusable" } } },
     { "Group", {
+        { "/lazy spec on|off, spec check", "A player's spec on their tooltip (off until you turn it on); check says why none shows" },
         { "/lazy follow [name]", "Follow a group member" },
         { "/lazy party, shareplan, acceptplan, duo", "Group features" } } },
     { "Meter, bags and the rest", {

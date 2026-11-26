@@ -28,9 +28,9 @@ local PAGES = {
     { "Compass", { "Compass", "Compass size and place", "Hide the compass" } },
     { "Quests and map", { "Quest map", "Map pins", "Quest tracker", "Finding quests", "Quest hints", "Dungeons and class quests", "Quest sounds", "Library books" } },
     { "Combat", { "Nameplates", "Damage meter", "Gear", "Action bars" } },
-    { "My class", { "Class options", "Paladin blessings", "Hunter pet", "Shaman panel", "Totems", "Shaman buffs", "Shaman helpers" } },
+    { "My class", { "Class options", "Paladin blessings", "Paladin helpers", "Paladin panel", "Hunter pet", "Shaman panel", "Totems", "Shaman buffs", "Shaman helpers" } },
     { "Bags and items", { "Bags", "Selling and looting", "Item tooltips", "Crafting", "Ore and herb nodes" } },
-    { "Chat and groups", { "Chat", "Sharing and party", "The Hive" } },
+    { "Chat and groups", { "Chat", "Player tooltips", "Sharing and party", "The Hive" } },
     { "Extras", { "Couch mode", "Alerts", "Talents and skills", "Pedometer" } },
     { "Advanced", { "Modules", "Quest data", "RestedXP friend (optional)" } },
 }
@@ -126,6 +126,8 @@ local SECTION_MODULE = {
 -- subheadings made for one class: they only show on that class, unless "show every class" is ticked
 local SECTION_CLASS = {
     ["Paladin blessings"] = "PALADIN",
+    ["Paladin helpers"] = "PALADIN",
+    ["Paladin panel"] = "PALADIN",
     ["Hunter pet"] = "HUNTER",
     ["Shaman panel"] = "SHAMAN",
     ["Totems"] = "SHAMAN",
@@ -725,6 +727,12 @@ local function BuildControls(parent)
     Check(content, L("Show distance"), 16, function() return DB().showDistance end, function(v) DB().showDistance = v end)
     Radio(content, L("Distance units:"), "units", { { "yd", "Yards" }, { "m", "Meters" }, { "steps", "Steps" } })
 
+    Header(content, "Player tooltips")
+    Check(content, L("Show a player's spec on their tooltip when I point at them"), 16,
+        function() return DB().tipSpec == true end, function(v) DB().tipSpec = v and true or nil end)
+    Label(content, L("Another player has to be close enough to inspect, so their spec can take a second the first time. No new ones are looked up during a fight."))
+    y = y - 26
+
     ---------------------------------------------------------------- Alerts
     Header(content, "Alerts")
     Check(content, L("Sound when I arrive at the quest spot"), 16,
@@ -869,6 +877,30 @@ local function BuildControls(parent)
     ShamanCheck(L("Remind me to use Ghost Wolf on a long run"), "shamWolf")
     Label(content, L("The interrupt cast bar flash for Earth Shock is under Combat, Nameplates."))
     y = y - 26
+
+    local function PalCheck(text, key)
+        Check(content, text, 16, function() return DB()[key] == true end,
+            function(v) DB()[key] = v and true or nil; if addon.PaladinRefresh then addon.PaladinRefresh() end end)
+    end
+    local function PalRedraw() if addon.PaladinRefresh then addon.PaladinRefresh() end end
+    Header(content, "Paladin helpers")
+    PalCheck(L("Seal button: red when you have no seal, with a pop-out menu of your seals"), "palSeal")
+    PalCheck(L("Aura button: red when none of your auras is on, with a pop-out menu"), "palAura")
+    PalCheck(L("Righteous Fury button for tanking, with a warning when a fight starts without it"), "palFury")
+    PalCheck(L("Cleanse buttons for you and your party: they change colour when there is something to take off"), "palCleanse")
+    Label(content, L("Point at the seal or aura button and your choices pop out: left-click one to cast it and keep it, right-click to only pick it. In a fight the menu casts, but your usual one stays as it was."))
+    y = y - 36
+
+    Header(content, "Paladin panel")
+    Slider(content, L("Paladin panel size"), 0.5, 2, 0.1, "%.1f", function() return tonumber(DB().palScale) or 1 end,
+        function(v) DB().palScale = v; PalRedraw() end)
+    Check(content, L("Lock the paladin panel (untick to drag it by its title)"), 16,
+        function() return DB().palLocked == true end, function(v) DB().palLocked = v and true or nil end)
+    Check(content, L("Stand the paladin panel up and down"), 16,
+        function() return DB().palVertical == true end, function(v) DB().palVertical = v and true or nil; PalRedraw() end)
+    Check(content, L("Open the seal and aura menus the other way"), 16,
+        function() return DB().palMenuFlip == true end, function(v) DB().palMenuFlip = v and true or nil; PalRedraw() end)
+    Button(content, L("Put the paladin panel back"), 16, 220, function() local d = DB(); if d.pos then d.pos.paladin = nil end; PalRedraw() end, true)
 
     Header(content, "Hunter pet")
     Check(content, L("Remind me when my pet needs feeding"), 16,

@@ -195,6 +195,17 @@ each marker, quest icons and the next stop in words. Hover a marker to see what 
 As a ghost it shows your body as a tombstone. The big arrow is off until you turn it on with /lazy arrow; the compass points at
 the same stop the arrow would.
 
+## Paladin helpers
+Off until ticked, in the options under My class, beside the blessing panel: a seal button and an aura button that turn red when
+yours is missing, each with a pop-out menu of the ones you know, a Righteous Fury button with a warning when a fight starts
+without it, and cleanse buttons for the party. The panel has its own size, lock and layout. Each cast takes its own click, and
+what a button casts can only change between fights. `/lazy paladin` shows what is on.
+
+## Specs on player tooltips
+Off until ticked (Chat and groups, Player tooltips, or `/lazy spec on`). Point at a player of level 10 or higher and the
+tooltip shows their spec, such as `Spec: Holy (31/20/0)`. Another player has to be close enough to inspect, and new players
+are not looked up during a fight. `/lazy spec check` with a player targeted says what the game answers.
+
 ## Shaman helpers
 Off until ticked, in the options under My class: a totem bar with timers and sets, a range warning (outdoors), weapon buff and
 shield buttons, ankhs and Reincarnation, cure buttons for the party, a Purge mark and a Ghost Wolf reminder. Point at a totem

@@ -5,7 +5,7 @@
 --              hidden side buttons, tabs that fade away, sticky channels, an extra whisper sound, font and size
 --   /lazy chat                 what is on
 --   /lazy chat preset          turn on the usual set
---   /lazy chat words a, b, c   the words to highlight (your own name is always one)
+--   /lazy chat words a, b, c   the words to highlight (your own full name is always one)
 --   /lazy chat copy            put the text of the chat window you are using in a window you can copy from
 -- Messages are changed on their way into the window, never the game's own chat data. Some changes need a /reload to undo.
 local ADDON, ns = ...
@@ -46,8 +46,22 @@ local function Learn(name, lvl)
     end
 end
 
+-- a player's whole name, as chat writes it. This game has first names and surnames and gives the surname as the second
+-- answer ("Tank", "Hanks"); sometimes the first answer already holds both. On other realms the second answer is a realm
+local function FullName(unit, ask)
+    local first, second = (ask or UnitName)(unit)
+    if type(first) ~= "string" or Secret(first) then return nil end
+    if Secret(second) or type(second) ~= "string" or second == "" then return first end
+    if RegionalUniqueNamesEnabled and not RegionalUniqueNamesEnabled() then return first end
+    if second == (GetRealmName and GetRealmName()) or second == (GetNormalizedRealmName and GetNormalizedRealmName()) then return first end
+    local c = Constants and Constants.CharacterNameSeparatorConsts
+    local tail = ((c and c.CHARACTERNAME_SURNAME_SEPARATOR) or " ") .. second
+    if #first > #tail and first:sub(-#tail) == tail then return first end
+    return first .. tail
+end
+
 local function LearnUnit(unit)
-    if UnitExists(unit) and UnitIsPlayer(unit) then Learn(UnitName(unit), UnitLevel(unit)) end
+    if UnitExists(unit) and UnitIsPlayer(unit) then Learn(FullName(unit), UnitLevel(unit)) end
 end
 
 local function LearnGroup()
@@ -249,16 +263,32 @@ local function Linkify(seg)
     end))
 end
 
+-- my whole name: the first name alone would match anyone typing "tank"
+local function MyName() return FullName("player", UnitNameUnmodified) end
+addon.ChatMyName = MyName
+
 local function Words()
     local db = DB()
     local list, seen = {}, {}
-    local function add(w)
+    local function add(w, whole)
         w = tostring(w or ""):gsub("^%s+", ""):gsub("%s+$", "")
-        if #w >= 2 and not seen[w:lower()] then seen[w:lower()] = true; list[#list + 1] = w end
+        if #w >= 2 and not seen[w:lower()] then seen[w:lower()] = true; list[#list + 1] = { text = w:lower(), whole = whole } end
     end
-    add(UnitName("player"))
+    add(MyName(), true)          -- my name only counts on its own, not inside a longer word
     for w in tostring(db.chatWords or ""):gmatch("[^,]+") do add(w) end
     return list
+end
+
+-- a letter or a digit, including the bytes of accented letters
+local function InWord(c) return c ~= "" and (c:find("^%w") ~= nil or c:byte() >= 128) end
+
+local function Find(low, w, pos)
+    while true do
+        local s, e = low:find(w.text, pos, true)
+        if not s then return nil end
+        if not w.whole or not (InWord(low:sub(s - 1, s - 1)) and s > 1) and not InWord(low:sub(e + 1, e + 1)) then return s, e end
+        pos = s + 1
+    end
 end
 
 local function Highlight(seg, words)
@@ -267,7 +297,7 @@ local function Highlight(seg, words)
     while pos <= #seg do
         local bs, be
         for _, w in ipairs(words) do
-            local s, e = low:find(w:lower(), pos, true)
+            local s, e = Find(low, w, pos)
             if s and (not bs or s < bs) then bs, be = s, e end
         end
         if not bs then out[#out + 1] = seg:sub(pos); break end
@@ -285,8 +315,7 @@ local function EventFilter(_, event, msg, author, ...)
     local changed = msg
     if On("chatLinks") then changed = MapPlain(changed, Linkify) end
     if On("chatWordsOn") and event ~= "CHAT_MSG_WHISPER_INFORM" and event ~= "CHAT_MSG_BN_WHISPER_INFORM" then
-        local me = UnitName("player")
-        if not (type(author) == "string" and not Secret(author) and Base(author) == me) then
+        if not (type(author) == "string" and not Secret(author) and Base(author) == MyName()) then
             local words = Words()
             if #words > 0 then
                 local hit
@@ -622,12 +651,13 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "words" then
             db.chatWords = b
             db.chatWordsOn = true
-            Print(L("chat keywords: ") .. (b ~= "" and b or "(only your own name)"))
+            Print(L("chat keywords: ") .. (b ~= "" and b or "(only your own name)") .. "  +  " .. tostring(MyName()))
             return true
         end
         local function s(k) return db[k] == true and "on" or "off" end
         Print(string.format(L("chat: timestamps %s, class colours %s, levels %s, short channels %s, keywords %s, copy links %s, input on top %s, no fade %s, sticky %s"),
             s("chatTime"), s("chatClassColor"), s("chatLevels"), s("chatShortChannels"), s("chatWordsOn"), s("chatLinks"), s("chatEditTop"), s("chatNoFade"), s("chatSticky")))
+        Print(L("highlighted as your name: ") .. tostring(MyName()))
         Print(L("  /lazy chat preset   /lazy chat words a, b, c   /lazy chat copy   (all of it is in the options under Chat)"))
         return true
     end

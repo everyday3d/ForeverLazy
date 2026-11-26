@@ -280,6 +280,11 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.28.0", {
+        "SPECS ON TOOLTIPS: point at a player to see their spec (off until you turn it on: /lazy spec on).",
+        "PALADIN HELPERS under My class: seal and aura buttons with pop-out menus, Righteous Fury and cleanse buttons. All start off.",
+        "The chat highlight now needs your full name, and player levels next to names are saved under full names.",
+    } },
     { "0.27.1", {
         "/lazy version (or /lazy ver) tells you which version you are running.",
     } },

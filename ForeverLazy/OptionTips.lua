@@ -130,6 +130,14 @@ local TIPS = {
     -- my class
     ["Show every class's settings"] = "Also lists the settings made for other classes.",
     ["Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"] = "A panel that blesses your group one click at a time.",
+    ["Paladin panel size"] = "How big the paladin panel is.",
+    ["Lock the paladin panel (untick to drag it by its title)"] = "Locked: it cannot be dragged by accident. This does not lock anything else.",
+    ["Stand the paladin panel up and down"] = "The buttons in a column instead of a row. Their menus then open to the side.",
+    ["Open the seal and aura menus the other way"] = "Downwards instead of up, or to the left instead of the right when the panel stands up.",
+    ["Seal button: red when you have no seal, with a pop-out menu of your seals"] = "Click to cast your usual seal. Point at it to pick another.",
+    ["Aura button: red when none of your auras is on, with a pop-out menu"] = "Click to turn on your usual aura. Point at it to pick another.",
+    ["Righteous Fury button for tanking, with a warning when a fight starts without it"] = "Turns red when Righteous Fury is missing or has under a minute left.",
+    ["Cleanse buttons for you and your party: they change colour when there is something to take off"] = "One button each: green is poison, brown is disease, blue is magic. Click to take it off.",
     ["... hide the game's totem bar while mine is showing"] = "The game's own totem bar goes away while the Forever Lazy totem bar is on screen. Untick to get the game's bar back.",
     ["Shaman panel size"] = "How big the shaman panel is. The arrows and compass keep their own sizes.",
     ["Lock the shaman panel (untick to drag it by its title)"] = "Locked: it cannot be dragged by accident. This does not lock anything else.",
@@ -164,13 +172,15 @@ local TIPS = {
     ["Show my found nodes on the world map"] = "Ore and herbs you have gathered, on the world map.",
     ["Also show them on the minimap"] = "Your found nodes on the minimap too.",
 
+    ["Show a player's spec on their tooltip when I point at them"] = "Adds a line like Spec: Holy (31/20/0), the points in each talent tree.",
+
     -- chat
     ["Timestamps in front of every line"] = "The time on every chat line.",
     ["Class-coloured names in every channel"] = "Player names in their class colour.",
     ["Player levels next to names (from group, guild, friends, target, /who)"] = "Levels beside names, when the game has told us them.",
     ["Short channel names ([Guild] becomes [G], [1. General] becomes [1])"] = "Shorter channel tags.",
     ["No brackets around channel names"] = "Removes the [ ] around channel names.",
-    ["Highlight your name and these words (with a sound):"] = "Chat lines with your name or your words stand out and make a sound.",
+    ["Highlight your name and these words (with a sound):"] = "Chat lines with your full name or your words stand out and make a sound. Your first name on its own does not count.",
     ["Click a web link to copy it, and a copy button on each window"] = "Lets you copy links and chat text.",
     ["Resize chat windows by dragging the bottom-right corner"] = "Drag the corner to size a chat window.",
     ["Input box on top of the chat window"] = "Where you type moves above the chat. Turning it off needs a /reload.",

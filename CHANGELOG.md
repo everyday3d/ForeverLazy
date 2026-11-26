@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.28.0
+
+**Fully restart the game after updating** (this version adds new files).
+
+### New
+- **Specs on player tooltips** *(off until you turn it on)*: point at a player and see a line like **Spec: Holy (31/20/0)**. Turn it on under **Chat and groups, Player tooltips**, or with `/lazy spec on`. The first look at a player takes a moment and needs them close enough to inspect. New players are not looked up during a fight. If no spec shows, target them and type `/lazy spec check`.
+- **Paladin helpers** *(off until you turn them on, under **My class**, or `/lazy paladin all`)*:
+  - **Seal and aura buttons** that turn red when yours is missing. Point at one for a menu of your seals or auras. The menus are built to open during fights, but that has not been confirmed in game yet, so please report.
+  - **Righteous Fury** button for tanking, with a warning if a fight starts without it.
+  - **Cleanse buttons** for you and your party: green for poison, brown for disease, blue for magic.
+  - The panel has its own size, lock and layout.
+
+### Fixed
+- **Chat highlight:** it now needs your full name. Before, anyone typing just your first name highlighted the line and played the sound. Your own messages are skipped again too. Words you added yourself work as before.
+- **Player levels next to names:** group members, targets and mouseovers were saved under their first name only, so their levels could be missing in chat, and players who share a first name could overwrite each other.
+
 ## 0.27.1
 ### New
 - **`/lazy version`** (or `/lazy ver`) shows the version you are running, and says if someone in your group or guild has a newer one.
