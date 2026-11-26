@@ -189,10 +189,10 @@ is installed it is still used as a second source. The addon also learns from pla
 meet is noted (`/lazy data`), and it fills gaps. Click **Test without Questie** in the options to try it.
 
 ## The quest map
-Your quests on the world map and the minimap: a skull for a creature to kill, a purple diamond for an item (where it drops), a
-green triangle for something to use, soft coloured areas behind them, one colour per quest, a yellow `!` on quests you can
-pick up in this zone and a yellow `?` where a finished quest is handed in. Hover a pin for the quest and what is left. The
-checkboxes are in the options under Quest map.
+Your quests on the world map and the minimap: coloured areas where to kill or collect, one colour per quest (on the minimap,
+small dots in that colour), a small green dot for each thing to click on the ground, a yellow `!` on quests you can pick up
+in this zone and a yellow `?` where a finished quest is handed in. Skull and purple diamond icons on the mob spots are an
+option. Hover a pin or an area for the quest and what is left. The checkboxes are in the options under Quest map.
 
 ## Quest tooltips and your group
 Hover a mob, an object or an item a quest needs and the tooltip names the quest (bold, gold) and your progress, with finished

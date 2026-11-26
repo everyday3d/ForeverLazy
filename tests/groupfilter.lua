@@ -80,5 +80,18 @@ test("a group that only needs a healer", function()
     local o = addon.GroupRolesOpen({ TANK = 1, HEALER = 0, DAMAGER = 3 }, 5)
     assert(addon.GroupNeeds(o) == "healer")
 end)
+test("a role filter on a lone player: only the role they play", function()
+    local p = { numMembers = 1, role = "DAMAGER", class = "MAGE" }
+    assert(M(p, { role = "DAMAGER" }, 25)); assert(not M(p, { role = "TANK" }, 25))
+    assert(M({ numMembers = 1 }, { role = "TANK" }, 25))   -- a listing that does not say is kept
+end)
+test("the role of a lone player is read from a table or from values", function()
+    local old = C_LFGList
+    C_LFGList = { GetSearchResultPlayerInfo = function() return { assignedRole = "DAMAGER", classFilename = "mage" } end }
+    local r, c = addon.GroupPlayerRole(1, {}); assert(r == "DAMAGER" and c == "MAGE")
+    C_LFGList = { GetSearchResultPlayerInfo = function() return "TANK", "WARRIOR" end }
+    r, c = addon.GroupPlayerRole(1, {}); assert(r == "TANK" and c == "WARRIOR")
+    C_LFGList = old
+end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)

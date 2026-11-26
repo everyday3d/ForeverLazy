@@ -35,6 +35,9 @@ function addon.GroupMatches(r, f, myLevel)
         local open = r.roleOpen[f.role]
         if open ~= nil and open <= 0 then return false end
     end
+    -- a lone player: the role they play (when the listing says which; a listing with no role is left in)
+    if f.role and n < 2 and r.role and r.role ~= "" and r.role ~= "NONE" and r.role ~= f.role then return false end
+    if f.class and n < 2 and r.class and r.class ~= "" and r.class ~= f.class then return false end
     local words = (f.text or ""):lower()
     if words ~= "" then
         local hay = ((r.activity or "") .. " " .. (r.leader or "") .. " " .. (r.comment or "") .. " " .. (r.name or "")):lower()
@@ -91,7 +94,36 @@ function addon.GroupNeeds(roleOpen)
     return #out > 0 and table.concat(out, ", ") or nil
 end
 
-local actCache = {}local function Activity(aid)
+-- the role and class of a lone player's listing: "TANK"/"HEALER"/"DAMAGER" and a class file name such as "MAGE" (nil when not told).
+-- The game gives this either as a table or as several values, and some clients put it on the listing itself.
+function addon.GroupPlayerRole(id, info)
+    local role, class
+    if C_LFGList and C_LFGList.GetSearchResultPlayerInfo then
+        local ok, a, b = pcall(C_LFGList.GetSearchResultPlayerInfo, id, 1)
+        if ok then
+            if type(a) == "table" then
+                role = a.assignedRole or a.role
+                class = a.classFilename or a.classFileName or a.class
+            else
+                role, class = a, b
+            end
+        end
+    end
+    if type(info) == "table" then
+        role = role or info.assignedRole or info.role
+        class = class or info.classFilename or info.classFileName
+        if not role and type(info.roles) == "table" then
+            role = (info.roles.tank and "TANK") or (info.roles.healer and "HEALER") or (info.roles.dps and "DAMAGER") or (info.roles.damage and "DAMAGER") or nil
+        end
+    end
+    if type(role) ~= "string" then role = nil end
+    if type(class) ~= "string" then class = nil end
+    if role == "DPS" or role == "DAMAGE" then role = "DAMAGER" end
+    return role, class and class:upper() or nil
+end
+
+local actCache = {}
+local function Activity(aid)
     if not aid then return "?", 0, 0, nil end
     local c = actCache[aid]
     if c then return c[1], c[2], c[3], c[4] end
@@ -136,6 +168,9 @@ local function ReadResults()
                 comment = info.comment or "", name = info.name or "", activity = act, minLevel = minL, maxSuggest = maxS,
                 itemLevel = info.requiredItemLevel or 0, voice = info.voiceChat or "",
             }
+            if (r.numMembers or 1) < 2 then
+                r.role, r.class = addon.GroupPlayerRole(id, info)
+            end
             if C_LFGList.GetSearchResultMemberCounts and (r.numMembers or 1) >= 2 then
                 local ok3, counts = pcall(C_LFGList.GetSearchResultMemberCounts, id)
                 if ok3 and type(counts) == "table" then
@@ -154,7 +189,8 @@ end
 --------------------------------------------------------------------------------
 local ROWS, ROWH = 16, 18
 local KINDS = { { nil, "Everyone" }, { "groups", "Groups" }, { "players", "Players looking" } }
-local ROLES = { { nil, "Any role" }, { "TANK", "Needs a tank" }, { "HEALER", "Needs a healer" }, { "DAMAGER", "Needs damage" } }
+-- for a group: the role it still needs. For a lone player: the role they play (so a leader looking for damage picks "Damage")
+local ROLES = { { nil, "Any role" }, { "TANK", "Role: tank" }, { "HEALER", "Role: healer" }, { "DAMAGER", "Role: damage" } }
 local AGES = { 0, 5, 15, 30, 60 }
 local SORTS = { { "new", "Newest first" }, { "size", "Biggest first" }, { "name", "By activity" } }
 
@@ -197,6 +233,11 @@ local function UpdateInner()
             local text = r.comment ~= "" and r.comment or r.name
             local needs = addon.GroupNeeds(r.roleOpen)
             if needs and (r.numMembers or 1) >= 2 then text = "|cff66ff66needs " .. needs .. "|r  " .. text end
+            if (r.numMembers or 1) < 2 and (r.role or r.class) then
+                local rn = ({ TANK = "tank", HEALER = "healer", DAMAGER = "dps" })[r.role or ""]
+                local cn = r.class and (r.class:sub(1, 1) .. r.class:sub(2):lower()) or nil
+                text = "|cff66ff66" .. table.concat({ cn or "", rn or "" }, (cn and rn) and " " or "") .. "|r  " .. text
+            end
             if r.itemLevel and r.itemLevel > 0 then text = "(" .. r.itemLevel .. " ilvl) " .. text end
             row.comment:SetText(text)
             row:Show()
@@ -436,7 +477,14 @@ function addon:HandleExtraCommand(cmd, rest)
     local c = (cmd or ""):lower()
     if c == "groups" or c == "lfgfilter" then
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
-        if a == "button on" then DB().lfgFilterButton = nil; AddButton(); Print(L("group filter: button shown on the group finder"))
+        if a == "debug" then
+            local n = 0
+            for _, r in ipairs(ReadResults()) do
+                n = n + 1
+                if n <= 5 then Print(string.format("%s: members %d, role %s, class %s", r.leader or "?", r.numMembers or 1, tostring(r.role), tostring(r.class))) end
+            end
+            Print(string.format("%d results. GetSearchResultPlayerInfo: %s", n, tostring(C_LFGList and C_LFGList.GetSearchResultPlayerInfo ~= nil)))
+        elseif a == "button on" then DB().lfgFilterButton = nil; AddButton(); Print(L("group filter: button shown on the group finder"))
         elseif a == "button off" then DB().lfgFilterButton = false; if button then button:Hide() end; Print(L("group filter: button hidden (/lazy groups still opens it)"))
         else addon.GroupFilterToggle() end
         return true

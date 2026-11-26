@@ -1,5 +1,6 @@
 -- The quest map: where my quests' mobs, items and objects are, drawn on the world map and the minimap, like Questie does.
---   skull      kill this           purple diamond   collect this (where it drops)       green triangle   use or click this
+--   coloured area    where to kill or collect (one colour for each quest)                green dot        click this on the ground
+--   (skull and purple diamond icons on those spots are an option, off unless the areas are off)
 --   yellow !   a quest I can pick up here (this zone)                     yellow ?   a finished quest to hand in
 -- Hover a pin for the quest and what is left. Finished objectives are not drawn. Own pins, separate from the route and arrow pins.
 --   /lazy questmap on|off   everything      /lazy questmap objectives|givers on|off
@@ -28,12 +29,19 @@ end
 local TEX = {
     kill = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8",
     collect = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_3",
-    object = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_4",
     give = "Interface\\GossipFrame\\AvailableQuestIcon",
     turnin = "Interface\\GossipFrame\\ActiveQuestIcon",
 }
-local MAX_WORLD, MAX_MINI, PER_OBJECTIVE = 450, 70, 45
+local MAX_WORLD, MAX_MINI = 600, 70
+-- the most spots drawn for one objective in one zone. Things on the ground get far more: each one is a place to click
+local PER_ZONE, PER_ZONE_OBJECT = 45, 150
+-- pin sizes (times the "Pin size" slider): small, so they do not cover the map
+local SIZE_WORLD = { give = 14, turnin = 14, object = 7, other = 10 }
+local SIZE_MINI = { object = 6, other = 9 }
+local AREA_ALPHA, PIN_ALPHA = 0.45, 0.7                  -- how strong the coloured areas and the mob icons are
+local DOT = "Interface\\CharacterFrame\\TempPortraitAlphaMask"       -- a white disc
 local CELL = 70                                          -- spots closer than 1/70 of a zone map share one pin
+local CELL_OBJECT = 160                                  -- ground objects are kept apart more finely
 
 --------------------------------------------------------------------------------
 -- Click a pin or a coloured area: the arrow points there
@@ -85,6 +93,31 @@ local function Frame(pool, i, size)
     f:Hide()
     pool[i] = f
     return f
+end
+
+-- how a pin looks: a ground object is a small green dot with a dark edge, everything else is an icon. Frames are reused, so
+-- everything one look sets is set again by the other
+local function Style(f, kind)
+    f.tex:ClearAllPoints()
+    if kind == "object" then
+        if not f.ring then
+            f.ring = f:CreateTexture(nil, "ARTWORK")
+            f.ring:SetAllPoints()
+            f.ring:SetTexture(DOT)
+            f.ring:SetVertexColor(0, 0, 0, 0.9)
+        end
+        f.ring:Show()
+        f.tex:SetPoint("TOPLEFT", 1.2, -1.2); f.tex:SetPoint("BOTTOMRIGHT", -1.2, 1.2)
+        f.tex:SetTexture(DOT)
+        f.tex:SetVertexColor(0.3, 1, 0.45, 1)
+    else
+        if f.ring then f.ring:Hide() end
+        f.tex:SetAllPoints()
+        f.tex:SetTexture(TEX[kind])
+        f.tex:SetVertexColor(1, 1, 1, 1)
+    end
+    -- the mob and drop icons are held back a little, so the coloured areas read first
+    f.tex:SetAlpha((kind == "kill" or kind == "collect") and PIN_ALPHA or 1)
 end
 
 -- translucent coloured areas behind the pins (world map only), one colour for each quest
@@ -198,15 +231,60 @@ local function MobLevelText(ref)
     return lo == hi and ("Mob level " .. lo) or ("Mob levels " .. lo .. "-" .. hi)
 end
 
+-- spots on the ground (object = true: a thing to click) and spots where mobs are. An item can come from both, and they are
+-- gathered apart so a long list of mobs never pushes the objects off the map
+local function GatherSpawns(ref)
+    local list = {}
+    local function Objects(ids)
+        if type(ids) ~= "table" or not api.AddObjects then return end
+        local got = {}
+        pcall(api.AddObjects, got, ids)
+        for _, s in ipairs(got) do s.object = true; list[#list + 1] = s end
+    end
+    if ref.store == "objects" then
+        Objects(ref.ids)
+    elseif ref.store == "npcs" then
+        if api.AddNpcs then pcall(api.AddNpcs, list, ref.ids) end
+    elseif ref.store == "items" then
+        for _, id in ipairs(ref.ids) do
+            Objects(data.Field("items", id, "objectDrops"))
+            local npcs = data.Field("items", id, "npcDrops")
+            if type(npcs) == "table" and api.AddNpcs then
+                local some = {}
+                for _, n in pairs(npcs) do
+                    if #some >= 40 then break end
+                    some[#some + 1] = n
+                end
+                local got = {}
+                pcall(api.AddNpcs, got, some)
+                for _, s in ipairs(got) do list[#list + 1] = s end
+            end
+        end
+    end
+    return list
+end
+
+-- the spots to draw: a limit for each zone (one for the whole list would drop the zone I am in), objects with their own, larger one
+local function PickSpots(list)
+    local out, count = {}, {}
+    for _, s in ipairs(list) do
+        local key = tostring(s.uiMapId) .. (s.object and "o" or "n")
+        local n = count[key] or 0
+        if n < (s.object and PER_ZONE_OBJECT or PER_ZONE) then
+            count[key] = n + 1
+            out[#out + 1] = s
+        end
+    end
+    return out
+end
+addon.QuestMapSpots = { Gather = GatherSpawns, Pick = PickSpots }            -- for the offline tests
+
 local spawnCache = {}
 local function Spawns(ref)
     local key = ref.store .. ":" .. table.concat(ref.ids, ",")
     local c = spawnCache[key]
     if c then return c end
-    local list = {}
-    if ref.store == "npcs" and api.AddNpcs then pcall(api.AddNpcs, list, ref.ids)
-    elseif ref.store == "objects" and api.AddObjects then pcall(api.AddObjects, list, ref.ids)
-    elseif ref.store == "items" and api.AddItemSources then for _, id in ipairs(ref.ids) do pcall(api.AddItemSources, list, id) end end
+    local list = PickSpots(GatherSpawns(ref))
     spawnCache[key] = list
     return list
 end
@@ -230,7 +308,8 @@ end
 
 local function AddCell(cells, order, kind, s, title, lines)
     if not (s.uiMapId and s.zx and s.zy) then return end
-    local key = kind .. ":" .. s.uiMapId .. ":" .. math.floor(s.zx * CELL) .. ":" .. math.floor(s.zy * CELL)
+    local cell = kind == "object" and CELL_OBJECT or CELL
+    local key = kind .. ":" .. s.uiMapId .. ":" .. math.floor(s.zx * cell) .. ":" .. math.floor(s.zy * cell)
     local c = cells[key]
     if not c then
         c = { kind = kind, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy, x = s.x, y = s.y, instance = s.instance, info = {}, titles = {}, title = title, area = s.area }
@@ -282,17 +361,15 @@ local function Build()
                         if not ref and #objs == #refs then ref = refs[i] end
                         if ref then
                             local spawns = Spawns(ref)
-                            local picked = 0
                             for _, s in ipairs(spawns) do
-                                if picked >= PER_OBJECTIVE then break end
-                                picked = picked + 1
                                 local ql = tonumber(data.Field("quests", q.questID, "questLevel")) or tonumber(q.level)
                                 local lines = {}
                                 if ql and ql > 0 then lines[#lines + 1] = "Quest level " .. ql end
                                 local ml = MobLevelText(ref)
                                 if ml then lines[#lines + 1] = ml end
                                 lines[#lines + 1] = o.text or ""
-                                AddCell(cells, order, ref.kind, s, tostring(q.title), lines)
+                                if s.object then lines[#lines + 1] = "On the ground: click it" end
+                                AddCell(cells, order, s.object and "object" or ref.kind, s, tostring(q.title), lines)
                             end
                         end
                     end
@@ -353,6 +430,39 @@ end
 --------------------------------------------------------------------------------
 -- Draw
 --------------------------------------------------------------------------------
+-- Which pins go on the world map when there are more than it takes. Taking the nearest ones hid whole quests until I walked
+-- up to them, so the room is shared: every quest (and every giver) gets one pin, then every one a second, and so on, each
+-- its nearest first. Zones in "here" (mine and the one on the map) are served before the others.
+-- entries: { { c = { kind, title, uiMapId } }, ... } nearest first. Returns the chosen entries, still nearest first.
+local function Budget(entries, max, here)
+    if #entries <= max then return entries end
+    local chosen, total = {}, 0
+    for _, wantHere in ipairs({ true, false }) do
+        local queues, order = {}, {}
+        for _, e in ipairs(entries) do
+            if (here[e.c.uiMapId] == true) == wantHere then
+                local key = tostring(e.c.kind) .. "\1" .. tostring(e.c.title)
+                if not queues[key] then queues[key] = {}; order[#order + 1] = queues[key] end
+                table.insert(queues[key], e)
+            end
+        end
+        local round, more = 1, true
+        while more and total < max do
+            more = false
+            for _, q in ipairs(order) do
+                if q[round] and total < max then
+                    chosen[q[round]] = true; total = total + 1; more = true
+                end
+            end
+            round = round + 1
+        end
+    end
+    local out = {}
+    for _, e in ipairs(entries) do if chosen[e] then out[#out + 1] = e end end
+    return out
+end
+addon.QuestMapBudget = Budget                                                -- for the offline tests
+
 local lastSig = ""
 local LiftAfterDraw
 local function Draw(force)
@@ -376,41 +486,62 @@ local function Draw(force)
         byDistance[#byDistance + 1] = { c = c, d = d }
     end
     table.sort(byDistance, function(a, b) return a.d < b.d end)
+    local here = {}
+    local mine = hbd and hbd:GetPlayerZone()
+    if mine then here[mine] = true end
+    local viewed = WorldMapFrame and WorldMapFrame:IsShown() and WorldMapFrame.GetMapID and WorldMapFrame:GetMapID()
+    if viewed then here[viewed] = true end
+    -- mob and drop spots show as coloured areas. The skull and diamond icons hide what is under them, so they are only drawn
+    -- when I ask for them, or when the areas are off and there would be nothing to see
+    local icons = db.questMapIcons == true or not Wants("areas")
+    local areaSpots, pinSpots = {}, {}
+    for _, e in ipairs(byDistance) do
+        local mobs = e.c.kind == "kill" or e.c.kind == "collect"
+        if mobs then areaSpots[#areaSpots + 1] = e end
+        if icons or not mobs then pinSpots[#pinSpots + 1] = e end
+    end
+    local forAreas = Budget(areaSpots, MAX_WORLD, here)
+    local forWorld = Budget(pinSpots, MAX_WORLD, here)
 
     -- the coloured areas first, so the icons sit on top
     if Wants("areas") then
-        local n = 0
-        for _, e in ipairs(byDistance) do
+        for n, e in ipairs(forAreas) do
             local c = e.c
-            if c.kind == "kill" or c.kind == "collect" or c.kind == "object" then
-                n = n + 1
-                if n > MAX_WORLD then break end
-                local size = AreaSize(c.uiMapId)
-                local f = AreaFrame(n)
-                local r, g, b = Colour(c.title or "")
-                f.tex:SetVertexColor(r, g, b, 0.30)
-                f:SetSize(size, size)
-                f.info, f.cell = c.info, c
-                if f.SetHitRectInsets then local ins = size * 0.15; f:SetHitRectInsets(ins, ins, ins, ins) end
-                pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy)
-            end
+            local size = AreaSize(c.uiMapId)
+            local f = AreaFrame(n)
+            local r, g, b = Colour(c.title or "")
+            f.tex:SetVertexColor(r, g, b, AREA_ALPHA)
+            f:SetSize(size, size)
+            f.info, f.cell = c.info, c
+            if f.SetHitRectInsets then local ins = size * 0.15; f:SetHitRectInsets(ins, ins, ins, ins) end
+            pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy)
         end
     end
 
-    for i, e in ipairs(byDistance) do
+    local scale = math.max(0.5, math.min(2, tonumber(db.questMapScale) or 1))
+    for i, e in ipairs(forWorld) do
         local c = e.c
-        if i <= MAX_WORLD then
-            local f = Frame(worldFrames, i, c.kind == "give" and 16 or 13)
-            f.tex:SetTexture(TEX[c.kind]); f.info = c.info; f.cell = c
-            local scale = math.max(0.5, math.min(2, tonumber(db.questMapScale) or 1))
-            local sz = ((c.kind == "give" or c.kind == "turnin") and 16 or 13) * scale
-            f:SetSize(sz, sz)
-            pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy, _G.HBD_PINS_WORLDMAP_SHOW_CONTINENT or 2)
-        end
-        if i <= MAX_MINI and e.d < 1e18 and e.d < 1500 ^ 2 then
-            local f = Frame(miniFrames, i, 11)
-            f.tex:SetTexture(TEX[c.kind]); f.info = c.info; f.cell = c
-            local msz = 11 * math.max(0.5, math.min(2, tonumber(db.questMapScale) or 1))
+        local f = Frame(worldFrames, i, SIZE_WORLD.other)
+        Style(f, c.kind); f.info = c.info; f.cell = c
+        local sz = (SIZE_WORLD[c.kind] or SIZE_WORLD.other) * scale
+        f:SetSize(sz, sz)
+        pcall(hbdp.AddWorldMapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy, _G.HBD_PINS_WORLDMAP_SHOW_CONTINENT or 2)
+    end
+    -- the minimap shows what is around me, so there the nearest ones are the right ones
+    for i = 1, math.min(#byDistance, MAX_MINI) do
+        local e = byDistance[i]
+        local c = e.c
+        if e.d < 1e18 and e.d < 1500 ^ 2 then
+            local f = Frame(miniFrames, i, SIZE_MINI.other)
+            Style(f, c.kind); f.info = c.info; f.cell = c
+            local msz = (SIZE_MINI[c.kind] or SIZE_MINI.other) * scale
+            -- the minimap has no areas: a small see-through dot in the quest's colour stands in for the icon
+            if not icons and (c.kind == "kill" or c.kind == "collect") then
+                f.tex:SetTexture(DOT)
+                local r, g, b = Colour(c.title or "")
+                f.tex:SetVertexColor(r, g, b, 1)
+                msz = SIZE_MINI.object * scale
+            end
             f:SetSize(msz, msz)
             pcall(hbdp.AddMinimapIconMap, hbdp, OWNER, f, c.uiMapId, c.zx, c.zy, false, false)
         end

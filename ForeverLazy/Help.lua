@@ -280,6 +280,13 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.24.8", {
+        "THE MAP is less crowded: where to kill or collect is now shown as coloured areas, one colour for each quest, without skulls and diamonds on top (they are an option under Quest map). Pins are smaller.",
+        "THINGS ON THE GROUND you need to click for a quest show as small green dots. They could be missing when mobs also dropped the item.",
+        "FAR AWAY QUESTS no longer wait until you walk up to them to show on the world map.",
+        "PALADINS: when everyone is blessed, the big button no longer casts on the last player again.",
+        "GROUP FINDER FILTER: picking a role now works for players looking too, so a leader can look for just damage, a healer or a tank.",
+    } },
     { "0.24.7", {
         "THE HUNT WINDOW works again: clicking a mob in it targets the mob and puts a skull on it. The buttons did not react to the click on some setups.",
     } },

@@ -348,7 +348,7 @@ local function BuildControls(parent)
     Button(content, L("Change the voice"), 116, 150, function() if addon.QuestSoundNextDone then addon.QuestSoundNextDone() end end, true)
 
     Header(content, "Quest map")
-    Label(content, L("Shows where your quests' mobs, items and objects are, on the world map and minimap. Skull = kill, purple diamond = collect, green triangle = use, yellow ! = quest to pick up, yellow ? = ready to hand in. Hover a pin for the quest."))
+    Label(content, L("Shows where your quests' mobs, items and objects are, on the world map and minimap. Coloured area = where to kill or collect (a colour for each quest), green dot = click it on the ground, yellow ! = quest to pick up, yellow ? = ready to hand in. Hover a pin for the quest."))
     y = y - 22
     Check(content, L("Show quest objectives on the map and minimap"), 16,
         function() return DB().questMap ~= false and DB().questMapObjectives ~= false end,
@@ -356,6 +356,9 @@ local function BuildControls(parent)
     Check(content, L("Coloured areas where the quest mobs are (world map)"), 16,
         function() return DB().questMap ~= false and DB().questMapAreas ~= false end,
         function(v) DB().questMapAreas = OffFlag(v); if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
+    Check(content, L("Skull and diamond icons on mob spots"), 16,
+        function() return DB().questMapIcons == true end,
+        function(v) DB().questMapIcons = v and true or nil; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
     Check(content, L("Show quest givers (!) and hand-ins (?) on the map"), 16,
         function() return DB().questMap ~= false and DB().questMapGivers ~= false end,
         function(v) DB().questMapGivers = OffFlag(v); if v then DB().questMap = nil end; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)

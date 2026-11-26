@@ -651,6 +651,8 @@ local function Refresh()
         button.text:SetText(string.format("%s: %s", Short(bless), tostring(pick.name or pick.unit)) .. (count > 1 and string.format("  (+%d)", count - 1) or ""))
         button.bg:SetColorTexture(0.1, 0.35, 0.1, 0.9)
     else
+        -- nobody to bless: the cast command has to go too, or the next click blesses the last player again
+        button:SetAttribute("macrotext", nil)
         button:SetAttribute("spell", nil)
         button:SetAttribute("unit", nil)
         button.icon:SetShown(false)

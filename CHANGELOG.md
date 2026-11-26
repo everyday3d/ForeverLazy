@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.24.8
+### Changed
+- **The map is less crowded.** Where to kill or collect is shown as coloured areas, one colour for each quest, without skull and purple diamond icons on top. A new option under Quest map, **Skull and diamond icons on mob spots**, brings them back. The minimap shows small dots in the quest's colour instead. The other pins are smaller.
+### New
+- **Things on the ground** that you click for a quest show as small green dots.
+- **The group finder filter's role choice works on players looking too**, so a leader can list only damage, healers or tanks. Their class and role show on the row. A listing that does not say a role stays in the list. `/lazy groups debug` prints what the game reports for the first results.
+### Fixed
+- **Ground spots could be missing from the map.** Only the first 45 spots of an objective were drawn, mobs first, so an item that also drops from mobs could lose its objects, and spots in your own zone could be cut. The limit is now per zone, with objects counted apart from mobs.
+- **Some quests only showed on the world map once you were close.** When there were more pins than the map draws, it kept the nearest ones. The room is now shared between all quests, your zone and the map you are looking at first.
+- **With everyone blessed, the big blessing button cast on the last player again.** It kept the old cast command.
+
 ## 0.24.7
 ### Fixed
 - **Clicking a mob in the Hunt window did nothing.** The buttons only listened for the mouse release, but secure buttons on this client can fire on the press, so the click was lost and the mob was neither targeted nor marked. They now listen for both.
