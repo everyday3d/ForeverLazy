@@ -47,7 +47,10 @@ local TIPS = {
 
     -- compass, travel, journey, lazy mode, waypoints
     ["In duo mode, show my partner on the compass (even when the arrows are off)"] = "Your partner's direction on the compass in duo mode.",
-    ["Compass bar at the top of the screen"] = "A compass strip with markers across the top of the screen. Hover a marker to see what it is.",
+    ["Compass bar at the top of the screen"] = "A compass strip with markers across the top of the screen. Hover a marker to see what it is. As a ghost it shows your body.",
+    ["Show the main arrow (off until you tick it)"] = "The big arrow to your next stop. Hidden or not, reaching a stop still counts. /lazy arrow does the same.",
+    ["Also show the big arrow to your next stop"] = "Off: only the compass shows the way. It points at the same stop the arrow would, and reaching a stop still counts.",
+    ["... show the next stop in words under the compass"] = "The next stop's name, what to do there and how far it is, under the compass bar.",
     ["Compass size"] = "How big the compass bar is. The arrows keep their own size.",
     ["Lock the compass (untick to drag it)"] = "Locked: it cannot be dragged by accident. This does not lock or unlock the arrows.",
     ["Hide the compass in combat"] = "Ticked: the compass goes away while you fight.",

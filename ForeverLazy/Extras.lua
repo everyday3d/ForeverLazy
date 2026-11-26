@@ -360,6 +360,16 @@ end
 -- the marker my partner gets on the compass (raid target icons: 1 star, 2 circle, 3 diamond, 4 triangle, 5 moon)
 local function PartnerIcon() return (DB() and DB().compassIcon) or 3 end
 
+-- the arrow's choice, the same way the arrow takes it: false from it means the next stop waits for another zone
+function addon.CompassTarget()
+    local db = DB()
+    if not db then return nil end
+    local at = addon.ArrowTarget and addon.ArrowTarget()
+    local wp = at or (at ~= false and db.waypoints and db.waypoints[1]) or nil
+    if wp and wp.instance and wp.x then return wp end
+    return nil
+end
+
 local function CompassSources()
     local db = DB()
     local out = {}
@@ -378,8 +388,12 @@ local function CompassSources()
     -- the person I follow with the purple arrow
     local fp = addon.FollowPosition and addon.FollowPosition()
     if fp and addon.ModuleOn("follow") and GetTime() - fp.t < 3 then out[#out + 1] = { fp.instance, fp.x, fp.y, { 0.85, 0.5, 1 }, nil, PartnerIcon(), { name = "Your partner" } } end
-    local wp = db.waypoints[1]
-    if wp then out[#out + 1] = { wp.instance, wp.x, wp.y, db.colorWaypoint, nil, nil, { who = "Next stop", name = wp.name or wp.label, wp = wp } } end
+    -- the next stop is the one the arrow would point at (closest first, a hand-in close by, the kill spot ...), shown or not
+    local wp = addon.CompassTarget()
+    if wp then
+        out[#out + 1] = { wp.instance, wp.x, wp.y, db.colorWaypoint, nil, nil,
+            { who = "Next stop", name = wp.name or wp.label, wp = wp, kind = wp.handInQuest and "turnin" or nil } }
+    end
     if db.ownQuests and mine.chosen then
         out[#out + 1] = { mine.chosen.spawn.instance, mine.chosen.spawn.x, mine.chosen.spawn.y, db.colorMine, nil, nil,
             { who = "My quest", name = mine.chosen.label, kind = "kill" } }
@@ -821,6 +835,9 @@ local function UpdateCompass(dt)
     compass:Show()
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     local facing = GetPlayerFacing()
+    -- as a ghost the only thing to find is my body (CompassCorpse is nil while I am alive)
+    local body = normal and addon.CompassCorpse and addon.CompassCorpse() or nil
+    if addon.CompassTargetText then addon.CompassTargetText(compass, body and body.stop or (normal and addon.CompassTarget() or nil), px, py, pinst) end
     if not px or not facing then
         for _, m in ipairs(compass.markers) do m:Hide() end
         return
@@ -828,8 +845,8 @@ local function UpdateCompass(dt)
     local drawn = {}
     local half = compass:GetWidth() / 2 - 8
     local n = 0
-    local sources = normal and CompassSources() or {}
-    if partner then sources[#sources + 1] = partner end
+    local sources = body and { body.source } or (normal and CompassSources() or {})
+    if partner and not body then sources[#sources + 1] = partner end
     for _, s in ipairs(sources) do
         if s[1] == pinst and n < #compass.markers then
             local angle = hbd:GetWorldVector(pinst, px, py, s[2], s[3])
@@ -2365,6 +2382,12 @@ deathFrame:SetScript("OnEvent", function()
         local inside, kind = IsInInstance()
         if inside and (kind == "party" or kind == "raid") then dungeon = GetInstanceInfo() end
     end
+    -- some dungeons here do not say they are one. Inside them the game gives no position, so only then ask by the zone's name
+    -- (outdoors, the cave leading to a dungeon can carry the dungeon's name, and there my body is where I fell)
+    if not dungeon and not x and addon.CurrentDungeon then
+        local ok, name = pcall(addon.CurrentDungeon)
+        if ok then dungeon = name end
+    end
     if DB() then DB().lastDeath = { x = x, y = y, instance = inst, dungeon = dungeon } end
 end)
 
@@ -2388,6 +2411,13 @@ local function CorpsePoint()
     end
     local d = DB().lastDeath
     if d then return d.instance, d.x, d.y end
+end
+
+function addon.CompassCorpse()
+    if not (UnitIsGhost and UnitIsGhost("player")) then return nil end
+    local inst, x, y, label = CorpsePoint()
+    if not inst then return nil end
+    return addon.CompassBody(inst, x, y, label)
 end
 
 local corpseTimer = 0

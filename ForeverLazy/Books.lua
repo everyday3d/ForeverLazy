@@ -125,6 +125,20 @@ local function SetDone(e, value)
     if RefreshBookPins then RefreshBookPins() end
 end
 
+-- make one book the active waypoint (keeps the others, no duplicates)
+local function TrackBook(e)
+    local w = Entry(e)
+    if not w then Print(L("couldn't place that book")); return end
+    local wps = DB().waypoints
+    for i = #wps, 1, -1 do
+        if wps[i].name == w.name then table.remove(wps, i) end
+    end
+    table.insert(wps, 1, w)
+    addon:RefreshPins()
+    if addon.RefreshOptions then addon.RefreshOptions() end
+    Print(L("tracking: ") .. w.name)
+end
+
 local function CountDone()
     local n = 0
     for _, e in ipairs(BOOKS) do if IsDone(e) then n = n + 1 end end
@@ -383,6 +397,85 @@ local hbdp = LibStub("HereBeDragons-Pins-2.0", true)
 local bookRef = {}
 local bookFrames = {}
 
+-- Hovering a book pin says which book it is; right-clicking it offers to mark it collected or not, or to point the arrow there.
+-- The same goes for a waypoint pin that stands for a book (it lies on top of the book's own pin).
+local function EntryByKey(key)
+    for _, e in ipairs(BOOKS) do if BookKey(e) == key then return e end end
+end
+
+-- the tooltip's lines for a book: title, where it is (with the "(inside ...)" note), and whether I have it
+function addon.BookPinLines(e)
+    local note = e[5]:match("%((.-)%)")
+    local lines = { BookKey(e), string.format("%s  %.0f, %.0f", e[1], e[3], e[4]) }
+    if note then lines[#lines + 1] = note end
+    lines[#lines + 1] = IsDone(e) and ("|cff55ff55" .. L("Collected") .. "|r") or ("|cffffd100" .. L("Not collected yet") .. "|r")
+    return lines
+end
+
+function addon.BookPinMenu(e)
+    local function Mark(value)
+        return function()
+            SetDone(e, value)
+            Print(string.format(L("%s marked as %s"), BookKey(e), value and "collected" or "not collected"))
+        end
+    end
+    return {
+        { text = L("Mark as collected"), fn = Mark(true) },
+        { text = L("Mark as not collected"), fn = Mark(false) },
+        { text = L("Point the arrow here"), fn = function() TrackBook(e) end },
+    }
+end
+
+local function PinEnter(self)
+    local lines = self.bookEntry and addon.BookPinLines(self.bookEntry) or (self.pinName and { self.pinName })
+    if not (lines and GameTooltip) then return end
+    GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+    for i, line in ipairs(lines) do
+        if i == 1 then GameTooltip:AddLine(line, 1, 0.82, 0) else GameTooltip:AddLine(line, 1, 1, 1, true) end
+    end
+    if self.bookEntry then GameTooltip:AddLine(L("Right-click: mark it, or point the arrow here"), 0.5, 1, 0.5) end
+    GameTooltip:Show()
+end
+local function PinClick(self, button)
+    local e = self.bookEntry
+    if button == "RightButton" and e and addon.ShowMenu then
+        if GameTooltip then GameTooltip:Hide() end
+        addon.ShowMenu(addon.BookPinMenu(e), BookKey(e))
+    end
+end
+
+-- give a map pin its hover and right-click. book: a book's entry or title; name: what to say for a pin that is not a book.
+-- With neither the pin lets the mouse through again.
+function addon.BookPinHover(f, book, name)
+    if type(book) == "string" then book = EntryByKey(book) end
+    f.bookEntry, f.pinName = book, (not book) and name or nil
+    if not f.bookHooked then
+        f.bookHooked = true
+        f:SetScript("OnEnter", PinEnter)
+        f:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+        f:SetScript("OnMouseUp", PinClick)
+    end
+    f:EnableMouse((f.bookEntry or f.pinName) and true or false)
+end
+
+-- keep the book pins above the quest areas and OpenMap's map art, or the mouse would never reach them
+local function LiftBookPins()
+    if InCombatLockdown and InCombatLockdown() then return end
+    local om = _G.OpenMapAPI
+    local top = om and om.IsStitched and om.IsStitched() and om.ArtTopLevel and om.ArtTopLevel()
+    for _, f in pairs(bookFrames) do
+        local parent = f.GetParent and f:GetParent()
+        local want = parent and parent.GetFrameLevel and (tonumber(parent:GetFrameLevel()) or 0) + 6 or 0
+        if type(top) == "number" then want = math.max(want, top + 6) end
+        if f.SetFrameLevel and want > 0 then pcall(f.SetFrameLevel, f, want) end
+    end
+end
+if WorldMapFrame and WorldMapFrame.HookScript then
+    pcall(WorldMapFrame.HookScript, WorldMapFrame, "OnShow", function()
+        if C_Timer and C_Timer.After then C_Timer.After(0.6, function() pcall(LiftBookPins) end) end
+    end)
+end
+
 function RefreshBookPins()
     if addon.BooksChanged then pcall(addon.BooksChanged) end
     if not hbdp then return end
@@ -407,9 +500,11 @@ function RefreshBookPins()
                 f.tex:SetTexture("Interface\\Icons\\INV_Misc_Book_09")
                 f.tex:SetVertexColor(1, 1, 1)
             end
+            addon.BookPinHover(f, e)
             pcall(hbdp.AddWorldMapIconWorld, hbdp, bookRef, f, w.instance, w.x, w.y, 1)
         end
     end
+    if C_Timer and C_Timer.After then C_Timer.After(0.5, function() pcall(LiftBookPins) end) end
 end
 addon.RefreshBookPins = RefreshBookPins
 
@@ -463,20 +558,6 @@ local function SortedBooks()
         return BookKey(ea) < BookKey(eb)
     end)
     return sortedIdx
-end
-
--- make one book the active waypoint (keeps the others, no duplicates)
-local function TrackBook(e)
-    local w = Entry(e)
-    if not w then Print(L("couldn't place that book")); return end
-    local wps = DB().waypoints
-    for i = #wps, 1, -1 do
-        if wps[i].name == w.name then table.remove(wps, i) end
-    end
-    table.insert(wps, 1, w)
-    addon:RefreshPins()
-    if addon.RefreshOptions then addon.RefreshOptions() end
-    Print(L("tracking: ") .. w.name)
 end
 
 local bookMenu, menuCatcher
@@ -645,14 +726,14 @@ function addon:HandleExtraCommand(cmd, rest)
         if sub:match("^%s*why") or sub:match("^%s*check") or sub:match("^%s*status") then
             -- say what stops the arrow from showing
         else
-            db.waypointArrowOff = not db.waypointArrowOff
+            db.waypointArrowOff = not addon.ArrowHidden()
             Print(L("waypoint arrow ") .. (db.waypointArrowOff and "hidden (waypoints are kept)" or "shown"))
             if db.waypointArrowOff then return true end
         end
         -- is there anything to see? say what stops it
         local reasons = {}
         if db.mode == "off" then reasons[#reasons + 1] = "arrows are switched off (mode off): /lazy toggle both turns them on" end
-        if db.waypointArrowOff then reasons[#reasons + 1] = "the waypoint arrow is hidden: /lazy arrow shows it" end
+        if addon.ArrowHidden() then reasons[#reasons + 1] = "the waypoint arrow is hidden: /lazy arrow shows it" end
         if api.ShouldHide and api.ShouldHide() then reasons[#reasons + 1] = "arrows hide here (inside a dungeon, as a ghost, or one of the hide options in Options)" end
         local target = addon.ArrowTarget and addon.ArrowTarget()
         if not target then

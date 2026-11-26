@@ -26,7 +26,7 @@ local STEPS = {
       target = function() return _G.ForeverLazy_MinimapButton end },
     { text = "|cffffd100The menu.|r This is what the right-click opens: go somewhere, plan your route, boats, journey, crafting, group, settings. Pick anything to try it.",
       target = nil, onShow = function() if addon.OpenMenu then addon:OpenMenu() end end, onHide = function() if _G.ForeverLazy_Menu then _G.ForeverLazy_Menu:Hide() end end },
-    { text = "|cffffd100The arrow.|r It points at your next stop. It goes to a finished quest you can hand in close by first, then to the closest stop, and it only points at stops in the zone you are in. Right-click it to skip a quest, put one off, or see why it chose this stop.",
+    { text = "|cffffd100The compass and the arrow.|r The compass at the top shows your next stop. The big arrow is off until you type /lazy arrow. Both point the same way. The arrow points at your next stop. It goes to a finished quest you can hand in close by first, then to the closest stop, and it only points at stops in the zone you are in. Right-click it to skip a quest, put one off, or see why it chose this stop.",
       target = function() local a = _G.ForeverLazy_WaypointArrow; return a and a:IsShown() and a or nil end },
     { text = "|cffffd100The world map.|r Press M. In the top right there is a search box (\"Go to...\") and a Lazy button. Type a place, a city, a dungeon or a flight point, and press Enter: the arrow plans the whole trip. Your route shows on the map with numbered stops.",
       target = function() local w = _G.WorldMapFrame; return w and w:IsShown() and w or nil end },
@@ -280,6 +280,14 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.26.0", {
+        "RESTART THE GAME after updating if you want the new tombstone picture.",
+        "THE BIG ARROW is now OFF until you turn it on: /lazy arrow. The compass shows the way: it points at the same stop the arrow would, and reaching a stop counts without the arrow.",
+        "COMPASS ONLY? Under Compass you can show the next stop in words under the bar (off until you tick it).",
+        "AS A GHOST the compass shows your body as a tombstone. Died in a dungeon? It leads to the entrance.",
+        "LIBRARY BOOKS on the world map say which book they are when you hover, and right-click marks them collected or not. Other stops are no longer drawn as books.",
+        "DUNGEONS: five more entrances (Alcaz Prison, Blackmaw Hold, The Drowned City, Krol'dok Stronghold, Shaper's Terrace), and names written as OpenMap writes them.",
+    } },
     { "0.25.0", {
         "RESTART THE GAME after updating (not just /reload): this version has new files.",
         "THE OPTIONS are now pages with a search box that finds any setting. Point at a tick box or slider and it says what it does.",

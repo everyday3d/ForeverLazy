@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.26.0
+
+**Fully restart the game after updating** to load the new tombstone picture.
+
+### Changed
+- **The big arrow is now off until you turn it on** (`/lazy arrow`, its checkbox, or the compass's right-click menu). This applies to everyone who never chose; you are told once. The compass stays on.
+- **Dungeon names are written as OpenMap writes them:** Deadmines, Stormwind Stockade, Sunken Temple and Ahn'Qiraj Temple. The old names and the wing names still work.
+### New
+- **Compass only works properly:** the compass points at the same stop the arrow would (closest first, a hand-in close by, the kill spot), and reaching a stop sounds and clears it with the arrow hidden. A new option shows the next stop in words under the bar (off until ticked).
+- **As a ghost the compass shows your body** as a tombstone with its distance, or the dungeon's entrance when you died inside one.
+- **Library books on the world map:** hover to see which book it is, where, and whether you have it; right-click to mark it collected or not, or to point the arrow there.
+- **Five more dungeon entrances:** Alcaz Prison, Blackmaw Hold, The Drowned City, Krol'dok Stronghold and Shaper's Terrace, from [OpenMap](https://github.com/openmap-world/openmap) (MIT). Not all have been checked in game: please report one that is off.
+### Fixed
+- Every waypoint after the first was drawn on the world map as a library book. Only books are now; other stops are a small yellow dot.
+- Stormwind Stockade's entrance was not found by the name the game shows.
+- Some dungeons that do not report themselves as dungeons now lead your ghost to the entrance.
+- Flying over a stop or passing it as a ghost no longer counts as arriving.
+
 ## 0.25.0
 
 **Fully restart the game after updating** (a /reload is not enough: there are new files).

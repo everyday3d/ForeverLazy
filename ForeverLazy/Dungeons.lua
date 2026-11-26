@@ -2,7 +2,8 @@
 -- It also gives the corpse arrow the dungeon entrance after you die inside one (the corpse run).
 --   /lazy dungeons              quests that need a dungeon, and dungeons for your level
 --   /lazy dungeons go [n|name]  put a waypoint on a dungeon entrance
--- Dungeon names, entrances and quest locations come from Questie's database.
+-- Dungeon names, entrances and quest locations come from Questie's database. Five WoW Forever dungeons it does not have come
+-- from OpenMap (https://github.com/openmap-world/openmap), MIT licence, Copyright (c) 2026 OpenMap contributors (see media\CREDITS.txt).
 local ADDON, ns = ...
 local L = ns.L
 local addon = ns.addon
@@ -14,14 +15,24 @@ local function DB() return addon.GetDB() end
 
 -- level ranges (from Questie's meeting stones, a few from memory)
 local LEVELS = {
-    ["Ragefire Chasm"] = { 13, 18 }, ["The Deadmines"] = { 16, 24 }, ["Wailing Caverns"] = { 16, 24 },
-    ["Shadowfang Keep"] = { 17, 25 }, ["Blackfathom Deeps"] = { 20, 28 }, ["The Stockade"] = { 22, 30 },
+    ["Ragefire Chasm"] = { 13, 18 }, ["Deadmines"] = { 16, 24 }, ["Wailing Caverns"] = { 16, 24 },
+    ["Shadowfang Keep"] = { 17, 25 }, ["Blackfathom Deeps"] = { 20, 28 }, ["Stormwind Stockade"] = { 22, 30 },
     ["Razorfen Kraul"] = { 23, 31 }, ["Gnomeregan"] = { 24, 32 }, ["Scarlet Monastery"] = { 28, 44 },
     ["Razorfen Downs"] = { 33, 41 }, ["Uldaman"] = { 36, 44 }, ["Maraudon"] = { 40, 52 },
-    ["Zul'Farrak"] = { 42, 50 }, ["The Temple of Atal'Hakkar"] = { 45, 54 }, ["Blackrock Depths"] = { 48, 61 },
+    ["Zul'Farrak"] = { 42, 50 }, ["Sunken Temple"] = { 45, 54 }, ["Blackrock Depths"] = { 48, 61 },
     ["Blackrock Spire"] = { 55, 61 }, ["Dire Maul"] = { 54, 61 }, ["Scholomance"] = { 56, 61 },
     ["Stratholme"] = { 56, 61 },
 }
+
+-- from OpenMap (MIT): { name, zone map, x, y (0 to 1 on that map), lowest and highest level }
+local OPENMAP_DUNGEONS = {
+    { "Alcaz Prison", 1445, 0.753, 0.141, 48, 55 },
+    { "Blackmaw Hold", 1447, 0.386, 0.332, 55, 60 },
+    { "The Drowned City", 1434, 0.213, 0.278, 35, 42 },
+    { "Krol'dok Stronghold", 2548, 0.375, 0.373, 40, 47 },
+    { "Shaper's Terrace", 1449, 0.481, 0.061, 58, 60 },
+}
+for _, d in ipairs(OPENMAP_DUNGEONS) do LEVELS[d[1]] = LEVELS[d[1]] or { d[5], d[6] } end
 
 api.DungeonLevels = LEVELS
 
@@ -29,9 +40,25 @@ local function Zone()
     return ns.data.Module("ZoneDB")
 end
 
+-- dungeons are named the way OpenMap names them; where our data says it another way, this is the new name
+local RENAME = {
+    ["The Deadmines"] = "Deadmines", ["The Stockade"] = "Stormwind Stockade",
+    ["The Temple of Atal'Hakkar"] = "Sunken Temple", ["Temple of Ahn'Qiraj"] = "Ahn'Qiraj Temple",
+}
+-- other names the game, a map or an older version may use (lower case, without "the"). OpenMap lists a dungeon's wings one by
+-- one; they share an entrance here, so each wing's name finds the dungeon
+local ALIAS = {
+    ["stockade"] = "stormwind stockade",
+    ["temple of atal'hakkar"] = "sunken temple",
+    ["temple of ahn'qiraj"] = "ahn'qiraj temple",
+    ["lower blackrock spire"] = "blackrock spire", ["upper blackrock spire"] = "blackrock spire",
+    ["scarlet monastery - graveyard"] = "scarlet monastery", ["scarlet monastery - library"] = "scarlet monastery",
+    ["scarlet monastery - armory"] = "scarlet monastery", ["scarlet monastery - cathedral"] = "scarlet monastery",
+    ["dire maul - east"] = "dire maul", ["dire maul - west"] = "dire maul", ["dire maul - north"] = "dire maul",
+}
 local function Key(name)
     local k = (name or ""):lower():gsub("^the%s+", "")
-    return k
+    return ALIAS[k] or k
 end
 
 --------------------------------------------------------------------------------
@@ -45,7 +72,7 @@ local function Build()
     if type(list) ~= "table" then return false end
     byKey, areaTo = {}, {}
     for areaId, e in pairs(list) do
-        local name = e[1]
+        local name = RENAME[e[1]] or e[1]
         local rec = byKey[Key(name)]
         if not rec then
             rec = { name = name, entrances = {}, levels = LEVELS[name] }
@@ -68,6 +95,19 @@ local function Build()
                     end
                 end
             end
+        end
+    end
+    -- the ones our data does not have (never over an entrance it does have)
+    for _, d in ipairs(OPENMAP_DUNGEONS) do
+        local name, uiMapId, zx, zy = d[1], d[2], d[3], d[4]
+        local rec = byKey[Key(name)]
+        if not rec then
+            rec = { name = name, entrances = {}, levels = LEVELS[name] }
+            byKey[Key(name)] = rec
+        end
+        if #rec.entrances == 0 then
+            local wx, wy, inst = hbd:GetWorldCoordinatesFromZone(zx, zy, uiMapId)
+            if wx then rec.entrances[1] = { uiMapId = uiMapId, zx = zx, zy = zy, instance = inst, x = wx, y = wy } end
         end
     end
     return true
@@ -349,8 +389,11 @@ local function Go(arg)
         rec = listing[n]
     elseif arg and arg ~= "" then
         local k = arg:lower()
-        for _, r in pairs(byKey) do
-            if r.name:lower():find(k, 1, true) then rec = r; break end
+        rec = byKey[Key(arg)]
+        if not rec then
+            for _, r in pairs(byKey) do
+                if r.name:lower():find(k, 1, true) then rec = r; break end
+            end
         end
     else
         rec = listing[1]

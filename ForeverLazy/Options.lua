@@ -700,6 +700,8 @@ local function BuildControls(parent)
         function(v) DB().guideScale = v; if _G.ForeverLazy_Guide and _G.ForeverLazy_Guide:IsShown() then _G.ForeverLazy_Guide:SetScale(v) end end)
 
     Header(content, "Arrows")
+    Check(content, L("Show the main arrow (off until you tick it)"), 16,
+        function() return DB().waypointArrowOff == false end, function(v) DB().waypointArrowOff = not v end)
     Check(content, L("Simple arrows: one main arrow, plus the ghost and follow arrows. The rest show on the compass."), 16,
         function() return DB().simpleArrows ~= false end, function(v) DB().simpleArrows = v; Changed() end)
     Radio(content, L("Arrow style:"), "style", {
@@ -949,6 +951,10 @@ local function BuildControls(parent)
         function() return DB().compassDistance == true end, function(v) DB().compassDistance = v and true or nil end)
     Check(content, L("... icons instead of blocks for quest targets"), 40,
         function() return DB().compassIcons == true end, function(v) DB().compassIcons = v and true or nil end)
+    Check(content, L("... show the next stop in words under the compass"), 40,
+        function() return DB().compassText == true end, function(v) DB().compassText = v and true or nil end)
+    Check(content, L("Also show the big arrow to your next stop"), 16,
+        function() return DB().waypointArrowOff == false end, function(v) DB().waypointArrowOff = not v end)
     Check(content, L("In duo mode, show my partner on the compass (even when the arrows are off)"), 16,
         function() return DB().duoCompass ~= false end, function(v) DB().duoCompass = v end)
     Radio(content, L("Marker for my partner on the compass:"), "compassIcon", {
@@ -1368,7 +1374,7 @@ local function ShowWelcome()
         text:SetPoint("TOP", by, "BOTTOM", 0, -14)
         text:SetWidth(360); text:SetJustifyH("CENTER")
         text:SetText("|cff4db8ffWelcome to Forever Lazy!|r\n\n"
-            .. "Arrows that point at your quests, your party and your next best XP. Click OK to open the options, "
+            .. "A compass at the top of the screen points at your quests and your next stop (/lazy arrow adds a big arrow). Click OK to open the options, "
             .. "where you can turn features on and off, and take a quick tour of the buttons.\n\n"
             .. "I have also added a few shared macros (type |cffffd100/macro|r and look for |cffffd100Lazy|r) that you can drag to your action bars.\n\n"
             .. "|cffaaaaaaTip: |cffffd100/lazy now|r|cffaaaaaa (or left-click the minimap button) points at the best next thing, and |cffffd100/lazy|r|cffaaaaaa opens the options any time.|r")

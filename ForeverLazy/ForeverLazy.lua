@@ -526,6 +526,7 @@ function addon:RefreshPins()
         local f = GetPinFrames(10)
         f.world.tex:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcon_1")
         f.mini.tex:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcon_1")
+        if addon.BookPinHover then addon.BookPinHover(f.world, wp.book, wp.name or wp.label) end
         if db.mapPins then
             pcall(hbdp.AddWorldMapIconWorld, hbdp, addon, f.world, wp.instance, wp.x, wp.y, _G.HBD_PINS_WORLDMAP_SHOW_CONTINENT or 2)
         end
@@ -534,12 +535,14 @@ function addon:RefreshPins()
         end
     end
 
-    -- the rest of my waypoints (e.g. the library books) as small book icons
+    -- the rest of my waypoints: a book icon for a library book, a small dot for any other stop (they used to look like books too)
     for i = 2, math.min(#db.waypoints, 60) do
         local w = db.waypoints[i]
         local f = GetPinFrames(100 + i)
-        f.world.tex:SetTexture("Interface\\Icons\\INV_Misc_Book_09")
-        f.mini.tex:SetTexture("Interface\\Icons\\INV_Misc_Book_09")
+        local icon = w.book and "Interface\\Icons\\INV_Misc_Book_09" or "Interface\\COMMON\\Indicator-Yellow"
+        f.world.tex:SetTexture(icon)
+        f.mini.tex:SetTexture(icon)
+        if addon.BookPinHover then addon.BookPinHover(f.world, w.book, w.name or w.label) end
         if db.mapPins then
             pcall(hbdp.AddWorldMapIconWorld, hbdp, addon, f.world, w.instance, w.x, w.y, _G.HBD_PINS_WORLDMAP_SHOW_CONTINENT or 2)
         end
@@ -905,12 +908,64 @@ local function UpdateFriendArrow(show)
 end
 
 local wpArrived
+-- Reaching a stop: the sound, and the stop goes if there is nothing left to do at it. This runs whether or not the arrow is on
+-- screen (someone may follow only the compass). Not on a flight path or as a ghost: passing over a spot is not arriving.
+local function Arrive(wp, dist)
+    if (UnitOnTaxi and UnitOnTaxi("player")) or (UnitIsGhost and UnitIsGhost("player")) then return end
+    if dist and dist < db.arrival and wpArrived ~= wp then
+        wpArrived = wp
+        if db.arrivalSound then PlayAlert((_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878) end
+        -- a stop for a quest I have not finished (kills, items) stays until the objectives are done; getting there is not enough
+        local open = addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(wp)
+        if addon.PlanLog and wp.quests then addon.PlanLog("arrival", (open and "arrived but kept the stop (its quest step is not done): " or "arrived, stop is done: ") .. tostring(wp.name or wp.label)) end
+        if db.waypointAutoClear and not open then
+            C_Timer.After(1.5, function()
+                -- the arrow may point at a later stop (closest first) or at a spot inside a stop: find the stop itself
+                local idx
+                for i, s in ipairs(db.waypoints) do
+                    if s == wp or (wp.quests and s.quests == wp.quests) then idx = i; break end
+                end
+                if idx and not (addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(db.waypoints[idx])) then
+                    local nm = db.waypoints[idx].name or wp.name
+                    addon:RemoveWaypoint(idx)
+                    Print(L("arrived at ") .. tostring(nm))
+                end
+            end)
+        end
+    end
+end
+
+-- how far a stop is when no arrow is being drawn for it: nil on another continent or when the game gives no position
+local function DistanceTo(wp)
+    if not (hbd and wp.x and wp.y) then return nil end
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    if not px or pinst ~= wp.instance then return nil end
+    return math.sqrt((wp.x - px) ^ 2 + (wp.y - py) ^ 2)
+end
+addon.Arrival = { Arrive = Arrive, DistanceTo = DistanceTo }          -- for the offline tests
+
+-- the main arrow is off until I turn it on (the compass shows the way): only "waypointArrowOff = false" shows it
+function addon.ArrowHidden() return db == nil or db.waypointArrowOff ~= false end
+
+-- it used to be on by itself: say once, to someone who never chose and has somewhere to go, how to get it back
+local function NoteArrowOff()
+    if db.waypointArrowOff ~= nil or db.arrowOffNoted then return end
+    db.arrowOffNoted = true
+    Print(L("the big arrow is now off until you turn it on: /lazy arrow. The compass at the top of the screen shows the way."))
+end
+
 local function UpdateWaypointArrow(show)
     local f = arrows.waypoint
     local at = addon.ArrowTarget and addon.ArrowTarget()
     -- false = the next stop is a quest in another zone: no arrow until I am in that zone
     local wp = at or (at ~= false and (db.waypoints[1] or (db.simpleArrows ~= false and addon.SimpleTarget and addon.SimpleTarget()))) or nil
-    if not show or not wp or db.waypointArrowOff then f:Hide(); return end
+    if not wp then f:Hide(); return end
+    if not show or addon.ArrowHidden() then
+        NoteArrowOff()
+        f:Hide()
+        Arrive(wp, DistanceTo(wp))
+        return
+    end
     f:Show()
     f:SetAlpha(db.alpha)
     -- a gold "?" over the arrow when this stop is a quest turn-in
@@ -941,27 +996,7 @@ local function UpdateWaypointArrow(show)
         detail = (detail and (detail .. " ") or "") .. "|cff999999(" .. addon.arrowWhy .. ")|r"
     end
     local dist = PointAt(f, wp.instance, wp.x, wp.y, ns.LocalizeLabel(wp.name), detail and ("|cffffffff" .. detail .. "|r\n") or nil)
-    if dist and dist < db.arrival and wpArrived ~= wp then
-        wpArrived = wp
-        if db.arrivalSound then PlayAlert((_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878) end
-        -- a stop for a quest I have not finished (kills, items) stays until the objectives are done; getting there is not enough
-        local open = addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(wp)
-        if addon.PlanLog and wp.quests then addon.PlanLog("arrival", (open and "arrived but kept the stop (its quest step is not done): " or "arrived, stop is done: ") .. tostring(wp.name or wp.label)) end
-        if db.waypointAutoClear and not open then
-            C_Timer.After(1.5, function()
-                -- the arrow may point at a later stop (closest first) or at a spot inside a stop: find the stop itself
-                local idx
-                for i, s in ipairs(db.waypoints) do
-                    if s == wp or (wp.quests and s.quests == wp.quests) then idx = i; break end
-                end
-                if idx and not (addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(db.waypoints[idx])) then
-                    local nm = db.waypoints[idx].name or wp.name
-                    addon:RemoveWaypoint(idx)
-                    Print(L("arrived at ") .. tostring(nm))
-                end
-            end)
-        end
-    end
+    Arrive(wp, dist)
 end
 
 local function ShouldHide()

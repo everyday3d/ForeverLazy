@@ -129,9 +129,46 @@ test("size stays within its limits, and the right-click menu switches things", f
     addon.ShowMenu = function(list) items = list end
     db.compassDirections = nil
     bar.scripts.OnMouseUp(bar, "LeftButton"); assert(not items)
-    bar.scripts.OnMouseUp(bar, "RightButton"); assert(items and #items == 6)
+    bar.scripts.OnMouseUp(bar, "RightButton"); assert(items and #items == 8)
     items[1].fn(); assert(db.compassDirections == true)
-    items[5].fn(); assert(db.compassBar == false)
+    items[7].fn(); assert(db.compassBar == false)
+    items[5].fn(); assert(db.waypointArrowOff == false, "the arrow starts off, so the menu turns it on")
+    addon.CompassMenu(); items[5].fn(); assert(db.waypointArrowOff == true)
+    items[4].fn(); assert(db.compassText == true)
+end)
+test("the next stop in words: only when ticked, with what to do and how far", function()
+    local wp = { name = "Turn in: Wolves", detail = "talk to Marshal", x = 120, y = 0, instance = 1 }
+    local host = Frame()
+    local made
+    host.CreateFontString = function() made = Frame(); return made end
+    db.compassText = nil
+    addon.CompassTargetText(host, wp, 0, 0, 1)
+    assert(not made)
+    db.compassText = true
+    addon.CompassTargetText(host, wp, 0, 0, 1)
+    assert(made.shown and made.text == "|cffffd100Turn in: Wolves|r\ntalk to Marshal  -  120 yd", made.text)
+    addon.CompassTargetText(host, nil, 0, 0, 1)
+    assert(not made.shown)
+end)
+test("as a ghost the compass stays up and shows my body, with its distance", function()
+    local ghost = true
+    UnitIsGhost = function() return ghost end
+    UnitAffectingCombat = function() return true end
+    db.compassSplit, db.compassHideCombat = true, true
+    assert(not addon.CompassHidden(), "a hiding rule hid the way to my body")
+    ghost = false
+    assert(addon.CompassHidden())
+    local body = addon.CompassBody(1, 200, 0)
+    assert(body.stop.name == "Your corpse" and body.source[6] == nil)
+    db.compassDistance, db.compassIcons = nil, nil
+    local m = Marker()
+    addon.CompassDraw(bar, { { marker = m, offset = 0, source = body.source } }, 0, 0, 0)
+    assert(m.dist.text == "200 yd", tostring(m.dist.text))
+    assert(m.icon.texture:find("tombstone"), "the body is not a tombstone")
+    assert(io.open("ForeverLazy/media/tombstone.tga", "rb"):read("a"):len() == 18 + 64 * 64 * 4, "the picture is missing or the wrong size")
+    m.scripts.OnEnter(m)
+    assert(tip.lines[1] == "Your corpse" and tip.lines[2] == "Your body  -  200 yd", table.concat(tip.lines, " | "))
+    UnitIsGhost = nil
 end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)

@@ -191,7 +191,9 @@ meet is noted (`/lazy data`), and it fills gaps. Click **Test without Questie** 
 ## The compass
 A bar across the top of the screen: the white line is the way you face, and each marker is a target. It has its own page in the
 options (switch, size, lock, and when to hide), separate from the arrows. You can turn on direction letters, the distance under
-each marker and quest icons. Hover a marker to see what it is; right-click the bar for a quick menu.
+each marker, quest icons and the next stop in words. Hover a marker to see what it is; right-click the bar for a quick menu.
+As a ghost it shows your body as a tombstone. The big arrow is off until you turn it on with /lazy arrow; the compass points at
+the same stop the arrow would.
 
 ## Shaman helpers
 Off until ticked, in the options under My class: a totem bar with timers and sets, a range warning (outdoors), weapon buff and

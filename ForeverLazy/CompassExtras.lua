@@ -13,6 +13,8 @@ local ICON = {
     give = "Interface\\GossipFrame\\AvailableQuestIcon",
     turnin = "Interface\\GossipFrame\\ActiveQuestIcon",
 }
+-- my body is a tombstone (our own drawing, tools/build_tombstone.lua)
+local TOMBSTONE = "Interface\\AddOns\\ForeverLazy\\media\\tombstone.tga"
 -- facing is measured as the game does it: 0 is north and it grows to the left (west is a quarter turn)
 local DIRECTIONS = { { "N", 0 }, { "W", math.pi / 2 }, { "S", math.pi }, { "E", 3 * math.pi / 2 } }
 local CLOSE = 12          -- markers this near each other on the bar share a tooltip
@@ -103,6 +105,8 @@ addon.CompassSettings = Own
 function addon.CompassHidden()
     local db = Own()
     if not db then return true end
+    -- as a ghost it shows the way to my body, whatever would hide it while I am alive
+    if UnitIsGhost and UnitIsGhost("player") then return false end
     if db.compassHideInstance and IsInInstance then
         local inside, kind = IsInInstance()
         if inside and (kind == "party" or kind == "raid") then return true end
@@ -137,6 +141,11 @@ function addon.CompassMenu()
         Switch("Directions (N, E, S, W)", "compassDirections"),
         Switch("Distance under the markers", "compassDistance"),
         Switch("Quest icons", "compassIcons"),
+        Switch("Next stop in words", "compassText"),
+        { text = (db.waypointArrowOff == false and "|cff55ff55on|r   " or "off  ") .. L("Main arrow"), fn = function()
+            db.waypointArrowOff = db.waypointArrowOff == false          -- shown only when this is false
+            if addon.RefreshOptions then addon.RefreshOptions() end
+        end },
         Switch("Lock the compass", "compassLocked"),
         { text = L("Hide the compass"), fn = function()
             db.compassBar = false
@@ -209,6 +218,51 @@ local function Directions(bar, facing, half)
     end
 end
 
+-- the words under the bar: what the next stop is and what to do there (off until ticked), for those who hide the arrow.
+-- The two lines for a target: its name, and what to do with the distance after it
+function addon.CompassTargetLines(wp, yards, units)
+    local name = tostring(wp.name or wp.label or "")
+    local detail = wp.detail
+    if addon.WaypointDetail then
+        local ok, d = pcall(addon.WaypointDetail, wp)
+        if ok and d then detail = d end
+    end
+    local foot = {}
+    if detail and detail ~= "" then foot[#foot + 1] = tostring(detail) end
+    if yards then foot[#foot + 1] = addon.CompassDistance(yards, units) end
+    return name, table.concat(foot, "  -  ")
+end
+
+-- my body, as the compass wants it: the marker (a tombstone), and the same spot for the words under the bar
+function addon.CompassBody(inst, x, y, label)
+    local name = label or L("Your corpse")
+    return {
+        source = { inst, x, y, { 1, 1, 1 }, nil, nil, { who = "Your body", name = name, kind = "corpse" } },
+        stop = { instance = inst, x = x, y = y, name = name },
+    }
+end
+
+function addon.CompassTargetText(bar, wp, px, py, pinst)
+    local db = DB()
+    if not (db.compassText == true and wp) then
+        if bar.target then bar.target:Hide() end
+        return
+    end
+    if not bar.target then
+        bar.target = bar:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+        -- below the row the distances use
+        bar.target:SetPoint("TOP", bar, "BOTTOM", 0, -17)
+        bar.target:SetWidth(420)
+        bar.target:SetJustifyH("CENTER")
+        bar.target:SetShadowOffset(1, -1)
+    end
+    local yards = (px and pinst == wp.instance) and math.sqrt((wp.x - px) ^ 2 + (wp.y - py) ^ 2) or nil
+    local name, foot = addon.CompassTargetLines(wp, yards, db.units)
+    if ns.LocalizeLabel then name = ns.LocalizeLabel(name) end
+    bar.target:SetText("|cffffd100" .. name .. "|r" .. (foot ~= "" and ("\n" .. foot) or ""))
+    bar.target:Show()
+end
+
 -- drawn: the markers on the bar now, most important first: { { marker =, source =, offset = }, ... }
 -- a source is { instance, x, y, colour, letter, raid icon, { who =, name =, wp = } }
 function addon.CompassDraw(bar, drawn, facing, px, py)
@@ -234,8 +288,16 @@ function addon.CompassDraw(bar, drawn, facing, px, py)
             m.icon:Show()
             m:SetSize(16, 18)
         end
+        -- the tombstone does not wait for the icons option: it is the only thing on the bar then
+        if info and info.kind == "corpse" then
+            m.tex:SetColorTexture(0, 0, 0, 0)
+            m.icon:SetTexture(TOMBSTONE)
+            m.icon:SetTexCoord(0, 1, 0, 1)
+            m.icon:Show()
+            m:SetSize(18, 18)
+        end
         local text = ""
-        if db.compassDistance == true and yards then
+        if (db.compassDistance == true or (info and info.kind == "corpse")) and yards then
             local room = true
             for _, x in ipairs(written) do if math.abs(x - d.offset) < LABEL_ROOM then room = false end end
             if room then
