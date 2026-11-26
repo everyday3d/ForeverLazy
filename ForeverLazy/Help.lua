@@ -38,7 +38,7 @@ local STEPS = {
       target = nil },
     { text = "|cffffd100Gear.|r Hover any item you could wear: a green Upgrade line says how much better it is for your class and spec. Upgrades in your bags get a green ^ in the bag window, and an optional gear bar (off until you turn it on in the options or with /lazy gear bar on) has a button that equips one when you click it. /lazy gear says what you are scored as.",
       target = function() local b = _G.ForeverLazyGearBar; return b and b:IsShown() and b or nil end },
-    { text = "|cffffd100The options.|r /lazy opens them. At the top: Start here (Just point me, Leveler, Duo, Everything) and the extras you can tick on or off. It shows only the basics; press Show all options for the rest. Switching a module off hides its options.",
+    { text = "|cffffd100The options.|r /lazy opens them. There are eight pages, with buttons at the top; Start here has Just point me, Leveler, Duo and Everything. The search box finds a setting on any page. Switching a module off hides its options.",
       target = nil, onShow = function() if addon.OpenOptions then addon:OpenOptions() end end },
     { text = "|cffffd100That is it.|r Lazy Mode (/lazy now, or left-click the minimap button) is the one to remember. /lazy tour shows this again, and /lazy check says if everything is working.",
       target = nil },
@@ -280,6 +280,15 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.25.0", {
+        "RESTART THE GAME after updating (not just /reload): this version has new files.",
+        "THE OPTIONS are now pages with a search box that finds any setting. Point at a tick box or slider and it says what it does.",
+        "THE COMPASS has its own page and its own rules: turning the arrows off no longer hides it. New: N E S W, distances, quest icons (each off until you tick it), hover a marker to see what it is, right-click for a menu.",
+        "SHAMANS get helpers under My class: totem bar with timers and sets, range warning, weapon and shield buttons, ankh count, cure buttons, a Purge mark and a Ghost Wolf reminder. All off until you tick them.",
+        "PALADINS: the blessing panel is now OFF until you turn it on: /lazy blessings on, or the options under My class.",
+        "CLICK A QUEST in the tracker and the arrow goes to it (and it still opens in your quest log).",
+        "A new option under Nameplates flashes a mob's cast bar while your interrupt is ready. Hammer of Justice counts as a paladin interrupt.",
+    } },
     { "0.24.8", {
         "THE MAP is less crowded: where to kill or collect is now shown as coloured areas, one colour for each quest, without skulls and diamonds on top (they are an option under Quest map). Pins are smaller.",
         "THINGS ON THE GROUND you need to click for a quest show as small green dots. They could be missing when mobs also dropped the item.",

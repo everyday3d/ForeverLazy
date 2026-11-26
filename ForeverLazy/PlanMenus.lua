@@ -125,6 +125,34 @@ function addon.PlanLaterReturn(id, why)
     end
 end
 
+-- a stop for the picked quest alone, at the nearest place the quest log knows for it. Nothing to do when the first stop has it.
+local function PinFocus(db, id, title)
+    local wps = db.waypoints
+    for i = #wps, 1, -1 do
+        if wps[i].focusId and wps[i].focusId ~= id then table.remove(wps, i) end
+    end
+    local first = wps[1]
+    if first and first.focusId == id then return end
+    for _, q in ipairs(first and first.quests or {}) do if q.id == id then return end end
+    local best, bd
+    local px, py, pinst = hbd:GetPlayerWorldPosition()
+    for _, g in ipairs(addon.QuestLogSpawns and addon.QuestLogSpawns() or {}) do
+        if g.id == id then
+            for _, s in ipairs(g.spawns or {}) do
+                local d = (px and s.instance == pinst) and math.sqrt((s.x - px) ^ 2 + (s.y - py) ^ 2) or 1e18
+                if s.uiMapId and (not bd or d < bd) then best, bd = s, d end
+            end
+        end
+    end
+    if not (best and addon.AddWaypointZone) then
+        Print(L("no place known for ") .. tostring(title))
+        return
+    end
+    addon:AddWaypointZone(best.uiMapId, best.zx, best.zy, tostring(title))
+    if wps[1] and not wps[1].quests then wps[1].focusId = id; wps[1].area = best.area end
+end
+addon.PinFocus = PinFocus
+
 -- do this quest next (the plan window and the right-click menu both use it)
 function addon:FocusQuest(id, label)
     local db = DB()
@@ -139,6 +167,8 @@ function addon:FocusQuest(id, label)
         pcall(addon.PlanRoute, addon, X.LastPlanAll() and true or false, true)
         ApplyFocus(db.waypoints)
     end
+    -- still no stop for it (the plan leaves it out, or planning is off): put a stop of its own in front, so the arrow goes there
+    PinFocus(db, id, PlainTitle(label))
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
     local first = db.waypoints[1]
@@ -210,6 +240,7 @@ function addon:OpenSkipMenu()
     if db.planFocus then
         items[#items + 1] = { text = "Back to the plan (stop doing " .. tostring(db.planFocus.label) .. ")", fn = function()
             db.planFocus = nil
+            for i = #db.waypoints, 1, -1 do if db.waypoints[i].focusId then table.remove(db.waypoints, i) end end
             Print(L("back to the plan"))
             ReplanAfterSkip()
         end }

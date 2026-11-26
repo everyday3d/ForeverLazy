@@ -327,7 +327,7 @@ local function MakeCompass()
     f:SetMovable(true)
     f:EnableMouse(true)
     f:RegisterForDrag("LeftButton")
-    f:SetScript("OnDragStart", function(self) if not DB().locked then self:StartMoving() end end)
+    f:SetScript("OnDragStart", function(self) if not (addon.CompassLocked and addon.CompassLocked()) then self:StartMoving() end end)
     f:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local point, _, _, x, y = self:GetPoint()
@@ -363,25 +363,26 @@ local function PartnerIcon() return (DB() and DB().compassIcon) or 3 end
 local function CompassSources()
     local db = DB()
     local out = {}
-    local mode = db.mode
+    local mode = db.mode == "off" and "both" or db.mode            -- arrows off is about the arrows only
     if mode == "quest" or mode == "both" then
         for i, c in ipairs(state.chosen) do
             if i == 1 or i <= 1 + db.extraTargets then
-                out[#out + 1] = { c.spawn.instance, c.spawn.x, c.spawn.y, db.colorQuest }
+                out[#out + 1] = { c.spawn.instance, c.spawn.x, c.spawn.y, db.colorQuest, nil, nil, { who = "Your friend's quest", name = c.label } }
             end
         end
     end
     if mode == "friend" or mode == "both" then
         local lk = state.lastKnown
-        if lk and GetTime() - lk.t < 3 then out[#out + 1] = { lk.instance, lk.x, lk.y, db.colorFriend, nil, 4 } end
+        if lk and GetTime() - lk.t < 3 then out[#out + 1] = { lk.instance, lk.x, lk.y, db.colorFriend, nil, 4, { name = state.friend or "Your friend" } } end
     end
     -- the person I follow with the purple arrow
     local fp = addon.FollowPosition and addon.FollowPosition()
-    if fp and addon.ModuleOn("follow") and GetTime() - fp.t < 3 then out[#out + 1] = { fp.instance, fp.x, fp.y, { 0.85, 0.5, 1 }, nil, PartnerIcon() } end
+    if fp and addon.ModuleOn("follow") and GetTime() - fp.t < 3 then out[#out + 1] = { fp.instance, fp.x, fp.y, { 0.85, 0.5, 1 }, nil, PartnerIcon(), { name = "Your partner" } } end
     local wp = db.waypoints[1]
-    if wp then out[#out + 1] = { wp.instance, wp.x, wp.y, db.colorWaypoint } end
+    if wp then out[#out + 1] = { wp.instance, wp.x, wp.y, db.colorWaypoint, nil, nil, { who = "Next stop", name = wp.name or wp.label, wp = wp } } end
     if db.ownQuests and mine.chosen then
-        out[#out + 1] = { mine.chosen.spawn.instance, mine.chosen.spawn.x, mine.chosen.spawn.y, db.colorMine }
+        out[#out + 1] = { mine.chosen.spawn.instance, mine.chosen.spawn.x, mine.chosen.spawn.y, db.colorMine, nil, nil,
+            { who = "My quest", name = mine.chosen.label, kind = "kill" } }
     end
     return out
 end
@@ -650,8 +651,11 @@ function addon.ArrowTarget()
     -- a quest I picked to do next (clicked in the tracker, or "do this next") is not overridden by closest-first
     local focused = false
     if wp and db and db.planFocus and wp == (db.waypoints and db.waypoints[1]) then
+        if wp.focusId == db.planFocus.id then focused = true end
         for _, q in ipairs(wp.quests or {}) do if q.id == db.planFocus.id then focused = true; break end end
     end
+    -- a spot I clicked on the map is a pick too
+    if wp and db and wp.questMapPin and wp == (db.waypoints and db.waypoints[1]) then focused = true end
     if wp and db and not focused and db.arrowNearest ~= false and db.waypoints and wp == db.waypoints[1] and #db.waypoints > 1 and hbd then
         local okN, pick = pcall(function()
             local px, py, pinst = hbd:GetPlayerWorldPosition()
@@ -742,7 +746,7 @@ function addon.ArrowTarget()
     end
     -- a quest stop in another zone stays off the arrow until I am in that zone: the arrow goes to the next stop that is here,
     -- or nowhere (false) when none is
-    if wp and wp.quests and wp.uiMapId and db and db.waypoints and wp == db.waypoints[1] and db.arrowSameZone ~= false then
+    if not focused and wp and wp.quests and wp.uiMapId and db and db.waypoints and wp == db.waypoints[1] and db.arrowSameZone ~= false then
         local zone = hbd and hbd:GetPlayerZone()
         if zone and wp.uiMapId ~= zone then
             local pick
@@ -796,7 +800,7 @@ local function DuoPartnerSource()
         local u = "party" .. i
         if UnitExists(u) and not UnitIsUnit(u, "player") then
             local x, y, inst = hbd:GetUnitWorldPosition(u)
-            if x then return { inst, x, y, { 0.85, 0.5, 1 }, nil, PartnerIcon() } end
+            if x then return { inst, x, y, { 0.85, 0.5, 1 }, nil, PartnerIcon(), { name = UnitName(u) or "Your partner" } } end
         end
     end
 end
@@ -809,13 +813,19 @@ local function UpdateCompass(dt)
     if compassTimer < 0.05 then return end
     compassTimer = 0
     local partner = DuoPartnerSource()
-    local normal = db.compassBar and db.mode ~= "off"
-    if (not normal and not partner) or api.ShouldHide() then compass:Hide(); return end
+    -- the compass has its own settings: turning the arrows off or hiding them does nothing to it
+    addon.CompassSettings()
+    local normal = db.compassBar
+    if (not normal and not partner) or addon.CompassHidden() then compass:Hide(); return end
+    compass:SetScale(addon.CompassScale())
     compass:Show()
     local px, py, pinst = hbd:GetPlayerWorldPosition()
     local facing = GetPlayerFacing()
-    for _, m in ipairs(compass.markers) do m:Hide() end
-    if not px or not facing then return end
+    if not px or not facing then
+        for _, m in ipairs(compass.markers) do m:Hide() end
+        return
+    end
+    local drawn = {}
     local half = compass:GetWidth() / 2 - 8
     local n = 0
     local sources = normal and CompassSources() or {}
@@ -830,6 +840,7 @@ local function UpdateCompass(dt)
                     local m = compass.markers[n]
                     m:ClearAllPoints()
                     m:SetPoint("CENTER", compass, "CENTER", -rel / (math.pi / 2) * half, 0)
+                    drawn[#drawn + 1] = { marker = m, source = s, offset = -rel / (math.pi / 2) * half }
                     m.icon:Hide()
                     m.letter:SetText("")
                     if s[6] then
@@ -853,6 +864,8 @@ local function UpdateCompass(dt)
             end
         end
     end
+    for i = n + 1, #compass.markers do compass.markers[i]:Hide() end
+    if addon.CompassDraw then addon.CompassDraw(compass, drawn, facing, px, py) end
 end
 
 --------------------------------------------------------------------------------
@@ -921,6 +934,10 @@ end
 local function ApplyFocus(wps)
     local db = DB()
     local f = db.planFocus
+    -- a stop made only for a picked quest goes when that quest is no longer the pick
+    for i = #(wps or {}), 1, -1 do
+        if wps[i].focusId and not (f and f.id == wps[i].focusId) then table.remove(wps, i) end
+    end
     if not f or not wps then return end
     local inLog = false
     for _, q in ipairs(ReadQuestLog()) do if q.id == f.id then inLog = true; break end end
@@ -928,6 +945,7 @@ local function ApplyFocus(wps)
         f.seen = true
     elseif f.seen then
         db.planFocus = nil                  -- done (handed in, or dropped): back to the plan
+        for i = #wps, 1, -1 do if wps[i].focusId then table.remove(wps, i) end end
         return
     end
     local moving, rest = {}, {}

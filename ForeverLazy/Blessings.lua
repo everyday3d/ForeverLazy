@@ -13,7 +13,7 @@ local Print = addon.Print
 local function DB() return addon.GetDB() end
 local function On()
     local d = DB()
-    return d and d.blessPanel ~= false
+    return d and d.blessPanel == true          -- off until I turn it on
 end
 
 local REFRESH = 90            -- seconds left on a blessing before it counts as running out
@@ -54,6 +54,7 @@ local function SpellsKnown()
     end
     return out
 end
+addon.SpellsKnown = SpellsKnown          -- the shaman helpers read the spellbook the same way
 
 -- the blessings (full spell names) I can cast, in the usual order. "Blessing of Might", or "Greater Blessing of Might" when that is what I have
 function addon.BlessingsAvailable(known)
@@ -546,6 +547,11 @@ local function Refresh()
     if not On() then addon.blessWhy = "the panel is switched off (/lazy blessings turns it on)"
     elseif not IsPaladin() then addon.blessWhy = "you are not a paladin"
     elseif not (IsInGroup and IsInGroup() or db.blessSolo == true) then addon.blessWhy = "you are not in a group (/lazy blessings solo shows it when you are alone)" end
+    -- it used to be on by itself: say once, to a paladin in a group who never chose, how to get it back
+    if db.blessPanel == nil and not db.blessOffNoted and IsPaladin() and IsInGroup and IsInGroup() then
+        db.blessOffNoted = true
+        Print(L("the paladin blessing panel is now off until you turn it on: /lazy blessings on (or the options, My class)"))
+    end
     if addon.blessWhy then
         if frame then frame:Hide() end
         return
@@ -789,7 +795,7 @@ function addon:HandleExtraCommand(cmd, rest)
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
         if a == "debug" then db.blessDebug = nil; addon.blessClickDebug = true; addon.BlessingsDebug(); return true end
-        if a == "on" then db.blessPanel = nil; Print(L("blessings: panel on (it shows for a paladin in a group, or when alone after /lazy blessings solo)"))
+        if a == "on" then db.blessPanel = true; Print(L("blessings: panel on (it shows for a paladin in a group, or when alone after /lazy blessings solo)"))
         elseif a == "off" then db.blessPanel = false; Print(L("blessings: panel off"))
         elseif a == "reset" then db.blessings = nil; Print(L("blessings: back to the usual choices (Might for fighters, Wisdom for casters)"))
         elseif a == "share off" then db.blessShare = false; Print(L("blessings: not sharing with other paladins (each paladin then casts what they chose)"))
@@ -800,7 +806,7 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "team" then addon.BlessTeam(); return true
         elseif a == "solo" then db.blessSolo = not db.blessSolo or nil; Print(L("blessings: the panel also shows when you are alone: ") .. tostring(db.blessSolo == true))
         else
-            db.blessPanel = (db.blessPanel == false) and nil or false
+            db.blessPanel = db.blessPanel ~= true
             if db.blessPanel == false then Print(L("blessings: panel hidden")) else Print(L("blessings: panel on (it shows for a paladin in a group)")) end
         end
         if addon.RefreshOptions then addon.RefreshOptions() end

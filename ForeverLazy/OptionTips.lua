@@ -1,0 +1,245 @@
+-- What each option does, shown when the mouse is over its tick box or slider. Keyed by the option's own words (in English; a
+-- translation of both is looked up the same way). tests/options.lua fails when an option has no description here.
+local ADDON, ns = ...
+local L = ns.L
+local addon = ns.addon
+
+local TIPS = {
+    -- start here, help
+    ["Show Forever Lazy buttons and panels in the game windows"] = "The search box and menu on the world map and the buttons under the quest log.",
+    ["Use separate settings for this character"] = "This character keeps its own settings. Off: it shares one set with your other characters.",
+
+    -- arrows
+    ["Simple arrows: one main arrow, plus the ghost and follow arrows. The rest show on the compass."] = "Fewer arrows on screen. Off: each kind of arrow shows on its own.",
+    ["Lock positions (untick to drag the arrows and panels)"] = "Locked: nothing moves by accident. Unlocked: drag arrows and panels where you want them.",
+    ["The arrow says why it points where it does"] = "A short reason with the arrow, such as 'the closest stop' or 'a hand-in close by'.",
+    ["Animate arrows (pulse when near, dim when facing away)"] = "The arrow pulses when you are close and fades when you face away from the spot.",
+    ["Show an arrow for my own quest log (turn-ins and objectives)"] = "An arrow to the objectives and hand-ins of the quests you have.",
+    ["Skip grey quests, and red ones unless they are just a turn-in"] = "The quest arrow ignores quests far below you, and ones too hard unless you only need to hand them in.",
+    ["Follow the quest I have selected or tracked (otherwise the nearest of all)"] = "The quest arrow sticks to the quest you picked.",
+    ["For kills and items, point the arrow at the nearest spot and move on when it is cleared"] = "Sends you spot to spot while you kill or collect.",
+    ["Closest first: the arrow goes to the nearest of my next stops, not strictly plan order"] = "The arrow may take a nearby stop before the plan's next one.",
+    ["Show the name under the arrow"] = "The name of what the arrow points at.",
+    ["Show distance"] = "How far away the arrow's spot is.",
+    ["In combat"] = "Ticked: arrows hide while you fight.",
+    ["In cities and inns (resting)"] = "Ticked: arrows hide while you are resting.",
+    ["On a flight path"] = "Ticked: arrows hide while you fly.",
+    ["Inside a dungeon or raid (the ghost arrow to your corpse still shows)"] = "Ticked: arrows hide in dungeons and raids.",
+    ["When I am a ghost, point the arrow at my corpse (other arrows hide)"] = "After you die, the arrow takes you back to your body.",
+    ["Hide pick-ups more levels above me than"] = "Quests to pick up that are further above your level than this are left off the map. 10 shows all.",
+    ["Arrow size"] = "How big the arrows are.",
+    ["Arrow opacity"] = "How see-through the arrows are. 1 is solid.",
+    ["Count as arrived within (yards)"] = "How close you must be before the arrow treats you as there.",
+    ["Guide text size (1.8 is big, for the TV)"] = "The size of the text in the guide window.",
+
+    -- the plan
+    ["Leave small quests out of the plan when the XP is not worth the time"] = "The plan skips quests that give little XP for the walking.",
+    ["Autopilot: visit the vendor or trainer between quests, and move on to the next zone when this one is done"] = "Adds vendor and trainer stops, and takes you to the next zone when this one is finished.",
+    ["Plan for quests I have not taken yet that are right here (about 600 yards)"] = "Nearby quests you could pick up are planned for too.",
+    ["Show the step window while a plan is running"] = "A window listing your plan's steps.",
+    ["Plan for XP: the quests with the most XP for the walking come first"] = "Orders the plan by XP for the time it takes.",
+    ["Keep the plan to the zone I am in (/lazy plan all ignores this)"] = "The plan only uses quests in your current zone.",
+    ["Leave grey (too low level) quests out of the plan"] = "Quests too low to be worth XP are not planned.",
+    ["Add a new quest to the plan where it costs the least walking"] = "A quest you accept slots into the plan where it adds the least walking.",
+    ["Finish the quests in an area before walking back to hand any in (unless it continues a chain)"] = "Does the work in one area first, then hands in together.",
+    ["Leave group quests out of my plan while I am solo"] = "Group quests are skipped when you are alone.",
+    ["Favour quests I share with someone in my group"] = "Quests your group also has move up the plan.",
+
+    -- compass, travel, journey, lazy mode, waypoints
+    ["In duo mode, show my partner on the compass (even when the arrows are off)"] = "Your partner's direction on the compass in duo mode.",
+    ["Compass bar at the top of the screen"] = "A compass strip with markers across the top of the screen. Hover a marker to see what it is.",
+    ["Compass size"] = "How big the compass bar is. The arrows keep their own size.",
+    ["Lock the compass (untick to drag it)"] = "Locked: it cannot be dragged by accident. This does not lock or unlock the arrows.",
+    ["Hide the compass in combat"] = "Ticked: the compass goes away while you fight.",
+    ["Hide the compass in cities and inns (resting)"] = "Ticked: the compass goes away while you are resting.",
+    ["Hide the compass on a flight path"] = "Ticked: the compass goes away while you fly.",
+    ["Hide the compass inside a dungeon or raid"] = "Ticked: the compass goes away in dungeons and raids.",
+    ["... show the directions N, E, S and W"] = "Letters on the compass bar that move as you turn. North is red.",
+    ["... show the distance under each marker"] = "How far away each target is. When two are close together only the first shows it.",
+    ["... icons instead of blocks for quest targets"] = "A ! for a quest to pick up, a ? for a hand-in and a skull for kills or collecting.",
+    ["Flight timer: how long a flight takes (learned the first time)"] = "Shows how long is left on a flight you have taken before.",
+    ["Suggest the next zone when I have outgrown the one I am in"] = "A hint about where to go when this zone is too low for you.",
+    ["Start a flight trip by itself when the next stop is far and flying is quicker"] = "Sends you by flight path on its own when that saves time.",
+    ["Offer to plan a new zone once I have stayed in it a while"] = "Asks whether to plan a zone you have been in for a bit.",
+    ["Tell me when my hearthstone would save a long walk"] = "A chat note when your hearthstone, or a shaman's Astral Recall, would save a long walk.",
+    ["Include dungeons that fit each stretch"] = "Your journey lists dungeons for each level range.",
+    ["Tell me when I have outgrown a stop and where to go next"] = "A note when it is time to move to the next zone of your journey.",
+    ["Keep going: pick the next thing by itself when I reach it"] = "Lazy mode moves on without another press.",
+    ["Remove a waypoint automatically when I arrive"] = "A waypoint of yours disappears once you reach it.",
+
+    -- quest map, pins, tracker
+    ["Show quest objectives on the map and minimap"] = "Where your quests' mobs, items and ground objects are.",
+    ["Coloured areas where the quest mobs are (world map)"] = "A coloured area for each quest where you kill or collect.",
+    ["Skull and diamond icons on mob spots"] = "Adds a skull (kill) or diamond (collect) on the mob spots. Off: coloured areas only.",
+    ["Show quest givers (!) and hand-ins (?) on the map"] = "Marks quests you can pick up and finished quests to hand in.",
+    ["Quest item sparkles: the game's own sparkle on quest items you can loot"] = "Keeps the game's sparkle on quest items. Turning it off needs a game restart.",
+    ["Pin size"] = "How big the quest map's pins are.",
+    ["Show my plan's numbered stops on the world map"] = "Your plan's stops, numbered, on the world map.",
+    ["... and draw lines between them"] = "Lines joining the plan's stops in order.",
+    ["XP hot spots on the world map (where the best quests for my level are)"] = "Highlights where the best XP for your level is.",
+    ["Draw my route on the minimap (numbered stops joined by lines)"] = "Your plan's route on the minimap.",
+    ["Quest pins on the world map"] = "Pins for your route stops on the world map.",
+    ["Quest pins on the minimap"] = "Pins for your route stops on the minimap.",
+    ["Also set a TomTom waypoint (needs TomTom)"] = "Copies the current spot to TomTom.",
+    ["Show minimap button"] = "Forever Lazy's button on the minimap.",
+    ["Use Forever Lazy's quest tracker"] = "A tracker with your quests in plan order, XP and objectives.",
+    ["Hide WoW's own quest tracker while mine is on"] = "Stops two trackers showing at once.",
+    ["Minimized (just the title, the zones and quests fold away)"] = "Folds the tracker down to its title.",
+    ["Hide the tracker while I am in combat"] = "The tracker gets out of the way while you fight.",
+    ["Compact: objectives only for the quest I am on, the others take one line"] = "A shorter tracker.",
+    ["No background (just the text, with an outline)"] = "Removes the box behind the tracker.",
+
+    -- finding quests, hints, class and dungeon quests, sounds, books
+    ["Quest link tooltips in chat"] = "Hover a quest link in chat to see who gives it, its level and its chain.",
+    ["Ping when I am near someone I can hand a quest in to"] = "A sound when a hand-in is close by.",
+    ["Tell me what comes next after I hand in a quest in a chain"] = "Names the next quest in a chain.",
+    ["Mark the best quest reward (likely upgrade or best price)"] = "A mark on the reward worth taking.",
+    ["Tell me when I reach a dungeon entrance my quests need"] = "A note at the door of a dungeon you have quests for.",
+    ["Cozy Sleeping Bag chain: guide me, with its next spot as stop 1"] = "Puts the sleeping bag quest chain first in your plan.",
+    ["Tell me when a new class quest opens up"] = "A chat note when a quest for your class becomes available.",
+    ["Pop-up when I enter a zone with something for a class quest (/lazy class here)"] = "A window saying what your class quests need in this zone.",
+    ["In a group, a pop-up when I enter a dungeon my quests need (/lazy dungeons here)"] = "A window with your group's quests for the dungeon you enter.",
+    ["Put class quest givers in my plan when they are in this zone"] = "Class quest givers nearby become plan stops.",
+    ["Play sounds for finished steps and quests ready to hand in"] = "A sound for each finished step, and a voice when a quest is ready.",
+    ["Announce in party chat when I complete a quest (not every step)"] = "Your party sees a line when you finish a quest.",
+    ["Tell me in chat when I enter a zone that has books"] = "A note when a zone has library books.",
+    ["Automatically add that zone's books as waypoints (keeps my other waypoints)"] = "Adds the zone's books to your waypoints by itself.",
+    ["Leave out zones that are too high for my level (All books and auto)"] = "Skips books in zones above your level.",
+    ["Show every book on the world map (book = to find, green tick = collected)"] = "All library books as pins on the world map.",
+
+    -- combat
+    ["Quest icons on nameplates (sword, loot bag, gold !)"] = "Marks mobs you need to kill, loot, or that drop a quest starter.",
+    ["Hunt panel: buttons for the mobs my quests need, click one to target it"] = "Click a mob's button to target it and put a skull on it.",
+    ["Interrupt marker when a mob casts (green ready, red on cooldown, grey none)"] = "The spell a mob is casting, with whether your interrupt is ready.",
+    ["... flash the mob's cast bar while my interrupt is ready"] = "The mob's cast bar flashes when you can interrupt now. Needs the interrupt marker.",
+    ["Colour hostile plates: red = aggressive or attacking me, orange = fighting someone else"] = "Nameplate health bars change colour by what the mob is doing.",
+    ["... colour aggressive mobs red before the fight, and by who is being attacked"] = "Aggressive mobs show red before they attack.",
+    ["... tint neutral quest mobs that are not in a fight (purple)"] = "Idle neutral quest mobs show purple.",
+    ["Live bars while I fight (a window over the Meter tab; the numbers are hidden from addons in a fight, so this is a try)"] = "Moving damage bars over the Meter tab during a fight.",
+    ["Players listed"] = "How many players the damage meter shows.",
+    ["Gear advisor: upgrade line in tooltips"] = "Item tooltips say whether an item is an upgrade for you.",
+    ["A green ^ on upgrades in the bag window and at vendors"] = "Marks upgrades so you can spot them.",
+    ["Gear bar: a button that equips an upgrade from my bags"] = "A button you click to equip an upgrade. Nothing is equipped by itself.",
+    ["Tell me in chat when I loot or buy an upgrade"] = "A chat note when you get an upgrade.",
+    ["Swap in the newest spell rank on my action bars when I learn it"] = "New ranks replace the old ones on your bars by themselves.",
+    ["Colour action buttons: red out of range, blue no mana, grey cannot use"] = "Tints your action buttons to show why a spell cannot be used.",
+
+    -- my class
+    ["Show every class's settings"] = "Also lists the settings made for other classes.",
+    ["Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"] = "A panel that blesses your group one click at a time.",
+    ["Totem bar: four totems with time left, and a button that drops your set"] = "Your four totems with timers. Click to drop one, or drop your whole set one click each.",
+    ["Tell me when I walk out of range of a totem (outdoors only)"] = "The totem turns orange and chat says so when you are over 20 yards from it.",
+    ["Weapon buff button: lights up when it is missing or about to run out"] = "A button for your weapon buff that turns red when it needs doing again.",
+    ["Shield button: lights up when your shield is missing or about to run out"] = "A button for your shield with its charges and time. Red means do it again.",
+    ["Ankh count and Reincarnation, with a warning when you run low"] = "How many ankhs you carry and when Reincarnation is ready.",
+    ["Warn me below this many ankhs"] = "The ankh warning starts under this number.",
+    ["Cure buttons for you and your party: they change colour for poison or disease"] = "One button each: green is poison (left-click), brown is disease (right-click).",
+    ["Mark enemy nameplates that have a magic buff you can Purge"] = "A purple-edged icon beside enemies you can Purge.",
+    ["Remind me to use Ghost Wolf on a long run"] = "A chat note after you have run a while without Ghost Wolf.",
+    ["Remind me when my pet needs feeding"] = "A reminder when your pet is getting hungry.",
+    ["Only remind when it is unhappy (not when it is just content)"] = "Fewer reminders: only when your pet is unhappy.",
+    ["Also remind me when I have no pet out or it is dead"] = "Reminds you to call or revive your pet.",
+    ["Play a sound with the reminder"] = "The pet reminder also makes a sound.",
+    ["Hunters: warn me when I am low on arrows or bullets"] = "A warning before you run out of ammo.",
+    ["Hunters: tell me when a better kind of ammo opens up for my level"] = "A note when you can use better ammo.",
+    ["Scream FEED ME!!! across the screen when my pet is hungry"] = "A very large pet reminder.",
+    ["Warn me below this much ammo"] = "The ammo warning starts under this number.",
+
+    -- bags, selling, items, crafting, gathering
+    ["Our bag window instead of the game's bags"] = "All your bags in one window with search and sections.",
+    ["Sell grey loot when a vendor opens (off until you tick it; items you protect with /lazy keep are never sold)"] = "Grey items are sold when you open a vendor.",
+    ["Faster auto loot: empty the loot window the moment it opens (needs auto loot on in the game's options)"] = "Loot is taken as soon as the window opens.",
+    ["Item tooltips show how many I have in bags, bank, mail and worn"] = "Item tooltips count what you own.",
+    ["... and how many my other characters have"] = "Adds your other characters' counts.",
+    ["Craft planner: a panel beside the profession window"] = "Shows what to craft next and the materials.",
+    ["When I open a profession window, tell me the best next craft"] = "A chat hint for your next craft.",
+    ["Show my found nodes on the world map"] = "Ore and herbs you have gathered, on the world map.",
+    ["Also show them on the minimap"] = "Your found nodes on the minimap too.",
+
+    -- chat
+    ["Timestamps in front of every line"] = "The time on every chat line.",
+    ["Class-coloured names in every channel"] = "Player names in their class colour.",
+    ["Player levels next to names (from group, guild, friends, target, /who)"] = "Levels beside names, when the game has told us them.",
+    ["Short channel names ([Guild] becomes [G], [1. General] becomes [1])"] = "Shorter channel tags.",
+    ["No brackets around channel names"] = "Removes the [ ] around channel names.",
+    ["Highlight your name and these words (with a sound):"] = "Chat lines with your name or your words stand out and make a sound.",
+    ["Click a web link to copy it, and a copy button on each window"] = "Lets you copy links and chat text.",
+    ["Resize chat windows by dragging the bottom-right corner"] = "Drag the corner to size a chat window.",
+    ["Input box on top of the chat window"] = "Where you type moves above the chat. Turning it off needs a /reload.",
+    ["Chat text never fades"] = "Old chat lines stay visible. Turning it off needs a /reload.",
+    ["Long chat history (1000 lines)"] = "Scroll back further in chat.",
+    ["Hide the chat side buttons"] = "Hides the buttons beside chat. Turning it off needs a /reload.",
+    ["Chat tabs never fade: General, Combat Log and the others stay fully visible"] = "Chat tabs stay solid.",
+    ["Tabs fade away until the mouse is over them"] = "Chat tabs hide until you point at them.",
+    ["Sticky channels (the input box remembers say, yell, guild, raid ...)"] = "The input box stays on the channel you used last.",
+    ["An extra sound when someone whispers me"] = "A louder cue for whispers.",
+    ["Outline the chat font"] = "Chat text gets an outline so it is easier to read.",
+    ["Chat font size"] = "The size of chat text.",
+
+    -- party and the Hive
+    ["Share boat docks I learn with my guild and group (nothing shows in chat)"] = "Boat docks you find are shared as hidden addon messages.",
+    ["Accept waypoints my party sends me"] = "Lets party members send you waypoints.",
+    ["Use the places where quest objectives were really done instead of the original data"] = "Uses spots players really completed objectives at.",
+    ["Item tooltips show the mobs seen dropping the item"] = "Tooltips list mobs seen dropping an item.",
+    ["Warn me when I walk into a place where players keep dying"] = "A warning for dangerous spots.",
+    ["Tell me when a rare shows up in my zone"] = "A note when a rare is reported near you.",
+    ["Show reported rares as pins on the world map"] = "Reported rares as map pins.",
+    ["Share which zone I am in (as a count, never who)"] = "Adds you to a zone's player count. Your name is not sent.",
+
+    -- extras
+    ["Couch mode (big text, auto accept and hand in, steps read aloud)"] = "For playing from the couch: turns the three together.",
+    ["Accept and hand in quests by myself (not dungeon, skipped or grey ones, and never choosing a reward)"] = "Quests are accepted and handed in for you. Hold Shift to do it by hand.",
+    ["Read the steps aloud as they change"] = "A voice reads your next step.",
+    ["Inside a dungeon, point the arrow at what my quests need there"] = "The arrow helps with quests inside dungeons.",
+    ["Voice speed"] = "How fast steps are read aloud.",
+    ["Sound when I arrive at the quest spot"] = "A sound when you get there.",
+    ["Remind me about unspent talent points and new skills at my trainer (/lazy talents)"] = "A reminder about talents and new skills.",
+    ["Pedometer: count how far I walk on foot"] = "Counts your distance today, this level and in total.",
+    ["Show the pedometer readout on the screen (click it for all the numbers)"] = "A small distance readout on screen.",
+
+    -- RestedXP friend
+    ["Listen to a friend's RestedXP steps"] = "Follows the steps a grouped friend's RestedXP shows.",
+    ["Show friend's current step in a box"] = "A box with your friend's current step.",
+    ["Show earlier steps in the step panel"] = "The box also lists past steps.",
+    ["Chat message when friend's step changes"] = "A chat line when your friend moves on.",
+    ["Sound when friend's step changes"] = "A sound when your friend moves on.",
+    ["Keep pointing at friend's last seen spot when too far away"] = "The arrow remembers where your friend was last.",
+    ["Warn me if my friend hasn't moved for 3 minutes"] = "A note if your friend seems stuck.",
+    ["Extra quest arrows (nearest other targets)"] = "How many more arrows point at other nearby targets.",
+    ["Step panel size"] = "How big the friend's step box is.",
+
+    -- modules
+    ["Lazy mode (one key: point me at the next thing)"] = "Off: Lazy mode does nothing and its settings are hidden.",
+    ["Route planner, plan window and the route on the map"] = "Off: no planning, plan window or route on the map.",
+    ["Follow arrow (point at someone in my group)"] = "Off: no arrow to group members.",
+    ["Library books"] = "Off: no library book guide, and its settings are hidden.",
+    ["Class quests"] = "Off: no class quest help.",
+    ["Dungeons (quests, entrances, level fit)"] = "Off: no dungeon help.",
+    ["Cozy Sleeping Bag guide"] = "Off: no sleeping bag quest guide.",
+    ["Next zone and journey"] = "Off: no zone suggestions or journey.",
+    ["Find services and trainers (inn, repair, flight master, ...)"] = "Off: no finding of inns, vendors or trainers.",
+    ["Take me there (/lazy go <place>)"] = "Off: /lazy go does nothing.",
+    ["Boats and zeppelins"] = "Off: no boat and zeppelin help.",
+    ["Hearthstone and flight points"] = "Off: no hearthstone or flight point help.",
+    ["Group features (shared quests, share plan, duo mode)"] = "Off: no group sharing or duo mode.",
+    ["Quest helpers (item button, chain, reward pick, farm)"] = "Off: no quest helpers.",
+    ["Gear advisor (upgrades in tooltips and bags, the gear bar)"] = "Off: no gear advice, and its settings are hidden.",
+    ["Crafting (what to craft next, materials, bank)"] = "Off: no crafting help.",
+    ["Gathering routes and fishing spots"] = "Off: no gathering help, and the node settings are hidden.",
+    ["Hunter pet reminder"] = "Off: no pet reminders, and the pet settings are hidden.",
+    ["Flight timer"] = "Off: no flight timer.",
+}
+
+local byText
+-- the description for an option, found by the words on it
+function addon.OptionTip(text)
+    if not byText then
+        byText = {}
+        for k, v in pairs(TIPS) do byText[L(k)] = v end
+    end
+    local v = byText[text] or TIPS[text]
+    return v and L(v) or nil
+end
+
+-- reached the end of the file without an error (used by /lazy check)
+do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["OptionTips.lua"] = true end end

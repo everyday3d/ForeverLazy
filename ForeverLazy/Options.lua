@@ -19,38 +19,103 @@ addon.RefreshOptions = Refresh
 -- layout cursor
 local y
 
--- Collapsible groups: every control made after a Header belongs to that group.
--- Controls remember where they sit inside their group, and Layout() puts the
--- groups one under the other, hiding the controls of collapsed ones.
+-- Pages: every control made after a Header belongs to that subheading, and PAGES says which page a subheading is on (a title
+-- used by several Headers is shown once, with all their controls). Inside a subheading the controls are kept in blocks (one
+-- setting and what belongs to it), so the search box can show just the settings that match.
+local PAGES = {
+    { "Start here", { "Start here", "Help", "Settings", "Buttons in the game windows" } },
+    { "Arrow and plan", { "Arrows", "My quest arrow", "The plan", "Hide arrows", "Travel and zones", "Journey", "Lazy mode", "My waypoints", "Text" } },
+    { "Compass", { "Compass", "Compass size and place", "Hide the compass" } },
+    { "Quests and map", { "Quest map", "Map pins", "Quest tracker", "Finding quests", "Quest hints", "Dungeons and class quests", "Quest sounds", "Library books" } },
+    { "Combat", { "Nameplates", "Damage meter", "Gear", "Action bars" } },
+    { "My class", { "Class options", "Paladin blessings", "Hunter pet", "Totems", "Shaman buffs", "Shaman helpers" } },
+    { "Bags and items", { "Bags", "Selling and looting", "Item tooltips", "Crafting", "Ore and herb nodes" } },
+    { "Chat and groups", { "Chat", "Sharing and party", "The Hive" } },
+    { "Extras", { "Couch mode", "Alerts", "Talents and skills", "Pedometer" } },
+    { "Advanced", { "Modules", "Quest data", "RestedXP friend (optional)" } },
+}
 local sections = {}
-local shared = {}    -- the one scrolling page and its content, reused by every Settings page
-local cur            -- group being built
-local topY           -- where the first group starts
+local shared = {}    -- the one scrolling page and its content
+local cur            -- subheading being built
+local topY           -- where the first subheading starts
 local Layout         -- defined in BuildControls
+local holding = false -- true while several controls are being made that belong to one block
+local query = ""     -- what is typed in the search box
 
-local function Track(obj, x, yy)
-    if cur then cur.items[#cur.items + 1] = { obj = obj, x = x, y = yy - cur.bodyY } end
+-- a block starts at the cursor and holds one setting
+local function NewBlock(kind)
+    if not cur or holding then return end
+    cur.blocks[#cur.blocks + 1] = { kind = kind, top = y, items = {} }
 end
 
-local function IsOpen(title)
-    local t = DB().optOpen
-    if t == nil then return sections[1] ~= nil and sections[1].title == title end
-    return t[title] == true
+local function Track(obj, x, yy, text)
+    if not cur then return end
+    if #cur.blocks == 0 then NewBlock("label") end
+    local block = cur.blocks[#cur.blocks]
+    local item = { obj = obj, x = x, y = yy - block.top, text = text }
+    block.items[#block.items + 1] = item
+    return item
 end
 
-local function SetOpen(title, open)
-    local t = DB().optOpen
-    if t == nil then
-        t = {}
-        if sections[1] then t[sections[1].title] = true end
-        DB().optOpen = t
+-- how wide the page is: the game's Settings window and my own window differ
+local function PageWidth(w)
+    if type(w) ~= "number" or w < 200 then return 520 end
+    return math.max(480, math.min(720, w))
+end
+
+local function TextHeight(fs)
+    local h = fs and fs.GetStringHeight and fs:GetStringHeight()
+    return type(h) == "number" and h or 0
+end
+
+-- Wraps a block's long text to the page and says how much lower each of its controls has to go, and how much taller the block
+-- gets. The room made for a text when it was written is the space down to the next control under it.
+local function Wrap(block, height, width)
+    local shift, down = 0, {}
+    for n, it in ipairs(block.items) do
+        down[n] = shift
+        if it.wrap then
+            it.wrap:SetWidth(width - it.x - (it.indent or 0) - 8)
+            local need, room = TextHeight(it.wrap), nil
+            if it.indent then
+                room = 16                                      -- one line beside a tick box
+            else
+                local nextY = -height
+                for m = n + 1, #block.items do
+                    local other = block.items[m].y
+                    if other < it.y and other > nextY then nextY = other end
+                end
+                room = it.y - nextY
+                need = need + 6
+            end
+            if need > room then shift = shift + (need - room) end
+        end
     end
-    t[title] = open and true or false
+    return down, shift
+end
+
+-- every word typed has to be somewhere in the text
+local function Matches(haystack, words)
+    haystack = haystack:lower()
+    for w in words:lower():gmatch("%S+") do
+        if not haystack:find(w, 1, true) then return false end
+    end
+    return true
+end
+
+local function BlockText(block)
+    local parts = {}
+    for _, it in ipairs(block.items) do
+        local t = it.text
+        if (not t or t == "") and it.obj.GetText then t = it.obj:GetText() end
+        if type(t) == "string" then parts[#parts + 1] = t end
+    end
+    -- colour codes are not words
+    return (table.concat(parts, " "):gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end
 
 -- groups that belong to one module: they are hidden while that module is switched off
 local SECTION_MODULE = {
-    ["Quest items"] = "quests",
     ["Lazy mode"] = "lazymode",
     ["Journey"] = "zones",
     ["Hunter pet"] = "pet",
@@ -58,50 +123,101 @@ local SECTION_MODULE = {
     ["Library books"] = "books",
     ["Gear"] = "gear",
 }
+-- subheadings made for one class: they only show on that class, unless "show every class" is ticked
+local SECTION_CLASS = {
+    ["Paladin blessings"] = "PALADIN",
+    ["Hunter pet"] = "HUNTER",
+    ["Totems"] = "SHAMAN",
+    ["Shaman buffs"] = "SHAMAN",
+    ["Shaman helpers"] = "SHAMAN",
+}
+local function OtherClass(title)
+    local c = SECTION_CLASS[title]
+    if not c or DB().optAllClasses == true then return false end
+    local _, mine = UnitClass("player")
+    return mine ~= c
+end
+
 local function SectionModuleOff(s)
+    if OtherClass(s.title) then return true end
     local m = SECTION_MODULE[s.title]
     return m ~= nil and addon.ModuleOn and not addon.ModuleOn(m)
 end
--- the basics: what a new player needs. "Show all options" at the top brings back the rest.
-local BASIC = {
-    ["Start here"] = true, ["Extras to turn on or off"] = true, ["Help"] = true, ["Modules"] = true, ["Lazy mode"] = true,
-    ["Arrows"] = true, ["Hide arrows"] = true, ["Alerts"] = true, ["Quest tracker"] = true, ["Settings"] = true,
-}
-local function SectionHidden(s)
-    if SectionModuleOff(s) then return true end
-    return DB().optAdvanced ~= true and not BASIC[s.title]
+
+-- what to show: { { page =, title =, parts = { { section, blocks } } } }. With words typed it looks through every page and
+-- keeps the settings that match (or everything under a subheading whose name matches); without, it is the page picked.
+local function Plan(pageName, words)
+    local searching = words:match("%S") ~= nil
+    local out = {}
+    for _, page in ipairs(PAGES) do
+        if searching or page[1] == pageName then
+            for _, title in ipairs(page[2]) do
+                local entry = { page = page[1], title = title, parts = {} }
+                for _, s in ipairs(sections) do
+                    if s.title == title and not SectionModuleOff(s) then
+                        local whole = not searching or Matches(L(title), words)
+                        local blocks = {}
+                        for i, block in ipairs(s.blocks) do
+                            if whole or Matches(BlockText(block), words) then blocks[#blocks + 1] = i end
+                        end
+                        if #blocks > 0 then entry.parts[#entry.parts + 1] = { s, blocks } end
+                    end
+                end
+                if #entry.parts > 0 then out[#out + 1] = entry end
+            end
+        end
+    end
+    return out
+end
+
+local function CurrentPage()
+    local want = DB().optPage
+    for _, p in ipairs(PAGES) do if p[1] == want then return want end end
+    return PAGES[1][1]
 end
 
 local function Header(parent, text)
     if cur then cur.bodyEnd = y end
     y = y - 12
-    local b = CreateFrame("Button", nil, parent)
+    local b = CreateFrame("Frame", nil, parent)
     b:SetSize(480, 24)
     b:SetPoint("TOPLEFT", 16, y)
     b.fs = b:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
     b.fs:SetPoint("LEFT", 0, 0)
-    local hl = b:CreateTexture(nil, "HIGHLIGHT")
-    hl:SetAllPoints(); hl:SetColorTexture(1, 1, 1, 0.08)
+    b:Hide()
     y = y - 26
-    cur = { title = text, header = b, bodyY = y, items = {} }
+    cur = { title = text, header = b, bodyY = y, blocks = {} }
     sections[#sections + 1] = cur
-    local mine = cur
-    b:SetScript("OnClick", function()
-        if shared.split then return end
-        SetOpen(mine.title, not IsOpen(mine.title))
-        if Layout then Layout() end
-    end)
 end
 
 local function Label(parent, text, x)
+    NewBlock("label")
     local fs = parent:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
     fs:SetPoint("TOPLEFT", x or 16, y)
     fs:SetText(text)
-    Track(fs, x or 16, y)
+    local item = Track(fs, x or 16, y)
+    fs:SetJustifyH("LEFT")
+    if item then item.wrap = fs end
     return fs
 end
 
+-- hovering a tick box or a slider says what it does. extra: a line for the state it is in now
+local function HoverTip(obj, title, about, state)
+    obj:SetScript("OnEnter", function(self)
+        local text = about()
+        if not (text and GameTooltip) then return end
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        local short = tostring(title):gsub("^%.%.%.%s*", ""):gsub("%s*[:(].*$", "")
+        GameTooltip:AddLine(short, 1, 0.82, 0, true)
+        GameTooltip:AddLine(text, 1, 1, 1, true)
+        if state then GameTooltip:AddLine(state(self), 0.6, 0.6, 0.6) end
+        GameTooltip:Show()
+    end)
+    obj:SetScript("OnLeave", function() if GameTooltip then GameTooltip:Hide() end end)
+end
+
 local checkId = 0
+local radioLabel                -- the question the radio choices being made answer
 local noConfirm = false
 local function Check(parent, text, x, get, set, advance)
     checkId = checkId + 1
@@ -109,9 +225,17 @@ local function Check(parent, text, x, get, set, advance)
     local name = "ForeverLazy_Check" .. checkId
     local cb = CreateFrame("CheckButton", name, parent, "UICheckButtonTemplate")
     cb:SetPoint("TOPLEFT", x or 16, y)
-    Track(cb, x or 16, y)
+    NewBlock("check")
+    local item = Track(cb, x or 16, y, text)
     local fs = _G[name .. "Text"]
     if fs then fs:SetText(text) end
+    -- a long line wraps beside the box (not the radio choices: those sit side by side)
+    if fs and item and not holding then
+        fs:ClearAllPoints()
+        fs:SetPoint("TOPLEFT", cb, "TOPRIGHT", 2, -9)
+        fs:SetJustifyH("LEFT")
+        item.wrap, item.indent = fs, 30
+    end
     cb.Refresh = function() cb:SetChecked(get()) end
     cb:SetScript("OnClick", function(self)
         local v = self:GetChecked() and true or false
@@ -123,6 +247,11 @@ local function Check(parent, text, x, get, set, advance)
             addon.Print(short .. ": " .. (v and "on" or "off"))
         end
     end)
+    local group = holding and radioLabel or nil
+    HoverTip(cb, text, function()
+        if group then return L("Pick one. ") .. group .. " " .. tostring(text) end
+        return addon.OptionTip and addon.OptionTip(text)
+    end, not group and function(self) return self:GetChecked() and L("Now: on. Click to turn it off.") or L("Now: off. Click to turn it on.") end or nil)
     refreshers[#refreshers + 1] = cb.Refresh
     if advance ~= false then y = y - 26 end
     return cb
@@ -132,10 +261,11 @@ local sliderId = 0
 local function Slider(parent, text, minV, maxV, step, fmt, get, set)
     sliderId = sliderId + 1
     local name = "ForeverLazy_Slider" .. sliderId
+    NewBlock("slider")
     y = y - 14
     local s = CreateFrame("Slider", name, parent, "OptionsSliderTemplate")
     s:SetPoint("TOPLEFT", 24, y)
-    Track(s, 24, y)
+    Track(s, 24, y, text)
     s:SetWidth(240)
     s:SetMinMaxValues(minV, maxV)
     s:SetValueStep(step)
@@ -155,6 +285,7 @@ local function Slider(parent, text, minV, maxV, step, fmt, get, set)
         set(v)
         title:SetText(text .. ": " .. string.format(fmt, v))
     end)
+    HoverTip(s, text, function() return addon.OptionTip and addon.OptionTip(text) end)
     refreshers[#refreshers + 1] = s.Refresh
     y = y - 34
     return s
@@ -163,6 +294,10 @@ end
 local function Button(parent, text, x, w, onClick, advance)
     local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
     b:SetPoint("TOPLEFT", x, y)
+    -- a button goes with the words or the buttons just above it
+    local last = cur and cur.blocks[#cur.blocks]
+    if not (last and (last.kind == "label" or last.kind == "button")) then NewBlock("button")
+    elseif not holding then last.kind = "button" end
     Track(b, x, y)
     b:SetSize(w, 24)
     b:SetText(text)
@@ -173,6 +308,9 @@ end
 
 -- Row of mutually exclusive choices drawn as check buttons
 local function Radio(parent, labelText, key, choices)
+    NewBlock("radio")
+    holding = true
+    radioLabel = labelText
     Label(parent, labelText)
     y = y - 22
     local boxes = {}
@@ -189,6 +327,7 @@ local function Radio(parent, labelText, key, choices)
     end
     if col ~= 0 then y = y - 26 end
     noConfirm = wasNo
+    holding = false
 end
 
 local function OpenPicker(get, set)
@@ -214,7 +353,8 @@ local function ColorRow(parent, text, key)
     local b = CreateFrame("Button", nil, parent)
     b:SetSize(22, 22)
     b:SetPoint("TOPLEFT", 20, y)
-    Track(b, 20, y)
+    NewBlock("color")
+    Track(b, 20, y, text)
     local border = b:CreateTexture(nil, "BACKGROUND")
     border:SetAllPoints(); border:SetColorTexture(1, 1, 1, 1)
     local sw = b:CreateTexture(nil, "ARTWORK")
@@ -246,17 +386,45 @@ local function BuildControls(parent)
     local intro = Label(content, L("Never think about where to go next: arrows, a quest route planner, guides and collections."))
     y = y - 24
 
-    sections, cur = {}, nil
-    local function setAll(open)
-        for _, s in ipairs(sections) do SetOpen(s.title, open) end
-        Layout()
-    end
-    local b1 = Button(content, L("Expand all"), 16, 100, function() setAll(true) end, false)
-    local b2 = Button(content, L("Collapse all"), 126, 100, function() setAll(false) end, false)
-    local b3 = Button(content, "", 236, 190, function() DB().optAdvanced = not (DB().optAdvanced == true); Layout() end, true)
-    refreshers[#refreshers + 1] = function() b3:SetText(DB().optAdvanced == true and "Show only the basics" or "Show all options") end
+    sections, cur, query = {}, nil, ""
     shared.scroll, shared.content = scroll, content
-    shared.top = { t, intro, b1, b2, b3 }
+    shared.tabs = {}
+    local search
+    for i, page in ipairs(PAGES) do
+        local tab = CreateFrame("Button", nil, content, "UIPanelButtonTemplate")
+        tab:SetSize(122, 24)
+        tab:SetPoint("TOPLEFT", 16 + ((i - 1) % 4) * 125, y - math.floor((i - 1) / 4) * 27)
+        tab:SetText(L(page[1]))
+        tab:SetScript("OnClick", function()
+            DB().optPage = page[1]
+            query = ""
+            if search then search:SetText(""); search:ClearFocus() end
+            Layout()
+            scroll:SetVerticalScroll(0)
+        end)
+        shared.tabs[page[1]] = tab
+    end
+    y = y - math.ceil(#PAGES / 4) * 27 - 8
+    local searchLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    searchLabel:SetPoint("TOPLEFT", 16, y - 4); searchLabel:SetText(L("Search all settings:"))
+    search = CreateFrame("EditBox", "ForeverLazy_OptionsSearch", content, "InputBoxTemplate")
+    search:SetSize(240, 22)
+    search:SetPoint("TOPLEFT", 170, y)
+    search:SetAutoFocus(false)
+    search:SetScript("OnTextChanged", function(self)
+        local typed = self:GetText()
+        if type(typed) ~= "string" or typed == query then return end
+        query = typed
+        Layout()
+        scroll:SetVerticalScroll(0)
+    end)
+    search:SetScript("OnEscapePressed", function(self) self:SetText(""); self:ClearFocus() end)
+    search:SetScript("OnEnterPressed", function(self) self:ClearFocus() end)
+    y = y - 28
+    local nothing = content:CreateFontString(nil, "ARTWORK", "GameFontDisable")
+    nothing:SetPoint("TOPLEFT", 16, y - 16); nothing:SetText(L("No setting matches that."))
+    nothing:Hide()
+    shared.nothing = nothing
     topY = y
 
     ---------------------------------------------------------------- Start here
@@ -269,46 +437,6 @@ local function BuildControls(parent)
     Button(content, "Everything", 346, 110, function() if addon.ApplyPreset then addon.ApplyPreset("full") end end, true)
     Label(content, L("Just point me = the arrow, the route plan and services. Leveler = the usual levelling helpers. Duo = Leveler plus group features."))
     y = y - 34
-
-    Header(content, "Extras to turn on or off")
-    Label(content, L("The parts people most often want to switch. A tick means it is on."))
-    y = y - 22
-    Check(content, L("Hunt panel: buttons for the mobs your quests need"), 16,
-        function() return DB().huntPanel ~= false end, function(v) DB().huntPanel = OffFlag(v); if addon.HuntPanelRefresh then addon.HuntPanelRefresh() end end)
-    Check(content, L("Quest markers on the nameplates"), 16,
-        function() return DB().questPlates ~= false end, function(v) DB().questPlates = OffFlag(v); if addon.QuestPlatesRefresh then addon.QuestPlatesRefresh() end end)
-    Check(content, L("Craft planner beside the profession window"), 16,
-        function() return DB().craftPanel == true end, function(v) DB().craftPanel = v or nil; if addon.CraftPanelRefresh then addon.CraftPanelRefresh() end end)
-    Check(content, L("Our bag window instead of the game's bags"), 16,
-        function() return DB().bagsReplace == true end, function(v) DB().bagsReplace = v or nil; if addon.BagSyncWrappers then addon.BagSyncWrappers(true) end end)
-    Check(content, L("Damage meter (in a chat tab called Meter)"), 16,
-        function() return DB().meterOn == true end, function(v) if addon.MeterSet then addon.MeterSet(v) end end)
-    Check(content, L("Quest item sparkles: the game's own sparkle on quest items you can loot"), 16,
-        function() return DB().questSparkles ~= false end, function(v) DB().questSparkles = OffFlag(v); if addon.QuestSparklesRefresh then addon.QuestSparklesRefresh() end end)
-    Check(content, L("Colour action buttons: red out of range, blue no mana, grey cannot use"), 16,
-        function() return DB().rangeColor == true end, function(v) DB().rangeColor = v or nil; if addon.RangeColorRefresh then addon.RangeColorRefresh() end end)
-    Check(content, L("Put the newest spell rank on my action bars when I learn it"), 16,
-        function() return DB().rankUp == true end, function(v) DB().rankUp = v or nil end)
-    Check(content, L("Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"), 16,
-        function() return DB().blessPanel ~= false end, function(v) DB().blessPanel = OffFlag(v); if addon.BlessingsRefresh then addon.BlessingsRefresh() end end)
-    Check(content, L("Sell grey loot when a vendor opens (off until you tick it; items you protect with /lazy keep are never sold)"), 16,
-        function() return DB().sellGray == true end, function(v) DB().sellGray = v or nil end)
-    Check(content, L("Faster auto loot: empty the loot window the moment it opens (needs auto loot on in the game's options)"), 16,
-        function() return DB().fastLoot == true end, function(v) DB().fastLoot = v or nil end)
-    Check(content, L("Pedometer: count how far I walk on foot"), 16,
-        function() return DB().pedometer ~= false end, function(v) DB().pedometer = OffFlag(v); if addon.PedometerRefresh then addon.PedometerRefresh() end end)
-    Check(content, L("Show the pedometer readout on the screen (click it for all the numbers)"), 16,
-        function() return DB().pedoShow == true end, function(v) DB().pedoShow = v or nil; if addon.PedometerRefresh then addon.PedometerRefresh() end end)
-    Check(content, L("Gear advisor: upgrade line in tooltips, a green ^ on upgrades in bags and at vendors"), 16,
-        function() return DB().gearAdvisor ~= false end, function(v) DB().gearAdvisor = OffFlag(v); if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
-    Check(content, L("Gear bar: a button that equips an upgrade from my bags"), 16,
-        function() return DB().gearBar == true end, function(v) DB().gearBar = v or nil; if addon.GearAdvisorRefresh then addon.GearAdvisorRefresh() end end)
-    Check(content, L("Tell me in chat when I loot or buy an upgrade"), 16,
-        function() return DB().gearNote == true end, function(v) DB().gearNote = v or nil end)
-    Check(content, L("The arrow goes to the closest stop first"), 16,
-        function() return DB().arrowNearest ~= false end, function(v) DB().arrowNearest = OffFlag(v) end)
-    Check(content, L("The arrow says why it points where it does"), 16,
-        function() return DB().arrowWhy ~= false end, function(v) DB().arrowWhy = OffFlag(v) end)
 
     ---------------------------------------------------------------- Modules
     Header(content, "Buttons in the game windows")
@@ -371,6 +499,32 @@ local function BuildControls(parent)
         function() return tonumber(DB().questMapScale) or 1 end,
         function(v) DB().questMapScale = v; if addon.QuestMapRefresh then addon.QuestMapRefresh() end end)
 
+    Header(content, "Quest map")
+    Check(content, L("Quest item sparkles: the game's own sparkle on quest items you can loot"), 16,
+        function() return DB().questSparkles ~= false end, function(v) DB().questSparkles = OffFlag(v); if addon.QuestSparklesRefresh then addon.QuestSparklesRefresh() end end)
+    Header(content, "Paladin blessings")
+    Check(content, L("Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"), 16,
+        function() return DB().blessPanel == true end, function(v) DB().blessPanel = v and true or false; if addon.BlessingsRefresh then addon.BlessingsRefresh() end end)
+    Header(content, "Bags")
+    Check(content, L("Our bag window instead of the game's bags"), 16,
+        function() return DB().bagsReplace == true end, function(v) DB().bagsReplace = v or nil; if addon.BagSyncWrappers then addon.BagSyncWrappers(true) end end)
+    Header(content, "Selling and looting")
+    Check(content, L("Sell grey loot when a vendor opens (off until you tick it; items you protect with /lazy keep are never sold)"), 16,
+        function() return DB().sellGray == true end, function(v) DB().sellGray = v or nil end)
+    Check(content, L("Faster auto loot: empty the loot window the moment it opens (needs auto loot on in the game's options)"), 16,
+        function() return DB().fastLoot == true end, function(v) DB().fastLoot = v or nil end)
+    Header(content, "Action bars")
+    Check(content, L("Colour action buttons: red out of range, blue no mana, grey cannot use"), 16,
+        function() return DB().rangeColor == true end, function(v) DB().rangeColor = v or nil; if addon.RangeColorRefresh then addon.RangeColorRefresh() end end)
+    Header(content, "Pedometer")
+    Check(content, L("Pedometer: count how far I walk on foot"), 16,
+        function() return DB().pedometer ~= false end, function(v) DB().pedometer = OffFlag(v); if addon.PedometerRefresh then addon.PedometerRefresh() end end)
+    Check(content, L("Show the pedometer readout on the screen (click it for all the numbers)"), 16,
+        function() return DB().pedoShow == true end, function(v) DB().pedoShow = v or nil; if addon.PedometerRefresh then addon.PedometerRefresh() end end)
+    Header(content, "Arrows")
+    Check(content, L("The arrow says why it points where it does"), 16,
+        function() return DB().arrowWhy ~= false end, function(v) DB().arrowWhy = OffFlag(v) end)
+
     Header(content, "Finding quests")
     Label(content, L("Hover a quest link in chat for who gives it, who takes it, its level and chain, and why you cannot take it. The buttons find any quest by name or show what you finished in each zone."))
     y = y - 22
@@ -412,6 +566,8 @@ local function BuildControls(parent)
         function() return DB().huntPanel ~= false end, function(v) DB().huntPanel = OffFlag(v); if addon.HuntPanelRefresh then addon.HuntPanelRefresh() end end)
     Check(content, L("Interrupt marker when a mob casts (green ready, red on cooldown, grey none)"), 16,
         function() return DB().nameplateCasts ~= false end, function(v) DB().nameplateCasts = OffFlag(v) end)
+    Check(content, L("... flash the mob's cast bar while my interrupt is ready"), 40,
+        function() return DB().castFlash == true end, function(v) DB().castFlash = v or nil end)
 
     Check(content, L("Colour hostile plates: red = aggressive or attacking me, orange = fighting someone else"), 16,
         function() return DB().plateColors == true end, function(v) DB().plateColors = v or nil; if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
@@ -539,6 +695,7 @@ local function BuildControls(parent)
         function() return DB().journeyHint ~= false end, function(v) DB().journeyHint = v end)
 
     ----------------------------------------------------------------- Arrows
+    Header(content, "Text")
     Slider(content, L("Guide text size (1.8 is big, for the TV)"), 0.8, 2.6, 0.1, "%.1f", function() return DB().guideScale or 1 end,
         function(v) DB().guideScale = v; if _G.ForeverLazy_Guide and _G.ForeverLazy_Guide:IsShown() then _G.ForeverLazy_Guide:SetScale(v) end end)
 
@@ -613,7 +770,7 @@ local function BuildControls(parent)
     Label(content, L("Several friends: right-click the step panel to switch, /lazy friend <name> to pin."))
     y = y - 26
 
-    Header(content, "My own quests")
+    Header(content, "My quest arrow")
     Check(content, L("Show an arrow for my own quest log (turn-ins and objectives)"), 16,
         function() return DB().ownQuests end, function(v) DB().ownQuests = v; Changed() end)
     Check(content, L("Skip grey quests, and red ones unless they are just a turn-in"), 16,
@@ -621,15 +778,17 @@ local function BuildControls(parent)
         function(v) DB().questColorFilter = v; Changed() end)
     Check(content, L("Follow the quest I have selected or tracked (otherwise the nearest of all)"), 16,
         function() return DB().ownFocus ~= false end, function(v) DB().ownFocus = v; Changed() end)
-    ColorRow(content, L("My quests arrow color"), "colorMine")
+    Header(content, "The plan")
     Check(content, L("Leave small quests out of the plan when the XP is not worth the time"), 16,
         function() return DB().planWorth ~= false end, function(v) DB().planWorth = v end)
     Check(content, L("Autopilot: visit the vendor or trainer between quests, and move on to the next zone when this one is done"), 16,
         function() return DB().autopilot == true end, function(v) DB().autopilot = v end)
+    Header(content, "My quest arrow")
     Check(content, L("For kills and items, point the arrow at the nearest spot and move on when it is cleared"), 16,
         function() return DB().arrowSpots ~= false end, function(v) DB().arrowSpots = v end)
     Check(content, L("Closest first: the arrow goes to the nearest of my next stops, not strictly plan order"), 16,
         function() return DB().arrowNearest ~= false end, function(v) DB().arrowNearest = OffFlag(v) end)
+    Header(content, "The plan")
     Check(content, L("Plan for quests I have not taken yet that are right here (about 600 yards)"), 16,
         function() return DB().planNearby ~= false end, function(v) DB().planNearby = v end)
     Check(content, L("Show the step window while a plan is running"), 16,
@@ -662,6 +821,38 @@ local function BuildControls(parent)
     Check(content, L("Add a new quest to the plan where it costs the least walking"), 16,
         function() return DB().planAuto ~= false end, function(v) DB().planAuto = v end)
 
+    Header(content, "Class options")
+    Label(content, L("Settings made for one class. You see the ones for your own class: paladins, hunters and shamans have some."))
+    y = y - 22
+    Check(content, L("Show every class's settings"), 16,
+        function() return DB().optAllClasses == true end,
+        function(v) DB().optAllClasses = v and true or nil; if Layout then Layout() end end)
+
+    local function ShamanCheck(text, key, x)
+        Check(content, text, x or 16, function() return DB()[key] == true end,
+            function(v) DB()[key] = v and true or nil; if addon.ShamanRefresh then addon.ShamanRefresh() end end)
+    end
+    Header(content, "Totems")
+    ShamanCheck(L("Totem bar: four totems with time left, and a button that drops your set"), "shamTotemBar")
+    ShamanCheck(L("Tell me when I walk out of range of a totem (outdoors only)"), "shamTotemRange")
+    Label(content, L("On the bar, left-click an element to drop its totem and right-click to pick another. Each set (Solo, Dungeon, Healing) remembers its own."))
+    y = y - 36
+    Button(content, L("Show my totem quests"), 16, 200, function() if addon.ClassWindow then addon.ClassWindow() end end, true)
+
+    Header(content, "Shaman buffs")
+    ShamanCheck(L("Weapon buff button: lights up when it is missing or about to run out"), "shamImbue")
+    ShamanCheck(L("Shield button: lights up when your shield is missing or about to run out"), "shamShield")
+    ShamanCheck(L("Ankh count and Reincarnation, with a warning when you run low"), "shamAnkh")
+    Slider(content, L("Warn me below this many ankhs"), 1, 20, 1, "%d", function() return tonumber(DB().shamAnkhLow) or 3 end,
+        function(v) DB().shamAnkhLow = v end)
+
+    Header(content, "Shaman helpers")
+    ShamanCheck(L("Cure buttons for you and your party: they change colour for poison or disease"), "shamCure")
+    ShamanCheck(L("Mark enemy nameplates that have a magic buff you can Purge"), "shamPurge")
+    ShamanCheck(L("Remind me to use Ghost Wolf on a long run"), "shamWolf")
+    Label(content, L("The interrupt cast bar flash for Earth Shock is under Combat, Nameplates."))
+    y = y - 26
+
     Header(content, "Hunter pet")
     Check(content, L("Remind me when my pet needs feeding"), 16,
         function() return DB().petRemind ~= false end, function(v) DB().petRemind = v end)
@@ -681,13 +872,15 @@ local function BuildControls(parent)
         function() return DB().petScream ~= false end, function(v) DB().petScream = v end)
     Button(content, L("Test the pet reminder"), 16, 170, function() addon:HandleExtraCommand("pet", "test") end, true)
 
-    Header(content, "More features")
+    Header(content, "Arrows")
     Check(content, L("Animate arrows (pulse when near, dim when facing away)"), 16,
         function() return DB().animate end, function(v) DB().animate = v end)
+    Header(content, "Travel and zones")
     Check(content, L("Flight timer: how long a flight takes (learned the first time)"), 16,
         function() return DB().flightTimer ~= false end, function(v) DB().flightTimer = v end)
     Check(content, L("Suggest the next zone when I have outgrown the one I am in"), 16,
         function() return DB().nextZoneHint ~= false end, function(v) DB().nextZoneHint = v end)
+    Header(content, "Dungeons and class quests")
     Check(content, L("Tell me when I reach a dungeon entrance my quests need"), 16,
         function() return DB().dungeonHint ~= false end, function(v) DB().dungeonHint = v end)
     Check(content, L("Cozy Sleeping Bag chain: guide me, with its next spot as stop 1"), 16,
@@ -700,46 +893,82 @@ local function BuildControls(parent)
         function() return DB().dungeonQuestPopup ~= false end, function(v) DB().dungeonQuestPopup = v end)
     Check(content, L("Put class quest givers in my plan when they are in this zone"), 16,
         function() return DB().planClass ~= false end, function(v) DB().planClass = v end)
+    Header(content, "Travel and zones")
     Check(content, L("Start a flight trip by itself when the next stop is far and flying is quicker"), 16,
         function() return DB().autoTrip == true end, function(v) DB().autoTrip = v end)
+    Header(content, "The plan")
     Check(content, L("Finish the quests in an area before walking back to hand any in (unless it continues a chain)"), 16,
         function() return DB().planBatch ~= false end, function(v) DB().planBatch = v end)
+    Header(content, "Map pins")
     Check(content, L("Show my plan's numbered stops on the world map"), 16,
         function() return DB().mapRoute ~= false end, function(v) DB().mapRoute = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
     Check(content, L("... and draw lines between them"), 16,
         function() return DB().mapRouteLines == true end, function(v) DB().mapRouteLines = v; if addon.DrawRouteLines then addon.DrawRouteLines() end end)
+    Header(content, "Item tooltips")
     Check(content, L("Item tooltips show how many I have in bags, bank, mail and worn"), 16,
         function() return DB().itemTooltip ~= false end, function(v) DB().itemTooltip = v end)
     Check(content, L("... and how many my other characters have"), 16,
         function() return DB().itemTooltipAlts ~= false end, function(v) DB().itemTooltipAlts = v end)
+    Header(content, "Map pins")
     Check(content, L("XP hot spots on the world map (where the best quests for my level are)"), 16,
         function() return DB().xpHeat == true end, function(v) DB().xpHeat = v; if addon.DrawXPHeat then addon.DrawXPHeat() end end)
     Check(content, L("Draw my route on the minimap (numbered stops joined by lines)"), 16,
         function() return DB().minimapLine == true end, function(v) DB().minimapLine = v end)
+    Header(content, "Travel and zones")
     Check(content, L("Offer to plan a new zone once I have stayed in it a while"), 16,
         function() return DB().zonePrompt ~= false end, function(v) DB().zonePrompt = v end)
+    Header(content, "Sharing and party")
     Check(content, L("Share boat docks I learn with my guild and group (nothing shows in chat)"), 16,
         function() return DB().community == true end, function(v) DB().community = v end)
+    Header(content, "Crafting")
     Check(content, L("Craft planner: a panel beside the profession window"), 16,
         function() return DB().craftPanel == true end, function(v) DB().craftPanel = v or nil; if addon.CraftPanelRefresh then addon.CraftPanelRefresh() end end)
     Check(content, L("When I open a profession window, tell me the best next craft"), 16,
         function() return DB().craftHint ~= false end, function(v) DB().craftHint = v end)
+    Header(content, "Quest hints")
     Check(content, L("Tell me what comes next after I hand in a quest in a chain"), 16,
         function() return DB().chainHint ~= false end, function(v) DB().chainHint = v end)
     Check(content, L("Mark the best quest reward (likely upgrade or best price)"), 16,
         function() return DB().rewardPick ~= false end, function(v) DB().rewardPick = v end)
+    Header(content, "The plan")
     Check(content, L("Leave group quests out of my plan while I am solo"), 16,
         function() return DB().planSkipGroup ~= false end, function(v) DB().planSkipGroup = v end)
     Check(content, L("Favour quests I share with someone in my group"), 16,
         function() return DB().planShared ~= false end, function(v) DB().planShared = v end)
+    Header(content, "Travel and zones")
     Check(content, L("Tell me when my hearthstone would save a long walk"), 16,
         function() return DB().hearthNudge ~= false end, function(v) DB().hearthNudge = v end)
+    Header(content, "Compass")
+    Label(content, L("The compass works on its own: turning the arrows off or hiding them does nothing to it. Right-click the bar for a quick menu, and hover a marker to see what it is."))
+    y = y - 36
+    Check(content, L("Compass bar at the top of the screen"), 16,
+        function() return DB().compassBar end, function(v) DB().compassBar = v end)
+    Check(content, L("... show the directions N, E, S and W"), 40,
+        function() return DB().compassDirections == true end, function(v) DB().compassDirections = v and true or nil end)
+    Check(content, L("... show the distance under each marker"), 40,
+        function() return DB().compassDistance == true end, function(v) DB().compassDistance = v and true or nil end)
+    Check(content, L("... icons instead of blocks for quest targets"), 40,
+        function() return DB().compassIcons == true end, function(v) DB().compassIcons = v and true or nil end)
     Check(content, L("In duo mode, show my partner on the compass (even when the arrows are off)"), 16,
         function() return DB().duoCompass ~= false end, function(v) DB().duoCompass = v end)
     Radio(content, L("Marker for my partner on the compass:"), "compassIcon", {
         { 3, "Diamond" }, { 1, "Star" }, { 2, "Circle" }, { 4, "Triangle" }, { 5, "Moon" } })
-    Check(content, L("Compass bar at the top of the screen"), 16,
-        function() return DB().compassBar end, function(v) DB().compassBar = v end)
+    Header(content, "Compass size and place")
+    Slider(content, L("Compass size"), 0.6, 2, 0.1, "%.1f", function() addon.CompassSettings(); return tonumber(DB().compassScale) or 1 end,
+        function(v) DB().compassScale = v end)
+    Check(content, L("Lock the compass (untick to drag it)"), 16,
+        function() addon.CompassSettings(); return DB().compassLocked == true end, function(v) DB().compassLocked = v and true or false end)
+
+    Header(content, "Hide the compass")
+    local function CompassHide(text, key)
+        Check(content, text, 16, function() addon.CompassSettings(); return DB()[key] == true end,
+            function(v) addon.CompassSettings(); DB()[key] = v and true or false end)
+    end
+    CompassHide(L("Hide the compass in combat"), "compassHideCombat")
+    CompassHide(L("Hide the compass in cities and inns (resting)"), "compassHideResting")
+    CompassHide(L("Hide the compass on a flight path"), "compassHideTaxi")
+    CompassHide(L("Hide the compass inside a dungeon or raid"), "compassHideInstance")
+    Header(content, "Sharing and party")
     Check(content, L("Accept waypoints my party sends me"), 16,
         function() return DB().acceptShared end, function(v) DB().acceptShared = v end)
     Label(content, L("Shift + click the friend arrow to tell the party 'On my way!'."))
@@ -797,7 +1026,7 @@ local function BuildControls(parent)
     Button(content, L("What do I have?"), 216, 130, function() addon:HandleExtraCommand("nodes", "") end, true)
 
     Header(content, "Quest tracker")
-    Label(content, L("Forever Lazy's own tracker: your quests in plan order with XP, live objectives and who to turn in to. Click a quest to open it in your quest log, shift-click to do it next, ctrl-click to share it, right-click for more. Questie has its own tracker: turn it off in Questie's options."))
+    Label(content, L("Forever Lazy's own tracker: your quests in plan order with XP, live objectives and who to turn in to. Click a quest to do it next (the arrow goes to it) and open it in your quest log, ctrl-click to share it, right-click for more. Questie has its own tracker: turn it off in Questie's options."))
     y = y - 50
     Check(content, L("Use Forever Lazy's quest tracker"), 16,
         function() return DB().trackerOn == true end, function(v) if addon.TrackerSet then addon.TrackerSet(v) else DB().trackerOn = v end end)
@@ -856,7 +1085,6 @@ local function BuildControls(parent)
     Header(content, "My waypoints")
     Label(content, L("Set one with /lazy way <x> <y> [name], /lazy way here, or Ctrl + right-click on the world map."))
     y = y - 26
-    ColorRow(content, L("Waypoint arrow color"), "colorWaypoint")
     Check(content, L("Remove a waypoint automatically when I arrive"), 16,
         function() return DB().waypointAutoClear end, function(v) DB().waypointAutoClear = v end)
     Button(content, L("Drop at my position"), 16, 150, function() addon:DropWaypointHere() end, false)
@@ -933,75 +1161,60 @@ local function BuildControls(parent)
     y = y - 30
     cur.bodyEnd = y
 
-    -- one long page with fold-away groups (used when the Settings window has no sub-categories)
     Layout = function()
-        shared.split = false
-        for _, w in ipairs(shared.top) do w:Show() end
-        local pos = topY
+        local page = CurrentPage()
+        local searching = query:match("%S") ~= nil
+        for name, tab in pairs(shared.tabs) do tab:SetEnabled(searching or name ~= page) end
         for _, s in ipairs(sections) do
-          if SectionHidden(s) then
-            -- its module is switched off: the whole group goes away until the module is switched on again
             s.header:Hide()
-            for _, it in ipairs(s.items) do it.obj:Hide() end
-          else
-            local open = IsOpen(s.title)
+            for _, block in ipairs(s.blocks) do
+                for _, it in ipairs(block.items) do it.obj:Hide() end
+            end
+        end
+        local pos = topY
+        local width = PageWidth(scroll.GetWidth and scroll:GetWidth())
+        content:SetWidth(width)
+        local plan = Plan(page, query)
+        for _, entry in ipairs(plan) do
             pos = pos - 12
-            s.header:Show()
-            s.header:ClearAllPoints()
-            s.header:SetPoint("TOPLEFT", 16, pos)
-            s.header.fs:SetText((open and "[-]  " or "[+]  ") .. L(s.title))
-            local body = pos - 26
-            for _, it in ipairs(s.items) do
-                if open then
-                    it.obj:ClearAllPoints()
-                    it.obj:SetPoint("TOPLEFT", it.x, body + it.y)
-                    it.obj:Show()
-                else
-                    it.obj:Hide()
+            local h = entry.parts[1][1].header
+            h:ClearAllPoints()
+            h:SetPoint("TOPLEFT", 16, pos)
+            h.fs:SetText(searching and (L(entry.page) .. "  >  " .. L(entry.title)) or L(entry.title))
+            h:Show()
+            pos = pos - 26
+            for _, part in ipairs(entry.parts) do
+                local s = part[1]
+                for _, i in ipairs(part[2]) do
+                    local block, after = s.blocks[i], s.blocks[i + 1]
+                    local height = block.top - (after and after.top or s.bodyEnd)
+                    local down, more = Wrap(block, height, width)
+                    for n, it in ipairs(block.items) do
+                        it.obj:ClearAllPoints()
+                        it.obj:SetPoint("TOPLEFT", it.x, pos + it.y - down[n])
+                        it.obj:Show()
+                    end
+                    pos = pos - height - more
                 end
             end
-            pos = open and (body - (s.bodyY - s.bodyEnd)) or body
-          end
         end
+        if searching and #plan == 0 then shared.nothing:Show(); pos = pos - 30 else shared.nothing:Hide() end
         content:SetHeight(-pos + 10)
     end
+    addon.OptionsModel = { pages = PAGES, sections = sections, Plan = Plan, Matches = Matches, BlockText = BlockText }   -- for the offline tests
     -- switching a module on or off (or a preset) shows or hides its options at once
-    refreshers[#refreshers + 1] = function() if not shared.split and Layout then Layout() end end
-end
-
--- one group at a time, each shown on its own page in the Settings list
-local function LayoutSplit(sec)
-    shared.split = true
-    for _, w in ipairs(shared.top) do w:Hide() end
-    for _, s in ipairs(sections) do
-        if s == sec and not SectionModuleOff(s) then
-            s.header:Show()
-            s.header:ClearAllPoints()
-            s.header:SetPoint("TOPLEFT", 16, -10)
-            s.header.fs:SetText(L(s.title))
-            local body = -10 - 26
-            for _, it in ipairs(s.items) do
-                it.obj:ClearAllPoints()
-                it.obj:SetPoint("TOPLEFT", it.x, body + it.y)
-                it.obj:Show()
-            end
-            shared.content:SetHeight(-(body - (s.bodyY - s.bodyEnd)) + 10)
-        else
-            s.header:Hide()
-            for _, it in ipairs(s.items) do it.obj:Hide() end
-        end
-    end
+    refreshers[#refreshers + 1] = function() if Layout then Layout() end end
 end
 
 -- put the shared scrolling page onto a Settings page and show the right group
-local function AttachTo(page, sec)
+local function AttachTo(page)
     local scroll = shared.scroll
     scroll:SetParent(page)
     scroll:ClearAllPoints()
     scroll:SetPoint("TOPLEFT", 4, -4)
     scroll:SetPoint("BOTTOMRIGHT", -28, 4)
     scroll:Show()
-    if sec then LayoutSplit(sec) else Layout() end
+    Layout()
     scroll:SetVerticalScroll(0)
     Refresh()
 end
@@ -1013,28 +1226,12 @@ local function Build()
     panel:Hide()      -- a new frame counts as shown; the Settings window needs to Show() it to fire OnShow
     panel.name = TITLE
     BuildControls(panel)
-    panel:SetScript("OnShow", function() AttachTo(panel, nil) end)
+    panel:SetScript("OnShow", function() AttachTo(panel) end)
 
     if _G.Settings and Settings.RegisterCanvasLayoutCategory then
         category = Settings.RegisterCanvasLayoutCategory(panel, TITLE)
         Settings.RegisterAddOnCategory(category)
 
-        -- every group gets its own entry under the addon name in the list on the left
-        if Settings.RegisterCanvasLayoutSubcategory and #sections > 1 then
-            local ok = pcall(function()
-                for i = 2, #sections do
-                    local sec = sections[i]
-                    local page = CreateFrame("Frame")
-                    page:Hide()
-                    page.name = sec.title
-                    page:SetScript("OnShow", function(self) AttachTo(self, sec) end)
-                    Settings.RegisterCanvasLayoutSubcategory(category, page, L(sec.title))
-                end
-            end)
-            if ok then
-                panel:SetScript("OnShow", function() AttachTo(panel, sections[1]) end)
-            end
-        end
     elseif _G.InterfaceOptions_AddCategory then
         InterfaceOptions_AddCategory(panel)
     end
@@ -1066,12 +1263,11 @@ function addon:OpenOptions()
         panel:SetPoint("TOPLEFT", 4, -24)
         panel:SetPoint("BOTTOMRIGHT", -4, 4)
         tinsert(UISpecialFrames, "ForeverLazy_OptionsWindow")
-        -- the stand-alone window shows everything on one page with fold-away groups
-        panel:SetScript("OnShow", function() AttachTo(panel, nil) end)
+        panel:SetScript("OnShow", function() AttachTo(panel) end)
     end
     standalone:SetShown(not standalone:IsShown())
     panel:Show()
-    AttachTo(panel, nil)
+    AttachTo(panel)
 end
 
 --------------------------------------------------------------------------------

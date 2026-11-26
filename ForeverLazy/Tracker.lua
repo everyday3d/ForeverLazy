@@ -231,13 +231,15 @@ local function RowClick(self, button)
         dirty = true
         return
     end
-    -- ctrl-click: share the quest with my group; a plain click opens the quest in the quest log
+    -- ctrl-click: share the quest with my group; a plain click does the quest next (the arrow goes to it) and opens it in the log
     if IsControlKeyDown and IsControlKeyDown() then
         Select(q.id)
         if QuestLogPushQuest then pcall(QuestLogPushQuest) end
         return
     end
     Select(q.id)
+    if addon.FocusQuest then addon:FocusQuest(q.id, q.title) end
+    dirty = true
     if QuestMapFrame_OpenToQuestDetails then pcall(QuestMapFrame_OpenToQuestDetails, q.id)
     elseif ToggleQuestLog then
         if not (QuestLogFrame and QuestLogFrame:IsShown()) then pcall(ToggleQuestLog) end

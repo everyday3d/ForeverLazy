@@ -2,6 +2,7 @@
 -- plate. The border tells you what you can do about it:
 --   green  = your interrupt is ready      red = your interrupt is on cooldown      grey = you have no interrupt at all
 -- Spells the game says can NOT be interrupted get no marker. Switch it off in the options (Nameplates).
+-- An option (off until ticked) also flashes the plate's cast bar while my interrupt is ready.
 local ADDON, ns = ...
 local addon = ns.addon
 
@@ -17,7 +18,7 @@ local INTERRUPTS = {
     ROGUE = { 1766 },                  -- Kick
     MAGE = { 2139 },                   -- Counterspell
     SHAMAN = { 8042, 57994 },          -- Earth Shock, Wind Shear
-    PALADIN = { 96231 },               -- Rebuke
+    PALADIN = { 96231, 853 },          -- Rebuke, Hammer of Justice (the stun stops a cast on mobs that can be stunned)
     PRIEST = { 15487 },                -- Silence
     DEATHKNIGHT = { 47528 },           -- Mind Freeze
     DRUID = { 106839, 5211 },          -- Skull Bash, Bash
@@ -49,7 +50,8 @@ local function InterruptState()
     local known
     for _, id in ipairs(list) do
         local name = SpellName(id)
-        local isKnown = name and ((GetSpellInfo and GetSpellInfo(name)) ~= nil or (IsSpellKnown and IsSpellKnown(id)))
+        local isKnown = name and ((GetSpellInfo and GetSpellInfo(name) ~= nil) or (IsSpellKnown and IsSpellKnown(id))
+            or (IsPlayerSpell and IsPlayerSpell(id)))
         if isKnown then
             known = true
             local s, d = Cooldown(name)
@@ -84,8 +86,48 @@ local function MarkerFor(plate)
     return f
 end
 
+-- the cast bar on a plate, when the game (or a nameplate addon that keeps its name) shows one
+local function CastBarOf(plate)
+    local uf = plate and plate.UnitFrame
+    local bar = uf and (uf.castBar or uf.CastBar or uf.castbar)
+    if bar and bar.IsShown and bar:IsShown() then return bar end
+end
+
+-- 2.5 flashes a second (under 3, which is the usual limit for flashing things)
+local function FlashAlpha(t)
+    return 0.15 + 0.7 * math.abs(math.sin(t * math.pi * 2.5))
+end
+addon.CastFlashAlpha = FlashAlpha
+
+-- Our own frame laid over the cast bar, so the game's bar is never touched. With no bar to lay it on, the spell icon flashes.
+local function Flash(f, on)
+    local db = DB()
+    if not (on and db and db.castFlash == true) then
+        if f.glow then f.glow:Hide() end
+        return
+    end
+    local g = f.glow
+    if not g then
+        g = CreateFrame("Frame", nil, f)
+        g:SetFrameStrata("HIGH")
+        g.tex = g:CreateTexture(nil, "OVERLAY")
+        g.tex:SetAllPoints()
+        g.tex:SetColorTexture(1, 0.95, 0.2, 1)
+        g.tex:SetBlendMode("ADD")
+        g:SetScript("OnUpdate", function(self) self:SetAlpha(FlashAlpha(GetTime())) end)
+        f.glow = g
+    end
+    local target = CastBarOf(f:GetParent()) or f
+    g:ClearAllPoints()
+    g:SetPoint("TOPLEFT", target, "TOPLEFT", -3, 3)
+    g:SetPoint("BOTTOMRIGHT", target, "BOTTOMRIGHT", 3, -3)
+    if target.GetFrameLevel then g:SetFrameLevel(target:GetFrameLevel() + 5) end
+    g:Show()
+end
+
 local function Paint(f)
     local st = InterruptState()
+    Flash(f, st == 1)
     if st == 1 then f.edge:SetColorTexture(0.1, 0.9, 0.2, 1)
     elseif st == 0 then f.edge:SetColorTexture(0.9, 0.15, 0.15, 1)
     else f.edge:SetColorTexture(0.55, 0.55, 0.55, 1) end

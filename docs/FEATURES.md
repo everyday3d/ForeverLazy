@@ -188,6 +188,16 @@ earlier quests, reputation, professions). `/lazy data verify` compares all of it
 is installed it is still used as a second source. The addon also learns from play: every quest you hold and every creature you
 meet is noted (`/lazy data`), and it fills gaps. Click **Test without Questie** in the options to try it.
 
+## The compass
+A bar across the top of the screen: the white line is the way you face, and each marker is a target. It has its own page in the
+options (switch, size, lock, and when to hide), separate from the arrows. You can turn on direction letters, the distance under
+each marker and quest icons. Hover a marker to see what it is; right-click the bar for a quick menu.
+
+## Shaman helpers
+Off until ticked, in the options under My class: a totem bar with timers and sets, a range warning (outdoors), weapon buff and
+shield buttons, ankhs and Reincarnation, cure buttons for the party, a Purge mark and a Ghost Wolf reminder. Each cast takes
+its own click, and what a button casts can only change between fights. `/lazy shaman` shows what is on.
+
 ## The quest map
 Your quests on the world map and the minimap: coloured areas where to kill or collect, one colour per quest (on the minimap,
 small dots in that colour), a small green dot for each thing to click on the ground, a yellow `!` on quests you can pick up

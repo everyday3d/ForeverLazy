@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.25.0
+
+**Fully restart the game after updating** (a /reload is not enough: there are new files).
+
+### Changed
+- **The options are rebuilt as pages with a search box.** Long fold-away lists, the two catch-all sections and settings that appeared twice are gone. In the game's Settings window Forever Lazy has one entry. Long text wraps, and pointing at a tick box or slider says what it does.
+- **The compass is separate from the arrow.** It has its own page, switch, hiding rules, size and lock, and its own right-click menu. Turning the arrows off no longer hides it. The first time, it copies your current hide and lock settings.
+- **The paladin blessing panel is off until you turn it on** (`/lazy blessings on`, or the options under My class). A paladin in a group who never chose is told once.
+- **A plain click on a quest in the tracker now points the arrow at it**, and still opens it in the quest log.
+### New
+- **Compass:** direction letters, the distance under each marker and quest icons (each off until you tick it). Hover a marker to see what it is.
+- **Shaman helpers** (all off until ticked, under My class): a totem bar with timers, three totem sets and a one-click-per-totem button, an out of range warning (outdoors), weapon buff and shield buttons, an ankh and Reincarnation count, cure buttons for the party, a mark on enemies you can Purge and a Ghost Wolf reminder. The hearthstone reminder knows Astral Recall. `/lazy shaman` shows what is on. These have not been tried on many shamans yet: please report what you see.
+- **Flash the cast bar** (off until ticked, Nameplates): a mob's cast bar flashes while your interrupt is ready. Hammer of Justice now counts as a paladin interrupt; it only stops casts on mobs that can be stunned.
+### Fixed
+- The arrow could ignore the quest you picked when it was in another zone, when the plan had no stop for it, or when you had clicked a spot on the map.
+- `/lazy blessings` on its own could hide the panel but not bring it back.
+
 ## 0.24.8
 ### Changed
 - **The map is less crowded.** Where to kill or collect is shown as coloured areas, one colour for each quest, without skull and purple diamond icons on top. A new option under Quest map, **Skull and diamond icons on mob spots**, brings them back. The minimap shows small dots in the quest's colour instead. The other pins are smaller.

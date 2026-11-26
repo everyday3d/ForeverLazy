@@ -84,9 +84,19 @@ local function HearthNudge()
     local wp = db.waypoints[1]
     if not (h.map and wp and wp.label and not wp.hearth) then return end
     if InCombatLockdown and InCombatLockdown() then return end
-    if not (GetItemCount and GetItemCount(6948) > 0) then return end
-    local start, duration = GetItemCooldown(6948)
-    if start and start > 0 and duration and duration > 2 then return end
+    -- the hearthstone when it is ready; a shaman's Astral Recall goes to the same place and has its own cooldown
+    local function Ready(start, duration) return not (start and start > 0 and duration and duration > 2) end
+    local stone = GetItemCount and GetItemCount(6948) > 0 and Ready(GetItemCooldown(6948))
+    local recall = false
+    if addon.SpellsKnown and select(2, UnitClass("player")) == "SHAMAN" and addon.SpellsKnown()["Astral Recall"] then
+        if C_Spell and C_Spell.GetSpellCooldown then
+            local c = C_Spell.GetSpellCooldown("Astral Recall")
+            recall = type(c) == "table" and not (issecretvalue and issecretvalue(c.startTime)) and Ready(c.startTime, c.duration)
+        elseif GetSpellCooldown then
+            recall = Ready(GetSpellCooldown("Astral Recall"))
+        end
+    end
+    if not (stone or recall) then return end
     local key = wp.name or wp.label
     if nudged == key then return end
     local hx, hy, hinst = hbd:GetWorldCoordinatesFromZone(h.zx, h.zy, h.map)
@@ -96,7 +106,8 @@ local function HearthNudge()
     local fromHearth = Dist({ x = hx, y = hy }, wp)
     if fromHere - fromHearth > 1500 then
         nudged = key
-        Print(string.format(L("your next stop is far: your hearthstone (bound at %s) would save about %d yards. /lazy hearth shows the way to it."),
+        Print(string.format(L(recall and "your next stop is far: Astral Recall (to %s) would save about %d yards. /lazy hearth shows the way to it."
+            or "your next stop is far: your hearthstone (bound at %s) would save about %d yards. /lazy hearth shows the way to it."),
             tostring(h.name), fromHere - fromHearth))
     end
 end

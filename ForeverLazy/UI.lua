@@ -311,7 +311,7 @@ end
 -- the same menu on every arrow you can see (the plan arrow does it in Extras.lua)
 local hookedArrows = {}
 local function HookArrows()
-    for _, name in ipairs({ "ForeverLazy_QuestArrow", "ForeverLazy_FriendArrow", "ForeverLazy_MineArrow", "ForeverLazy_Compass" }) do
+    for _, name in ipairs({ "ForeverLazy_QuestArrow", "ForeverLazy_FriendArrow", "ForeverLazy_MineArrow" }) do          -- the compass has its own menu
         local f = _G[name]
         if f and not hookedArrows[name] and f.HookScript then
             f:EnableMouse(true)

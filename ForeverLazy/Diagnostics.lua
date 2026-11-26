@@ -280,6 +280,7 @@ local COMMANDS = {
         { "/lazy lfg", "What the group finder gives to addons (for bug reports and filter ideas)" },
         { "/lazy steps, steps reset, steps show|hide, steps on|off", "The pedometer: how far you have walked" },
         { "/lazy platecolors on|off", "Colour hostile nameplates: red attacking me, yellow someone else, purple a quest mob" },
+        { "/lazy shaman, shaman all, shaman off", "Shaman helpers (off until you turn them on)" },
         { "/lazy blessings on|off, blessings solo, blessings debug, blessings reset", "Paladin blessings: one button for the group, a blessing for each class" },
         { "/lazy l10n, l10n use <code>, l10n missing", "Languages: what is translated, pick one, list what needs translating" } } },
     { "Finding things", {
