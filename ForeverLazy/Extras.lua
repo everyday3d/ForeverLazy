@@ -632,7 +632,7 @@ local function NearbyHandIn()
                     if api.AddObjects then pcall(api.AddObjects, list, by[2]) end
                     for _, s in ipairs(list) do
                         if s.instance == pinst and s.x and s.y then
-                            local d = api.D2 and api.D2(s.x, s.y, px, py) or math.sqrt((s.x - px) ^ 2 + (s.y - py) ^ 2)
+                            local d = math.sqrt((s.x - px) ^ 2 + (s.y - py) ^ 2)      -- yards (api.D2 gives them squared)
                             if d <= HANDIN_NEAR and (not bd or d < bd) then
                                 local name = info.title or ("quest " .. id)
                                 best, bd = { instance = s.instance, x = s.x, y = s.y, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy, name = "Turn in: " .. name, handInQuest = id }, d

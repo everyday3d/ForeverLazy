@@ -27,11 +27,31 @@ local function Spots(id)
     return s
 end
 
-local function Ping(id, title, who)
+local GAP = 8                        -- seconds: one signal for one hand-in, whoever notices it first
+local lastSignal = -100
+local report = "not run"             -- what the game answered the last time (shown by /lazy ping test)
+local function Ping(title, who)
+    local now = GetTime and GetTime() or 0
+    if now - lastSignal < GAP then return end
+    lastSignal = now
     local msg = "Hand in: " .. tostring(title) .. (who and (" to " .. who) or "")
     if UIErrorsFrame and UIErrorsFrame.AddMessage then UIErrorsFrame:AddMessage(msg, 0.3, 1, 0.3, 1, 4) end
-    pcall(PlaySound, (_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878, "Master")
-    if Minimap and Minimap.PingLocation then pcall(Minimap.PingLocation, Minimap, 0, 0) end
+    local id = (_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878
+    local okS, will = pcall(PlaySound, id, "Master")
+    local okP, whyP = false, "this client has no minimap ping"
+    if Minimap and Minimap.PingLocation then okP, whyP = pcall(Minimap.PingLocation, Minimap, 0, 0) end
+    report = string.format("sound %s: %s. Minimap ping: %s", tostring(id),
+        okS and ("the game answered " .. tostring(will)) or ("failed, " .. tostring(will)),
+        okP and "sent, the game gave no error" or ("failed, " .. tostring(whyP)))
+end
+
+-- the arrow or the compass reached a hand-in stop: the same message, sound and minimap ping. False when the ping is off
+function addon.HandInSignal(stop)
+    local db = DB()
+    if not db or db.handInPing == false then return false end
+    local title = tostring(stop and (stop.name or stop.label) or "?"):gsub("^%d+%.%s*", ""):gsub("^Turn in:%s*", "")
+    Ping(title)
+    return true
 end
 
 local acc = 0
@@ -64,7 +84,7 @@ ev:SetScript("OnUpdate", function(_, dt)
                         local by = data.Field("quests", id, "finishedBy")
                         local who = addon.QuestWho and addon.QuestWho(by)
                         if who then who = who:gsub("%s*|c%x%x%x%x%x%x%x%x.-|r", "") end
-                        Ping(id, info.title, who)
+                        Ping(info.title, who)
                     elseif nearest > FAR then
                         pinged[id] = nil
                     end
@@ -81,6 +101,40 @@ function addon:HandleExtraCommand(cmd, rest)
     if (cmd or ""):lower() == "ping" then
         local a = (rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
         local db = DB()
+        if a == "test" then
+            lastSignal = -100
+            Print(L("playing the hand-in signal: a green message, a sound and a minimap ping"))
+            Ping(L("this is a test"))
+            Print(report)
+            return true
+        elseif a == "check" then
+            local px, py, pinst = api.hbd:GetPlayerWorldPosition()
+            Print(string.format("hand-in ping %s, your position %s", db.handInPing == false and "OFF" or "on", px and "known" or "NOT known"))
+            local any = false
+            for i = 1, (C_QuestLog and C_QuestLog.GetNumQuestLogEntries and C_QuestLog.GetNumQuestLogEntries() or 0) do
+                local ok, info = pcall(C_QuestLog.GetInfo, i)
+                if ok and type(info) == "table" and not info.isHeader and info.questID then
+                    local okC, complete = pcall(C_QuestLog.IsComplete, info.questID)
+                    local ready = C_QuestLog.ReadyForTurnIn and select(2, pcall(C_QuestLog.ReadyForTurnIn, info.questID))
+                    if (okC and complete) or ready == true then
+                        any = true
+                        local nearest, spotsHere = nil, 0
+                        for _, s in ipairs(Spots(info.questID)) do
+                            if px and s.instance == pinst then
+                                spotsHere = spotsHere + 1
+                                local d = math.sqrt(api.D2(s.x, s.y, px, py))
+                                if not nearest or d < nearest then nearest = d end
+                            end
+                        end
+                        Print(string.format("  %s (%s): complete %s, ready %s, places known %d, %d on this continent, nearest %s, already pinged %s",
+                            tostring(info.title), tostring(info.questID), tostring(complete), tostring(ready), #Spots(info.questID), spotsHere,
+                            nearest and string.format("%d yd", nearest) or "-", tostring(pinged[info.questID] == true)))
+                    end
+                end
+            end
+            if not any then Print("  the game reports no finished quest in your log") end
+            return true
+        end
         if a == "off" then db.handInPing = false elseif a == "on" then db.handInPing = nil end
         Print(L("hand-in ping: ") .. (db.handInPing == false and "OFF" or "on") .. L("  (/lazy ping on|off)"))
         return true

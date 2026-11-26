@@ -66,5 +66,45 @@ test("the main arrow is off until it is turned on, and compass bar on", function
     db.waypointArrowOff = false; assert(not addon.ArrowHidden())
     assert(src:find("\n    compassBar = true,", 1, true), "the compass should start on")
 end)
+test("a hand-in has more room than other stops", function()
+    local before = sounds
+    local plain = Stop("3. Kill wolves", 15)
+    db.waypoints = { plain }; A.Arrive(plain, 15)
+    assert(sounds == before, "a plain stop counted from 15 yards")
+    local turn = Stop("4. Turn in: Wolves", 15)
+    open = true
+    db.waypoints = { turn }; A.Arrive(turn, 15)
+    assert(sounds == before + 1, "no sound at a hand-in 15 yards off")
+    assert(#db.waypoints == 1, "a hand-in not handed in yet must stay")
+    open = false
+end)
+test("walking well away and back sounds again, standing around does not", function()
+    local before = sounds
+    local s = Stop("Turn in: Bears", 10)
+    open = true
+    db.waypoints = { s }
+    A.Arrive(s, 10); A.Arrive(s, 18); A.Arrive(s, 10)
+    assert(sounds == before + 1)
+    A.Arrive(s, 150); A.Arrive(s, 10)
+    assert(sounds == before + 2)
+    open = false
+end)
+test("the hand-in close by rule measures in yards", function()
+    local ex = io.open("ForeverLazy/Extras.lua", "rb"):read("a"):gsub("\r\n", "\n")
+    local i = assert(ex:find("local HANDIN_NEAR", 1, true))
+    local j = assert(ex:find("function addon.ArrowTarget()", i, true))
+    local code = "local ns, api, hbd = ...\n" .. ex:sub(i, j - 1) .. "\nreturn NearbyHandIn"
+    local clock, npcAt = 100, 300
+    GetTime = function() return clock end
+    C_QuestLog = { GetNumQuestLogEntries = function() return 1 end, GetInfo = function() return { questID = 7, title = "Wolves" } end, IsComplete = function() return true end }
+    local near = assert(load(code))({ data = { Field = function() return { { 1 }, {} } end } },
+        { AddNpcs = function(l) l[#l + 1] = { instance = 1, x = npcAt, y = 0 } end, D2 = function(a, b, c, d) return (a - c) ^ 2 + (b - d) ^ 2 end },
+        { GetPlayerWorldPosition = function() return 0, 0, 1 end })
+    local spot = near()
+    assert(spot and spot.name == "Turn in: Wolves", "300 yards away was not found")
+    npcAt, clock = 600, 200
+    assert(near() == nil, "600 yards is not close by")
+    GetTime, C_QuestLog = nil, nil
+end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)

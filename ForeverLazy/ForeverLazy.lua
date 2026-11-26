@@ -592,8 +592,8 @@ local function DecodeSteps(payload)
     if ok and type(steps) == "table" then return steps end
 end
 
-local function PlayAlert(id)
-    pcall(PlaySound, id)
+local function PlayAlert(id, channel)
+    pcall(PlaySound, id, channel)
 end
 
 function addon:SetStepText(sender, text)
@@ -908,13 +908,22 @@ local function UpdateFriendArrow(show)
 end
 
 local wpArrived
+local TURNIN_REACH = 20          -- yards: how near a hand-in counts as there
 -- Reaching a stop: the sound, and the stop goes if there is nothing left to do at it. This runs whether or not the arrow is on
 -- screen (someone may follow only the compass). Not on a flight path or as a ghost: passing over a spot is not arriving.
 local function Arrive(wp, dist)
     if (UnitOnTaxi and UnitOnTaxi("player")) or (UnitIsGhost and UnitIsGhost("player")) then return end
-    if dist and dist < db.arrival and wpArrived ~= wp then
+    -- at a hand-in I stop to talk a few steps short, and the person may not stand exactly where the data says: more room there
+    local reach = db.arrival
+    if tostring(wp.label or wp.name or ""):find("Turn in:", 1, true) then reach = math.max(reach, TURNIN_REACH) end
+    -- gone well away again: coming back counts as arriving again
+    if wpArrived == wp and dist and dist > reach * 5 then wpArrived = nil end
+    if dist and dist < reach and wpArrived ~= wp then
         wpArrived = wp
-        if db.arrivalSound then PlayAlert((_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878) end
+        -- a hand-in gets the hand-in signal (message, sound and minimap ping); any other stop the arrival sound. Both on the Master
+        -- channel, so they are heard with sound effects turned down
+        local signalled = tostring(wp.label or wp.name or ""):find("Turn in:", 1, true) and addon.HandInSignal and addon.HandInSignal(wp)
+        if not signalled and db.arrivalSound then PlayAlert((_G.SOUNDKIT and _G.SOUNDKIT.UI_QUEST_ROLLING_FORWARD_01) or 878, "Master") end
         -- a stop for a quest I have not finished (kills, items) stays until the objectives are done; getting there is not enough
         local open = addon.StopHasOpenObjectives and addon.StopHasOpenObjectives(wp)
         if addon.PlanLog and wp.quests then addon.PlanLog("arrival", (open and "arrived but kept the stop (its quest step is not done): " or "arrived, stop is done: ") .. tostring(wp.name or wp.label)) end

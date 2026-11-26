@@ -197,7 +197,9 @@ the same stop the arrow would.
 
 ## Shaman helpers
 Off until ticked, in the options under My class: a totem bar with timers and sets, a range warning (outdoors), weapon buff and
-shield buttons, ankhs and Reincarnation, cure buttons for the party, a Purge mark and a Ghost Wolf reminder. Each cast takes
+shield buttons, ankhs and Reincarnation, cure buttons for the party, a Purge mark and a Ghost Wolf reminder. Point at a totem
+on the bar for a menu of that element's totems. The panel has its own size, lock and layout, a recall button, and can hide the
+game's totem bar. Each cast takes
 its own click, and what a button casts can only change between fights. `/lazy shaman` shows what is on.
 
 ## The quest map

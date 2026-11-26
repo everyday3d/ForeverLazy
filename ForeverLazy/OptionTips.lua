@@ -130,7 +130,12 @@ local TIPS = {
     -- my class
     ["Show every class's settings"] = "Also lists the settings made for other classes.",
     ["Paladin blessings: one button blesses the next player who needs it (shows for a paladin in a group)"] = "A panel that blesses your group one click at a time.",
-    ["Totem bar: four totems with time left, and a button that drops your set"] = "Your four totems with timers. Click to drop one, or drop your whole set one click each.",
+    ["... hide the game's totem bar while mine is showing"] = "The game's own totem bar goes away while the Forever Lazy totem bar is on screen. Untick to get the game's bar back.",
+    ["Shaman panel size"] = "How big the shaman panel is. The arrows and compass keep their own sizes.",
+    ["Lock the shaman panel (untick to drag it by its title)"] = "Locked: it cannot be dragged by accident. This does not lock anything else.",
+    ["Stand the shaman panel up and down"] = "The totems in a column instead of a row. Their menus then open to the side.",
+    ["Open the totem menus the other way"] = "Downwards instead of up, or to the left instead of the right when the panel stands up.",
+    ["Totem bar: four totems with time left, and a button that drops your set"] = "Your four totems with timers. Click to drop one, drop your whole set one click each, and a recall button once you know the spell.",
     ["Tell me when I walk out of range of a totem (outdoors only)"] = "The totem turns orange and chat says so when you are over 20 yards from it.",
     ["Weapon buff button: lights up when it is missing or about to run out"] = "A button for your weapon buff that turns red when it needs doing again.",
     ["Shield button: lights up when your shield is missing or about to run out"] = "A button for your shield with its charges and time. Red means do it again.",

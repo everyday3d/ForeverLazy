@@ -352,12 +352,15 @@ local function Build()
     end)
     b:SetScript("OnLeave", function() GameTooltip:Hide() end)
     -- after the click (the cast itself is the secure part): remember who was just blessed and move on to the next person
-    b:HookScript("PostClick", function(self)
+    -- ONLY on the release: one click runs these scripts for the press and again for the release, and the spell goes out on the
+    -- release with whatever the button holds then. Moving on at the press emptied the button (or put the next player on it) first.
+    b:HookScript("PostClick", function(self, _, down)
+        if down then return end
         if addon.BlessNoteCast then addon.BlessNoteCast(self:GetAttribute("unit"), self:GetAttribute("spell")) end
     end)
-    b:HookScript("OnClick", function(self)
+    b:HookScript("OnClick", function(self, _, down)
         -- only after /lazy blessings debug, and only until the next reload
-        if addon.blessClickDebug then
+        if addon.blessClickDebug and not down then
             local macro = self:GetAttribute("macrotext")
             Print("blessings click: " .. (macro and ("casts: " .. macro) or "nothing to cast (everyone is blessed, or nobody can be reached)"))
         end

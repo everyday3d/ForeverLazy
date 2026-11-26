@@ -28,7 +28,7 @@ local PAGES = {
     { "Compass", { "Compass", "Compass size and place", "Hide the compass" } },
     { "Quests and map", { "Quest map", "Map pins", "Quest tracker", "Finding quests", "Quest hints", "Dungeons and class quests", "Quest sounds", "Library books" } },
     { "Combat", { "Nameplates", "Damage meter", "Gear", "Action bars" } },
-    { "My class", { "Class options", "Paladin blessings", "Hunter pet", "Totems", "Shaman buffs", "Shaman helpers" } },
+    { "My class", { "Class options", "Paladin blessings", "Hunter pet", "Shaman panel", "Totems", "Shaman buffs", "Shaman helpers" } },
     { "Bags and items", { "Bags", "Selling and looting", "Item tooltips", "Crafting", "Ore and herb nodes" } },
     { "Chat and groups", { "Chat", "Sharing and party", "The Hive" } },
     { "Extras", { "Couch mode", "Alerts", "Talents and skills", "Pedometer" } },
@@ -127,6 +127,7 @@ local SECTION_MODULE = {
 local SECTION_CLASS = {
     ["Paladin blessings"] = "PALADIN",
     ["Hunter pet"] = "HUNTER",
+    ["Shaman panel"] = "SHAMAN",
     ["Totems"] = "SHAMAN",
     ["Shaman buffs"] = "SHAMAN",
     ["Shaman helpers"] = "SHAMAN",
@@ -834,10 +835,24 @@ local function BuildControls(parent)
         Check(content, text, x or 16, function() return DB()[key] == true end,
             function(v) DB()[key] = v and true or nil; if addon.ShamanRefresh then addon.ShamanRefresh() end end)
     end
+    Header(content, "Shaman panel")
+    local function Panel() return addon.Shaman and addon.Shaman.Settings and addon.Shaman.Settings() or DB() end
+    local function Redraw() if addon.ShamanRefresh then addon.ShamanRefresh() end end
+    Slider(content, L("Shaman panel size"), 0.5, 2, 0.1, "%.1f", function() return tonumber(Panel().shamScale) or 1 end,
+        function(v) Panel().shamScale = v; Redraw() end)
+    Check(content, L("Lock the shaman panel (untick to drag it by its title)"), 16,
+        function() return Panel().shamLocked == true end, function(v) Panel().shamLocked = v and true or false end)
+    Check(content, L("Stand the shaman panel up and down"), 16,
+        function() return Panel().shamVertical == true end, function(v) Panel().shamVertical = v and true or nil; Redraw() end)
+    Check(content, L("Open the totem menus the other way"), 16,
+        function() return Panel().shamMenuFlip == true end, function(v) Panel().shamMenuFlip = v and true or nil; Redraw() end)
+    Button(content, L("Put the shaman panel back"), 16, 220, function() local d = DB(); if d.pos then d.pos.shaman = nil end; Redraw() end, true)
+
     Header(content, "Totems")
     ShamanCheck(L("Totem bar: four totems with time left, and a button that drops your set"), "shamTotemBar")
     ShamanCheck(L("Tell me when I walk out of range of a totem (outdoors only)"), "shamTotemRange")
-    Label(content, L("On the bar, left-click an element to drop its totem and right-click to pick another. Each set (Solo, Dungeon, Healing) remembers its own."))
+    ShamanCheck(L("... hide the game's totem bar while mine is showing"), "shamHideGameBar", 40)
+    Label(content, L("Point at an element on the bar and all its totems pop out: left-click one to drop it and keep it, right-click to only pick it. Each set (Solo, Dungeon, Healing) remembers its own. In a fight the menu drops totems, but your picks stay as they were."))
     y = y - 36
     Button(content, L("Show my totem quests"), 16, 200, function() if addon.ClassWindow then addon.ClassWindow() end end, true)
 

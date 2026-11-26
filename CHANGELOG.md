@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.27.0
+
+### Fixed
+- **The big paladin blessing button could cast nothing, or skip a player.** A click runs once when pressed and once when released, and the spell goes out on the release. The button moved on at the press, so when you were alone it emptied itself first and said everyone was blessed, and in a group it could cast on the next player instead. This has been broken since 0.24.8.
+- **The "hand-in close by" rule only worked within about 21 yards**, not the 450 it was meant to (a distance mix-up since 0.24.6). The arrow and compass now go to a finished quest close by.
+### New
+- **Shaman totem menu:** point at an element on the totem bar and all its totems pop out. Out of a fight, left-click drops one and keeps it as your pick, right-click only picks it. In a fight, left-click drops it and your picks stay as they were. It uses the game's secure menu scripts to open during fights; it has not been tried by a shaman yet, so please report.
+- **Shaman panel:** its own size and lock, across or up and down, menus that can open the other way, and a button to put it back.
+- **Totem recall button** once you know the spell.
+- **Hide the game's totem bar** while the Forever Lazy bar is showing (off until you tick it).
+- `/lazy ping test` and `/lazy ping check` show what the hand-in ping is doing.
+### Changed
+- **A turn-in counts as reached from 20 yards** and gives the hand-in message, sound and minimap ping. The arrival sound uses the Master channel. Walk well away and back and it sounds again. If you get the message but no sound or ping, run `/lazy ping test` and tell us what it prints.
+
 ## 0.26.0
 
 **Fully restart the game after updating** to load the new tombstone picture.

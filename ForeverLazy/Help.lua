@@ -280,6 +280,12 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.27.0", {
+        "PALADINS, FIXED: the big blessing button now casts what it shows. One click could cast nothing when you were alone, or skip a player in a group.",
+        "SHAMANS: point at a totem on the bar and all its totems pop out, so you click the one you want. It is set up to work in a fight too: please tell us if it does.",
+        "SHAMANS: the panel has its own size, lock and layout (across or up and down), a totem recall button, and an option to hide the game's totem bar (off until you tick it).",
+        "HAND-INS: a turn-in counts as reached from 20 yards, with the hand-in message, sound and minimap ping. The arrow and compass now find a hand-in close by from much farther off, as they were meant to.",
+    } },
     { "0.26.0", {
         "RESTART THE GAME after updating if you want the new tombstone picture.",
         "THE BIG ARROW is now OFF until you turn it on: /lazy arrow. The compass shows the way: it points at the same stop the arrow would, and reaching a stop counts without the arrow.",

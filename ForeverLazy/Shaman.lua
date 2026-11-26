@@ -1,6 +1,8 @@
 -- Shaman helpers. Everything is off until ticked (options, My class) and only works on a shaman.
---   totem bar      your four totems with time left; left-click an element drops the totem picked for it, right-click picks
---                  another one. One more button drops the whole set, one totem a click. Three sets: Solo, Dungeon, Healing.
+--   totem bar      your four totems with time left; left-click an element drops the totem picked for it. Point at an element
+--                  and all its totems pop out: left-click one drops it and keeps it as the pick, right-click only picks it.
+--                  One more button drops the whole set, one totem a click. Three sets: Solo, Dungeon, Healing.
+--   the panel      has its own size and lock, and can lie across or stand up and down
 --   range          says so when I have walked away from my totems (outdoors only: the game gives no position inside)
 --   weapon, shield buttons that light up when the weapon buff or the shield is missing or about to run out
 --   ankhs          how many I carry and whether Reincarnation is ready, with a warning when they run low
@@ -39,6 +41,7 @@ local ELEMENTS = {
 local SETS = { "Solo", "Dungeon", "Healing" }
 local IMBUES = { "Rockbiter Weapon", "Flametongue Weapon", "Frostbrand Weapon", "Windfury Weapon" }
 local SHIELDS = { "Lightning Shield", "Water Shield" }
+local RECALLS = { "Totemic Recall", "Totemic Call" }        -- brings my totems back; the name differs between versions
 local ANKH = 17030
 local RANGE = 20                 -- yards: how far most totems reach
 local SOON = 10                  -- seconds left on a totem before its time turns red
@@ -162,9 +165,27 @@ end
 --------------------------------------------------------------------------------
 local frame
 local cells, cureCells = {}, {}
-local setButton, dropButton, imbueButton, shieldButton, ankhText
+local setButton, dropButton, recallButton, imbueButton, shieldButton, ankhText
+local recalledAt = -100            -- when I last recalled my totems: they are not "gone" then, I took them
 local totems = {}          -- element key -> { name, start, duration, x, y, inst, warnedFar }
 local waiting = false
+
+-- the panel used to follow the arrows' size and lock: the first time, it takes them over as they are
+local function Own()
+    local d = DB()
+    if not d then return nil end
+    if not d.shamSplit then
+        d.shamSplit = true
+        d.shamScale = tonumber(d.scale) or 1
+        d.shamLocked = d.locked == true
+    end
+    return d
+end
+S.Settings = Own
+function S.Scale()
+    local d = Own()
+    return math.max(0.5, math.min(2, tonumber(d and d.shamScale) or 1))
+end
 
 local function SetName()
     local d = DB()
@@ -186,8 +207,8 @@ local function Tip(owner, lines)
 end
 
 -- a secure button with an icon, a line of text under or on it, and a tooltip
-local function Cell(name, width, height, tip)
-    local b = CreateFrame("Button", name, frame, "SecureActionButtonTemplate")
+local function Cell(name, width, height, tip, parent, template)
+    local b = CreateFrame("Button", name, parent or frame, template or "SecureActionButtonTemplate")
     b:SetSize(width, height)
     -- secure buttons fire on the key-down or key-up edge depending on the ActionButtonUseKeyDown setting, so listen for both
     b:RegisterForClicks("AnyUp", "AnyDown")
@@ -200,9 +221,159 @@ local function Cell(name, width, height, tip)
     b.text = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     b.text:SetPoint("CENTER", 0, 0)
     b:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square")
-    b:SetScript("OnEnter", function(self) Tip(self, tip(self)) end)
-    b:SetScript("OnLeave", function() GameTooltip:Hide() end)
+    -- hooked, not set: some buttons carry the game's own enter and leave scripts, which must stay
+    if tip then
+        b:HookScript("OnEnter", function(self) Tip(self, tip(self)) end)
+        b:HookScript("OnLeave", function() GameTooltip:Hide() end)
+    end
     return b
+end
+
+--------------------------------------------------------------------------------
+-- The pop-out menu of an element's totems
+--------------------------------------------------------------------------------
+-- Opening a menu during a fight takes the game's own "secure" enter script, which runs these few lines for us. The menu closes
+-- by itself a moment after the mouse leaves it and its button. Where the client has no such thing, the menu works between
+-- fights only.
+local ON_ENTER = [[
+    for i = 1, 4 do
+        local other = self:GetFrameRef("menu" .. i)
+        if other then other:Hide() end
+    end
+    local menu = self:GetFrameRef("mine")
+    if menu then
+        menu:Show()
+        menu:UnregisterAutoHide()
+        menu:RegisterAutoHide(0.4)
+        menu:AddToAutoHide(self)
+    end
+]]
+local menus = {}
+local toldCombatPick = false
+
+-- what the menu of an element lists: every totem of it I know, then "none"
+function S.MenuList(totemList, knownSpells)
+    local list = {}
+    for _, t in ipairs(totemList) do if knownSpells[t] then list[#list + 1] = t end end
+    if #list > 0 then list[#list + 1] = "none" end
+    return list
+end
+
+-- a click in a menu has happened (the cast, if any, is already out): remember the pick. The game does not let an addon change
+-- what a button casts during a fight, so then the old pick stays
+local function Picked(element, totem)
+    if InCombatLockdown() then
+        if not toldCombatPick then
+            toldCombatPick = true
+            Print(L("dropped. Your usual totem for this slot stays until you pick one outside a fight."))
+        end
+        return
+    end
+    Choices()[element.key] = totem
+    for _, m in ipairs(menus) do m:Hide() end
+    addon.ShamanRefresh()
+end
+
+local function MenuButton(menu, element, i)
+    local b = menu.buttons[i]
+    if b then return b end
+    b = Cell("ForeverLazy_TotemMenu" .. menu.index .. "_" .. i, 30, 30, function(self)
+        if self.totem == "none" then return { L("None"), L("Leave this element out of the set.") } end
+        return { self.totem or "", L("Left-click: drop it, and keep it as your pick. Right-click: only pick it.") }
+    end, menu)
+    -- only on the release: the spell goes out then, with what the button holds
+    b:HookScript("PostClick", function(self, _, down)
+        if down or not self.totem then return end
+        Picked(element, self.totem)
+    end)
+    menu.buttons[i] = b
+    return b
+end
+
+local function MakeMenu(index, element, cell)
+    local ok, menu = pcall(CreateFrame, "Frame", "ForeverLazy_TotemMenu" .. index, cell, "SecureHandlerBaseTemplate")
+    if not ok or not menu then menu = CreateFrame("Frame", "ForeverLazy_TotemMenu" .. index, cell) end
+    menu:SetFrameStrata("HIGH")
+    local bg = menu:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints(); bg:SetColorTexture(0, 0, 0, 0.85)
+    menu.index, menu.element, menu.buttons = index, element, {}
+    menu:Hide()
+    menus[index] = menu
+    return menu
+end
+
+-- tell each element button about the menus. Returns true when the menus can open during a fight too
+local function WireMenus()
+    local secure = SecureHandlerSetFrameRef ~= nil
+    for i, c in ipairs(cells) do
+        if secure and c.secureEnter then
+            local ok = pcall(function()
+                SecureHandlerSetFrameRef(c, "mine", menus[i])
+                for j = 1, #menus do if j ~= i then SecureHandlerSetFrameRef(c, "menu" .. j, menus[j]) end end
+                c:SetAttribute("_onenter", ON_ENTER)
+            end)
+            if not ok then secure = false end
+        else
+            secure = false
+        end
+    end
+    if not secure then
+        for i, c in ipairs(cells) do
+            if not c.plainEnter then
+                c.plainEnter = true
+                c:HookScript("OnEnter", function()
+                    if InCombatLockdown() then return end
+                    for j, m in ipairs(menus) do m:SetShown(j == i and (m.count or 0) > 0) end
+                end)
+                local away = 0
+                menus[i]:SetScript("OnUpdate", function(self, dt)
+                    if InCombatLockdown() then return end
+                    if (self.IsMouseOver and self:IsMouseOver()) or (c.IsMouseOver and c:IsMouseOver()) then away = 0
+                    else away = away + dt; if away > 0.4 then away = 0; self:Hide() end end
+                end)
+            end
+        end
+    end
+    S.menusWorkInCombat = secure
+    return secure
+end
+
+-- fill a menu and lay it out beside its element button (between fights only)
+local function FillMenu(menu, pick)
+    local element = menu.element
+    local list = S.MenuList(element.totems, known)
+    menu.count = #list
+    local d = Own()
+    local sideways = d.shamVertical == true          -- a standing panel opens its menus to the side
+    local flip = d.shamMenuFlip == true
+    for i, totem in ipairs(list) do
+        local b = MenuButton(menu, element, i)
+        b.totem = totem
+        local cast = totem ~= "none" and ("/cast " .. totem) or nil
+        b:SetAttribute("type1", cast and "macro" or nil)
+        b:SetAttribute("macrotext1", cast)
+        b.icon:SetTexture(totem == "none" and "Interface\\Buttons\\UI-GroupLoot-Pass-Up" or Texture(totem))
+        local chosen = totem == (pick or "none")
+        b.bg:SetColorTexture(chosen and 1 or 0.15, chosen and 0.82 or 0.15, chosen and 0 or 0.15, 1)
+        b:ClearAllPoints()
+        if sideways then
+            if flip then b:SetPoint("RIGHT", menu, "RIGHT", -2 - (i - 1) * 32, 0) else b:SetPoint("LEFT", menu, "LEFT", 2 + (i - 1) * 32, 0) end
+        else
+            if flip then b:SetPoint("TOP", menu, "TOP", 0, -2 - (i - 1) * 32) else b:SetPoint("BOTTOM", menu, "BOTTOM", 0, 2 + (i - 1) * 32) end
+        end
+        b:Show()
+    end
+    for i = #list + 1, #menu.buttons do menu.buttons[i]:Hide() end
+    local length = #list * 32 + 2
+    local cell = menu:GetParent()
+    menu:ClearAllPoints()
+    if sideways then
+        menu:SetSize(length, 34)
+        if flip then menu:SetPoint("RIGHT", cell, "LEFT", 0, 0) else menu:SetPoint("LEFT", cell, "RIGHT", 0, 0) end
+    else
+        menu:SetSize(34, length)
+        if flip then menu:SetPoint("TOP", cell, "BOTTOM", 0, 0) else menu:SetPoint("BOTTOM", cell, "TOP", 0, 0) end
+    end
 end
 
 local function Build()
@@ -216,7 +387,7 @@ local function Build()
     local title = CreateFrame("Button", nil, f)
     title:SetPoint("TOPLEFT"); title:SetPoint("TOPRIGHT"); title:SetHeight(16)
     title:RegisterForDrag("LeftButton")
-    title:SetScript("OnDragStart", function() if not DB().locked and not InCombatLockdown() then f:StartMoving() end end)
+    title:SetScript("OnDragStart", function() if not Own().shamLocked and not InCombatLockdown() then f:StartMoving() end end)
     title:SetScript("OnDragStop", function()
         f:StopMovingOrSizing()
         local point, _, _, x, y = f:GetPoint()
@@ -228,12 +399,8 @@ local function Build()
     frame = f
 
     for i, e in ipairs(ELEMENTS) do
-        local c = Cell("ForeverLazy_Totem" .. i, 40, 40, function(self)
-            local lines = { L(e.name) .. ": " .. (self.pick or L("nothing")) }
-            if totems[e.key] then lines[#lines + 1] = L("Down now: ") .. totems[e.key].name end
-            lines[#lines + 1] = L("Left-click: drop it. Right-click: pick another (between fights). Shift-right-click goes back.")
-            return lines
-        end)
+        local made, c = pcall(Cell, "ForeverLazy_Totem" .. i, 40, 40, nil, nil, "SecureActionButtonTemplate,SecureHandlerEnterLeaveTemplate")
+        if made and c then c.secureEnter = true else c = Cell("ForeverLazy_Totem" .. i, 40, 40, nil) end
         c.element = e
         c:HookScript("OnClick", function(self, mouse, down)
             if down or mouse ~= "RightButton" then return end
@@ -242,7 +409,9 @@ local function Build()
             addon.ShamanRefresh()
         end)
         cells[i] = c
+        MakeMenu(i, e, c)
     end
+    WireMenus()
 
     setButton = CreateFrame("Button", nil, f, "UIPanelButtonTemplate")
     setButton:SetSize(66, 22)
@@ -262,6 +431,12 @@ local function Build()
     dropButton.icon:Hide()
     dropButton.bg:SetColorTexture(0.1, 0.35, 0.1, 0.9)
     dropButton.text:SetText(L("Drop the set"))
+
+    recallButton = Cell("ForeverLazy_TotemRecall", 22, 22, function(self)
+        return { self.spell or L("Recall"), L("Takes your totems back.") }
+    end)
+    recallButton.icon:ClearAllPoints()
+    recallButton.icon:SetPoint("TOPLEFT", 1, -1); recallButton.icon:SetPoint("BOTTOMRIGHT", -1, 1)
 
     local function BuffButton(name, what, choices, dbKey)
         local b = Cell(name, 84, 26, function(self)
@@ -299,7 +474,7 @@ local function Place()
     local p = DB().pos and DB().pos.shaman or { point = "LEFT", x = 20, y = -80 }
     frame:ClearAllPoints()
     frame:SetPoint(p.point, UIParent, p.point, p.x, p.y)
-    frame:SetScale(DB().scale or 1)
+    frame:SetScale(S.Scale())
 end
 
 --------------------------------------------------------------------------------
@@ -314,7 +489,7 @@ local function PaintTotems()
         if not hidden then
             local before = totems[e.key]
             local event = S.TotemEvent(before, t, now)
-            if event == "gone" and Opt("shamTotemBar") then Print(string.format(L("your %s is gone"), before.name)) end
+            if event == "gone" and Opt("shamTotemBar") and now - recalledAt > 3 then Print(string.format(L("your %s is gone"), before.name)) end
             if t and (not before or before.start ~= t.start or before.name ~= t.name) then
                 -- just dropped: it stands where I stand now
                 totems[e.key] = { name = t.name, start = t.start, duration = t.duration, x = px, y = py, inst = inst }
@@ -434,6 +609,27 @@ local function Paint()
 end
 
 --------------------------------------------------------------------------------
+-- The game's own totem bar
+--------------------------------------------------------------------------------
+local gameBarHidden = false
+local gameBarWasShown = false
+-- hidden through the game's own visibility rule, so it stays hidden when the game tries to show it, and nothing of the game's is
+-- moved or overwritten. Between fights only
+local function GameBar(hide)
+    local bar = _G.MultiCastActionBarFrame
+    if not (bar and RegisterStateDriver and UnregisterStateDriver) then return end
+    if hide and not gameBarHidden then
+        gameBarWasShown = bar.IsShown and bar:IsShown() and true or false
+        RegisterStateDriver(bar, "visibility", "hide")
+        gameBarHidden = true
+    elseif not hide and gameBarHidden then
+        UnregisterStateDriver(bar, "visibility")
+        if gameBarWasShown then bar:Show() end
+        gameBarHidden = false
+    end
+end
+
+--------------------------------------------------------------------------------
 -- What the buttons cast and where they sit (between fights only: they are secure buttons)
 --------------------------------------------------------------------------------
 local function CastMacro(button, mouse, text)
@@ -451,43 +647,73 @@ local function Refresh()
     if InCombatLockdown() then waiting = true; return end
     waiting = false
     if not wanted then
+        GameBar(false)
         if frame then frame:Hide() end
         return
     end
     ReadSpells()
+    Own()
     if not frame then Build() end
     local y = -18
+
+    local tall = Own().shamVertical == true
+    frame:SetWidth(tall and 100 or 176)
 
     -- totems
     local names, any = {}, false
     local choices = Choices()
+    for _, e in ipairs(ELEMENTS) do
+        for _, t in ipairs(e.totems) do if known[t] then any = true end end
+    end
     for i, e in ipairs(ELEMENTS) do
         local c = cells[i]
         local pick = S.Pick(choices[e.key], e.totems, known)
         c.pick = pick
         names[#names + 1] = pick or ""
-        for _, t in ipairs(e.totems) do if known[t] then any = true end end
         CastMacro(c, "left", pick and ("/cast " .. pick) or nil)
         c.icon:SetTexture(pick and Texture(pick) or "Interface\\Icons\\INV_Misc_QuestionMark")
         c.icon:SetShown(pick ~= nil)
         c:ClearAllPoints()
-        c:SetPoint("TOPLEFT", frame, "TOPLEFT", 5 + (i - 1) * 42, y)
+        if tall then
+            c:SetPoint("TOPLEFT", frame, "TOPLEFT", 30, y - (i - 1) * 42)
+        else
+            c:SetPoint("TOPLEFT", frame, "TOPLEFT", 5 + (i - 1) * 42, y)
+        end
         c:SetShown(showBar and any)
+        FillMenu(menus[i], pick)
     end
-    for _, c in ipairs(cells) do c:SetShown(showBar and any) end
     local sequence = S.Sequence(names)
     CastMacro(dropButton, "left", sequence)
     dropButton.list = sequence and sequence:gsub("^/castsequence reset=15/combat ", "") or L("no totems yet")
+    local recall
+    for _, name in ipairs(RECALLS) do if known[name] then recall = name; break end end
+    recallButton.spell = recall
+    CastMacro(recallButton, "left", recall and ("/cast " .. recall) or nil)
+    recallButton.icon:SetTexture(recall and Texture(recall) or "Interface\\Icons\\INV_Misc_QuestionMark")
+    recallButton:SetShown(showBar and any and recall ~= nil)
     setButton:SetText(L(SetName()))
     setButton:SetShown(showBar and any); dropButton:SetShown(showBar and any)
+    -- the game's bar only goes while mine is really there to take its place
+    GameBar(Opt("shamHideGameBar") and showBar and any)
     if showBar and any then
-        y = y - 43
-        setButton:ClearAllPoints(); setButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, y)
-        dropButton:ClearAllPoints(); dropButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 73, y)
-        y = y - 25
+        setButton:ClearAllPoints(); dropButton:ClearAllPoints(); recallButton:ClearAllPoints()
+        if tall then
+            y = y - 4 * 42 - 1
+            setButton:SetSize(90, 22); setButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, y)
+            y = y - 24
+            dropButton:SetSize(recall and 66 or 90, 22); dropButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, y)
+            if recall then recallButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 73, y) end
+            y = y - 25
+        else
+            y = y - 43
+            setButton:SetSize(66, 22); setButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, y)
+            dropButton:SetSize(recall and 78 or 102, 22); dropButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 73, y)
+            if recall then recallButton:SetPoint("TOPLEFT", frame, "TOPLEFT", 153, y) end
+            y = y - 25
+        end
     end
 
-    -- weapon buff and shield
+    -- weapon buff and shield: side by side, or one above the other
     local x = 5
     for _, spec in ipairs({ { imbueButton, "shamImbue" }, { shieldButton, "shamShield" } }) do
         local b, key = spec[1], spec[2]
@@ -498,8 +724,9 @@ local function Refresh()
         local show = Opt(key) and pick ~= nil
         b:SetShown(show)
         if show then
+            b:SetSize(tall and 90 or 84, 26)
             b:ClearAllPoints(); b:SetPoint("TOPLEFT", frame, "TOPLEFT", x, y)
-            x = x + 86
+            if tall then y = y - 29 else x = x + 86 end
         end
     end
     if x > 5 then y = y - 29 end
@@ -509,7 +736,8 @@ local function Refresh()
     ankhText:SetShown(showAnkh and true or false)
     if showAnkh then
         ankhText:ClearAllPoints(); ankhText:SetPoint("TOPLEFT", frame, "TOPLEFT", 7, y - 2)
-        y = y - 18
+        ankhText:SetWidth(tall and 90 or 166); ankhText:SetJustifyH("LEFT")
+        y = y - (tall and 30 or 18)
     end
 
     -- cure buttons
@@ -519,11 +747,13 @@ local function Refresh()
         CastMacro(c, "right", known["Cure Disease"] and ("/cast [@" .. c.unit .. ",help,nodead] Cure Disease") or nil)
         c:SetShown(canCure and true or false)
         if canCure then
-            c:ClearAllPoints(); c:SetPoint("TOPLEFT", frame, "TOPLEFT", 5 + (i - 1) * 33.5, y)
+            c:SetSize(tall and 90 or 32, tall and 20 or 24)
+            c:ClearAllPoints()
+            if tall then c:SetPoint("TOPLEFT", frame, "TOPLEFT", 5, y - (i - 1) * 22)
+            else c:SetPoint("TOPLEFT", frame, "TOPLEFT", 5 + (i - 1) * 33.5, y) end
         end
     end
-    if canCure then y = y - 27 end
-
+    if canCure then y = y - (tall and (#cureCells * 22 + 3) or 27) end
     if y == -18 then frame:Hide(); return end           -- nothing learned yet that the ticked helpers could use
     frame:SetHeight(-y + 3)
     Place()
@@ -594,11 +824,17 @@ end
 
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "SPELLS_CHANGED", "PLAYER_REGEN_ENABLED", "GROUP_ROSTER_UPDATE",
-    "PLAYER_TOTEM_UPDATE", "UNIT_AURA", "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED" }) do
+    "PLAYER_TOTEM_UPDATE", "UNIT_AURA", "NAME_PLATE_UNIT_ADDED", "NAME_PLATE_UNIT_REMOVED", "UNIT_SPELLCAST_SUCCEEDED" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
-ev:SetScript("OnEvent", function(_, event, unit)
+ev:SetScript("OnEvent", function(_, event, unit, _, spellId)
     if not IsShaman() then return end
+    if event == "UNIT_SPELLCAST_SUCCEEDED" then
+        if unit ~= "player" or not spellId or not Plain(spellId) then return end
+        local name = (C_Spell and C_Spell.GetSpellName and C_Spell.GetSpellName(spellId)) or (GetSpellInfo and GetSpellInfo(spellId))
+        for _, r in ipairs(RECALLS) do if name == r then recalledAt = GetTime() end end
+        return
+    end
     if event == "NAME_PLATE_UNIT_REMOVED" then
         local plate = C_NamePlate.GetNamePlateForUnit(unit)
         if plate and marks[plate] then marks[plate]:Hide() end
@@ -645,6 +881,13 @@ function addon:HandleExtraCommand(cmd, rest)
         Print(string.format(L("shaman helpers: %d of %d on (/lazy shaman all|off, or the options under My class)"), on, #KEYS))
         if not IsShaman() then Print(L("they only work on a shaman")) end
         pcall(Refresh)
+        if IsShaman() and not (recallButton and recallButton.spell) then
+            Print(L("no totem recall spell was found in your spellbook (the button shows once you know it, with the totem bar on)"))
+        end
+        if frame and S.menusWorkInCombat ~= nil then
+            Print(S.menusWorkInCombat and L("the totem menus are set up to open during fights")
+                or L("this client would not set up the totem menus for fights: they open between fights only"))
+        end
         return true
     end
     if prev then return prev(self, cmd, rest) end
