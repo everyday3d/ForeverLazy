@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.28.1
+
+### New
+- **`/lazy flash on|off`** turns the cast bar flash on or off (it is still off until you turn it on).
+- **`/lazy flash check`**: target a mob and type it while the mob is casting. It says whether the flash is on, whether your interrupt is found and ready, what the game reports about the cast, and whether it found the nameplate's cast bar.
+
+### Fixed
+- **Blocked-action error during fights:** targeting or pointing at a mob in combat, including from the hunt panel, could raise an addon error. The addon was asking how close the mob was, which the game does not allow during a fight. It now only asks outside combat.
+- **Interrupt detection** also reads your spellbook, so a higher rank of an interrupt should not be missed.
+
 ## 0.28.0
 
 **Fully restart the game after updating** (this version adds new files).

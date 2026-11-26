@@ -206,6 +206,11 @@ Off until ticked (Chat and groups, Player tooltips, or `/lazy spec on`). Point a
 tooltip shows their spec, such as `Spec: Holy (31/20/0)`. Another player has to be close enough to inspect, and new players
 are not looked up during a fight. `/lazy spec check` with a player targeted says what the game answers.
 
+## Interrupt marker and cast bar flash
+
+- While a mob casts, its nameplate shows the spell: green border when your interrupt is ready, red on cooldown, grey if you have none.
+- The cast bar can also flash while your interrupt is ready (off until you turn it on): `/lazy flash on`. If nothing flashes, target the mob and type `/lazy flash check` while it casts.
+
 ## Shaman helpers
 Off until ticked, in the options under My class: a totem bar with timers and sets, a range warning (outdoors), weapon buff and
 shield buttons, ankhs and Reincarnation, cure buttons for the party, a Purge mark and a Ghost Wolf reminder. Point at a totem

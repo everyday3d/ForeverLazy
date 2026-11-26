@@ -92,7 +92,8 @@ local function SeenUnit(unit)
         n.maxLevel = n.maxLevel and math.max(n.maxLevel, lvl) or lvl
     end
     -- only count a position when the creature is close to me (about 28 yards), so the spot is about where it stands
-    local close = CheckInteractDistance and CheckInteractDistance(unit, 4)
+    -- the game blocks this question during a fight (an "addon tried to call a protected function" error), so only ask outside one
+    local close = not (InCombatLockdown and InCombatLockdown()) and CheckInteractDistance and CheckInteractDistance(unit, 4)
     NoteSpot(n, close)
 end
 

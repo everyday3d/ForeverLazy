@@ -280,6 +280,11 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.28.1", {
+        "HUNT AND TARGETING: no more blocked-action error from the addon when you target or point at a mob during a fight.",
+        "CAST BAR FLASH: /lazy flash on turns it on (it is off until you do). /lazy flash check, typed while your target casts, says why nothing flashes.",
+        "INTERRUPTS are now looked up in your spellbook too.",
+    } },
     { "0.28.0", {
         "SPECS ON TOOLTIPS: point at a player to see their spec (off until you turn it on: /lazy spec on).",
         "PALADIN HELPERS under My class: seal and aura buttons with pop-out menus, Righteous Fury and cleanse buttons. All start off.",

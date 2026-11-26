@@ -42,7 +42,18 @@ local function Cooldown(spell)
     end
 end
 
--- 1 ready, 0 on cooldown, nil I have none
+-- the spellbook, read at most every few seconds. A higher rank has another spell id, so the name in the book is the sure test.
+local book, bookAt
+local function InBook(name)
+    if not addon.SpellsKnown then return false end
+    if not book or GetTime() - bookAt > 5 then
+        local ok, found = pcall(addon.SpellsKnown)
+        book, bookAt = ok and found or {}, GetTime()
+    end
+    return book[name] == true
+end
+
+-- 1 ready, 0 on cooldown, nil I have none. The second answer is the interrupt it is talking about.
 local function InterruptState()
     local _, class = UnitClass("player")
     local list = INTERRUPTS[class or ""]
@@ -50,19 +61,19 @@ local function InterruptState()
     local known
     for _, id in ipairs(list) do
         local name = SpellName(id)
-        local isKnown = name and ((GetSpellInfo and GetSpellInfo(name) ~= nil) or (IsSpellKnown and IsSpellKnown(id))
+        local isKnown = name and (InBook(name) or (GetSpellInfo and GetSpellInfo(name) ~= nil) or (IsSpellKnown and IsSpellKnown(id))
             or (IsPlayerSpell and IsPlayerSpell(id)))
         if isKnown then
-            known = true
+            known = known or name
             local s, d = Cooldown(name)
             if s and d and not (issecretvalue and (issecretvalue(s) or issecretvalue(d))) then
-                if s == 0 or d <= 1.6 then return 1 end
+                if s == 0 or d <= 1.6 then return 1, name end
             else
-                return 1
+                return 1, name
             end
         end
     end
-    return known and 0 or nil
+    if known then return 0, known end
 end
 
 local markers = {}     -- nameplate frame -> marker frame
@@ -186,6 +197,58 @@ ev:SetScript("OnUpdate", function(_, dt)
     acc = 0
     for _, f in pairs(markers) do if f:IsShown() then pcall(Paint, f) end end
 end)
+
+--------------------------------------------------------------------------------
+-- /lazy flash [on|off]     /lazy flash check: why nothing is flashing (best typed while the mob I target is casting)
+--------------------------------------------------------------------------------
+local function Check()
+    local Print, L = addon.Print, ns.L
+    local db = DB()
+    Print(L("flash check: cast bar flash ") .. ((db and db.castFlash == true) and "on" or L("OFF (/lazy flash on)"))
+        .. L(", interrupt marker ") .. (On() and "on" or L("OFF (tick it under Nameplates)")))
+    local st, spell = InterruptState()
+    if st == 1 then Print(L("flash check: your interrupt is ready: ") .. spell)
+    elseif st == 0 then Print(L("flash check: on cooldown, so no flash right now: ") .. spell)
+    else Print(L("flash check: no interrupt found for your character, so nothing will flash")) end
+    if not UnitExists("target") or not UnitCanAttack("player", "target") then
+        Print(L("flash check: for the rest, target a mob and type this while it is casting"))
+        return
+    end
+    local function Read(fn, at)
+        local r = { pcall(fn, "target") }
+        local name = r[2]
+        if not r[1] then return nil end
+        if issecretvalue and issecretvalue(name) then return "hidden" end
+        if not name then return nil end
+        local no = r[at]
+        if issecretvalue and issecretvalue(no) then no = false end
+        return name, no and true or false
+    end
+    local name, locked = Read(UnitCastingInfo, 9)
+    if not name then name, locked = Read(UnitChannelInfo, 8) end
+    if not name then Print(L("flash check: the game reports no cast from your target"))
+    elseif name == "hidden" then Print(L("flash check: the game hides what your target is casting from addons"))
+    else Print(L("flash check: casting ") .. name .. (locked and L(" (the game says it can not be interrupted)") or L(" (can be interrupted)"))) end
+    local plate = C_NamePlate and C_NamePlate.GetNamePlateForUnit and C_NamePlate.GetNamePlateForUnit("target")
+    Print(L("flash check: nameplate ") .. (plate and L("found") or L("not shown (turn enemy nameplates on)"))
+        .. (plate and (L(", cast bar on it ") .. (CastBarOf(plate) and L("found") or L("not found, the spell icon flashes instead"))) or ""))
+end
+
+local prev = addon.HandleExtraCommand
+function addon:HandleExtraCommand(cmd, rest)
+    if (cmd or ""):lower() == "flash" then
+        local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
+        if a == "check" then Check(); return true end
+        local d = DB()
+        if a == "on" then d.castFlash = true
+        elseif a == "off" then d.castFlash = nil
+        elseif a == "" then d.castFlash = (d.castFlash ~= true) or nil end
+        addon.Print(ns.L("cast bar flash: ") .. (d.castFlash == true and "on" or "off") .. ns.L("  (/lazy flash on|off|check)"))
+        if addon.RefreshOptions then addon.RefreshOptions() end
+        return true
+    end
+    if prev then return prev(self, cmd, rest) end
+end
 
 -- reached the end of the file without an error (used by /lazy check)
 do local ns2 = select(2, ...); if ns2 and ns2.addon then ns2.addon.loaded = ns2.addon.loaded or {}; ns2.addon.loaded["NameplateCasts.lua"] = true end end
