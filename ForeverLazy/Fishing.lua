@@ -5,6 +5,7 @@
 --   a lure warning and a button that puts your best lure on
 --   picking up the catch, a catch log, your skill and the points gained, and pool spots on the world map
 --   /lazy fish log [all|reset]    what you caught        /lazy fish status    your skill, pole and lure
+--   /lazy fish cook               what you can cook from your catch, and what still raises your cooking
 -- Nothing clicks the bobber or casts by itself: you press the key or the button every time.
 local ADDON, ns = ...
 local L = ns.L
@@ -90,6 +91,43 @@ function F.IsPoolName(name)
     local n = (name or ""):lower()
     return (n:find("school", 1, true) or n:find("swarm", 1, true) or n:find("oil spill", 1, true)
         or n:find("floating wreckage", 1, true) or n:find("floating debris", 1, true)) and true or false
+end
+
+-- raw fish a cook (or an alchemist) uses. Anything in the catch log counts as a catch too
+F.RAW_FISH = {}
+for _, id in ipairs({ 6291, 6303, 6289, 6317, 6361, 6308, 6362, 8365, 4603, 6358, 6359, 6522, 13754, 13755, 13756, 13758, 13759,
+                      13760, 13888, 13889, 13893, 21071, 21153 }) do F.RAW_FISH[id] = true end
+
+local KIND_ORDER = { optimal = 1, medium = 2, easy = 3, trivial = 4 }
+
+-- recipes: as saved from the cooking window. count(id): in my bags. isCatch(id, name): is this something I fished up
+-- gives the recipes that use a catch I am carrying (what I can make now first, best colour first):
+--   { name, kind, can = how many now, skill = gives points, short = { { name, need } } for one more, when can is 0 }
+function F.CookList(recipes, count, isCatch)
+    local out, used = {}, {}
+    for _, r in ipairs(recipes or {}) do
+        local holding, can, short = false, nil, {}
+        for _, re in ipairs(r.reagents or {}) do
+            local have, need = re.id and count(re.id) or 0, re.count or 1
+            if re.id and have > 0 and isCatch(re.id, re.name) then
+                holding = true
+                used[re.id] = true
+            end
+            local times = math.floor(have / need)
+            if not can or times < can then can = times end
+            if have < need then short[#short + 1] = { name = re.name or "?", need = need - have } end
+        end
+        if holding then
+            out[#out + 1] = { name = r.name, kind = r.kind, can = can or 0, short = short, skill = r.kind ~= nil and r.kind ~= "trivial" }
+        end
+    end
+    table.sort(out, function(a, b)
+        if (a.can > 0) ~= (b.can > 0) then return a.can > 0 end
+        local x, y = KIND_ORDER[a.kind] or 4, KIND_ORDER[b.kind] or 4
+        if x ~= y then return x < y end
+        return a.name < b.name
+    end)
+    return out, used
 end
 
 --------------------------------------------------------------------------------
@@ -337,6 +375,83 @@ local function Status()
 end
 
 --------------------------------------------------------------------------------
+-- Cooking my catch. The recipes and their colours are the ones from the last time I opened the cooking window
+--------------------------------------------------------------------------------
+local COLOR = { optimal = { "ffff8040", "orange" }, medium = { "ffffff00", "yellow" }, easy = { "ff40c040", "green" }, trivial = { "ff808080", "grey" } }
+
+local function CookingData()
+    if not addon.CraftData then return nil end
+    local name
+    if C_Spell and C_Spell.GetSpellName then name = C_Spell.GetSpellName(2550) end
+    if not name and GetSpellInfo then name = GetSpellInfo(2550) end
+    return (type(name) == "string" and addon.CraftData(name)) or addon.CraftData("Cooking")
+end
+
+local function CatchTest()
+    local logged = {}
+    for _, z in pairs(DB().fishCatch or {}) do for name in pairs(z) do logged[name] = true end end
+    -- the log also has junk and cloth in it, so a name from it only counts when it reads like a fish
+    return function(id, name)
+        if F.RAW_FISH[id] then return true end
+        if not (name and logged[name]) then return false end
+        local n = name:lower()
+        return (n:find("fish") or n:find("raw ") or n:find("eel") or n:find("clam") or n:find("lobster") or n:find("squid")) and true or false
+    end
+end
+
+-- the list, and the raw fish in my bags that no recipe of mine uses. nil when I have not seen the cooking window
+function F.Cooking()
+    local data = CookingData()
+    if not data or not data.recipes then return nil end
+    local list, used = F.CookList(data.recipes, ItemCount, CatchTest())
+    local unused = {}
+    for id in pairs(F.RAW_FISH) do
+        local n = ItemCount(id)
+        if n > 0 and not used[id] then unused[#unused + 1] = { name = ItemName(id), n = n } end
+    end
+    table.sort(unused, function(a, b) return a.name < b.name end)
+    return list, unused, data
+end
+
+local function CookLine(e)
+    local color = COLOR[e.kind] or COLOR.trivial
+    local text = "|c" .. color[1] .. e.name .. "|r (" .. L(color[2]) .. ")"
+    if e.can > 0 then return text .. ": " .. string.format(L("you can make %d"), e.can) end
+    local parts = {}
+    for _, s in ipairs(e.short) do parts[#parts + 1] = s.need .. " x " .. s.name end
+    return text .. ": " .. L("still need ") .. table.concat(parts, ", ")
+end
+
+function F.CookLines()
+    local list, unused, data = F.Cooking()
+    if not list then return { L("Open your cooking window once, so I can read your recipes.") } end
+    local lines = {}
+    local ready, gives = 0, 0
+    for _, e in ipairs(list) do
+        if e.can > 0 then
+            ready = ready + 1
+            if e.skill then gives = gives + 1 end
+        end
+        lines[#lines + 1] = CookLine(e)
+    end
+    if #list == 0 then
+        lines[#lines + 1] = L("No fish in your bags that a recipe you know uses.")
+    else
+        table.insert(lines, 1, string.format(L("Ready to cook now: %d, and %d of those can still raise your cooking"), ready, gives))
+        if data.max and data.rank and data.rank >= data.max then
+            lines[#lines + 1] = L("Your cooking was at its cap: train more before it can go up.")
+        end
+        lines[#lines + 1] = L("Colours are from the last time you opened your cooking window.")
+    end
+    for _, u in ipairs(unused) do lines[#lines + 1] = string.format(L("No recipe you know uses: %d x %s"), u.n, u.name) end
+    return lines, ready, gives
+end
+
+local function ShowCooking()
+    for _, line in ipairs((F.CookLines())) do Print(line) end
+end
+
+--------------------------------------------------------------------------------
 -- Lure warnings
 --------------------------------------------------------------------------------
 local warnedNone, warnedLow = false, false
@@ -365,7 +480,7 @@ end
 -- The buttons (secure: what they do can only be changed between fights)
 --------------------------------------------------------------------------------
 local castKey, swapKey
-local bar, barCast, barSwap, barLure, skillText, catchText
+local bar, barCast, barSwap, barLure, skillText, catchText, cookLine, cookText
 
 local function Secure(name, parent, template)
     local b = CreateFrame("Button", name, parent, template or "SecureActionButtonTemplate")
@@ -422,6 +537,18 @@ local function BuildBar()
     barCast = BarButton("ForeverLazy_FishBarCast")
     barSwap = BarButton("ForeverLazy_FishBarSwap")
     barLure = BarButton("ForeverLazy_FishBarLure")
+    -- a line to point at for the list, or click to have it in chat
+    cookLine = CreateFrame("Button", nil, bar)
+    cookLine:SetSize(324, 14)
+    cookLine:SetPoint("TOPLEFT", 6, -20)
+    cookText = cookLine:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    cookText:SetPoint("LEFT", 0, 0)
+    Tip(cookLine, function()
+        local lines = { L("Cooking your catch") }
+        for i, line in ipairs((F.CookLines())) do if i <= 14 then lines[#lines + 1] = line end end
+        return lines
+    end)
+    cookLine:SetScript("OnClick", ShowCooking)
     Tip(barCast, function() return { L("Cast your line"), L("With the pole in your bags, the first press puts it on.") } end)
     Tip(barSwap, function()
         local w = Gear().weapons
@@ -462,11 +589,15 @@ function F.Paint()
     skillText:SetText(parts)
     local _, total, value = F.Summary(session)
     catchText:SetText((Opt("fishLog") and total > 0) and string.format(L("%d caught, %s"), total, Money(value)) or "")
+    if cookText and Opt("fishCook") then
+        local _, ready, gives = F.CookLines()
+        cookText:SetText(ready and string.format(L("Cook now: %d recipes, %d for skill"), ready, gives) or L("Cooking: open your cooking window once"))
+    end
 end
 
 local function BarWanted()
     if Opt("fishSwap") then return true end                          -- the button has to be there to put the pole on
-    return (Opt("fishLure") or Opt("fishSkill") or Opt("fishLog")) and PoleOn()
+    return (Opt("fishLure") or Opt("fishSkill") or Opt("fishLog") or Opt("fishCook")) and PoleOn()
 end
 
 local pending = false
@@ -497,6 +628,8 @@ function F.Update()
     local p = d.pos and d.pos.fishing
     if p then bar:SetPoint(p[1], UIParent, p[1], p[2], p[3]) else bar:SetPoint("CENTER", UIParent, "CENTER", 0, -180) end
     bar:SetScale(tonumber(d.fishScale) or 1)
+    bar:SetSize(336, Opt("fishCook") and 76 or 62)
+    cookLine:SetShown(Opt("fishCook"))
     SetMacro(barCast, cast)
     barCast:SetText(L("Cast"))
     SetMacro(barSwap, swap)
@@ -691,8 +824,9 @@ function addon:HandleExtraCommand(cmd, rest)
             F.Paint()
             return true
         elseif a == "status" then Status(); return true
+        elseif a == "cook" then ShowCooking(); return true
         elseif a == "help" then
-            Print(L("/lazy fish (nearest pool), /lazy fish status, /lazy fish log, /lazy fish log all, /lazy fish log reset. Turn the helpers on in the options, under Fishing."))
+            Print(L("/lazy fish (nearest pool), /lazy fish status, /lazy fish cook, /lazy fish log, /lazy fish log all, /lazy fish log reset. Turn the helpers on in the options, under Fishing."))
             return true
         end
     end

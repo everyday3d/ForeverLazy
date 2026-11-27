@@ -26,6 +26,11 @@ local function Section(name)
     return root[name][CharKey()]
 end
 
+-- what I saved from a profession window: { rank, max, recipes, t }, or nil when I have not opened it
+function addon.CraftData(profession)
+    return Section("crafting")[profession]
+end
+
 -- an item's name, from whichever item function this client has (nil if it is not loaded yet)
 local function ItemName(id)
     if not id then return nil end

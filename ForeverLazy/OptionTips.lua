@@ -13,6 +13,7 @@ local TIPS = {
     ["Pick up what I fish up by itself"] = "Takes everything from the fishing loot window, even with the game's auto loot off. Other loot is left alone.",
     ["Keep a catch log for each zone (/lazy fish log)"] = "Writes down what you fish up and what a vendor would pay for it.",
     ["Show my fishing skill and the points gained this session"] = "Shown on the fishing bar while your pole is on.",
+    ["Show what I can cook from my catch on the fishing bar (/lazy fish cook)"] = "How many of your fish recipes you can make now and how many still raise cooking. Point at the line for the list. Open your cooking window once first.",
     ["Show known fishing pool spots on the world map"] = "Fish icons where pools can turn up. A marker does not mean the pool is there right now.",
     ["Fishing bar size"] = "How big the fishing bar is.",
     ["Lock the fishing bar (untick to drag it)"] = "Locked: it stays where it is. Unlocked: drag it where you want it.",

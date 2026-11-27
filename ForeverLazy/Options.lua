@@ -944,10 +944,11 @@ local function BuildControls(parent)
     FishCheck(L("Pick up what I fish up by itself"), "fishAutoLoot")
     FishCheck(L("Keep a catch log for each zone (/lazy fish log)"), "fishLog")
     FishCheck(L("Show my fishing skill and the points gained this session"), "fishSkill")
+    FishCheck(L("Show what I can cook from my catch on the fishing bar (/lazy fish cook)"), "fishCook")
     FishCheck(L("Show known fishing pool spots on the world map"), "fishPools", function() if addon.Fish then addon.Fish.DrawPools() end end)
 
     Header(content, "Fishing bar")
-    Label(content, L("The bar appears with the pole button ticked, or while your pole is on with the lure, skill or catch log ticked. A second key for pole and weapons is in the game's key bindings, under AddOns."))
+    Label(content, L("The bar appears with the pole button ticked, or while your pole is on with the lure, skill, catch log or cooking ticked. A second key for pole and weapons is in the game's key bindings, under AddOns."))
     y = y - 36
     Slider(content, L("Fishing bar size"), 0.5, 2, 0.1, "%.1f", function() return tonumber(DB().fishScale) or 1 end,
         function(v) DB().fishScale = v; FishRedraw() end)

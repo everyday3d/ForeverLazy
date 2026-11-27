@@ -226,6 +226,7 @@ All of it is off until you turn it on, on the **Fishing** page of the options.
 - **Pole button:** pole on with one click, and your weapons, shield or off-hand back with the next. There is a key for it in the game's key bindings too.
 - **Lure button:** puts the best lure in your bags that your skill allows on your pole, with a warning when there is none or it is about to wear off.
 - **Auto loot while fishing**, a **catch log** per zone (`/lazy fish log`, `/lazy fish log all`, `/lazy fish log reset`), your **skill and points gained** (`/lazy fish status`), and **pool spots on the world map**. A map marker does not mean the pool is there right now.
+- **Cooking tie-in:** `/lazy fish cook`, or a tick that adds a line to the fishing bar, shows the recipes you know that use the fish in your bags: how many you can make now, what is missing, and which can still raise your cooking. Open your cooking window once first; the colours are from the last time you opened it.
 - `/lazy fish` still takes you to the nearest pool.
 
 Nothing fishes for you: you press the key or button every cast and click the bobber yourself.

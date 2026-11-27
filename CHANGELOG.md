@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.31.0
+
+From 0.30.0, `/reload` is enough. Coming from 0.29.1 or older? **Fully restart the game after updating.**
+
+### New
+- **Cooking your catch.** `/lazy fish cook` lists the recipes you know that use the fish in your bags: how many you can make now, what is still missing, and which can still raise your cooking. It also names common raw fish you are carrying that none of your recipes use.
+- A tick on the Fishing page adds it to the fishing bar while your pole is on (off until you turn it on). Point at the line for the list, or click it to have the list in chat.
+- It uses your recipes from your own cooking window, so open that once first. The colours are from the last time you opened it, and the Crafting module has to be on for it to read them.
+- Not yet confirmed in game. Please report what works and what does not.
+
 ## 0.30.0
 
 **Fully restart the game after updating** (a new file and new key bindings).

@@ -202,5 +202,34 @@ test("/lazy fish 2 is still the pool finder's", function()
     eq(addon:HandleExtraCommand("fish", "2"), nil)
 end)
 
+local cooking = { rank = 10, max = 75, recipes = {
+    { name = "Brilliant Smallfish", kind = "optimal", reagents = { { id = 6291, name = "Raw Brilliant Smallfish", count = 1 } } },
+    { name = "Smoked Sagefish", kind = "medium", reagents = { { id = 21071, name = "Raw Sagefish", count = 1 }, { id = 2678, name = "Mild Spices", count = 1 } } },
+    { name = "Slitherskin Mackerel", kind = "trivial", reagents = { { id = 6303, name = "Raw Slitherskin Mackerel", count = 1 } } },
+    { name = "Charred Wolf Meat", kind = "optimal", reagents = { { id = 2672, name = "Stringy Wolf Meat", count = 1 } } },
+} }
+test("cooking: only recipes that use a fish I carry, ready ones first, what is missing said", function()
+    local have = { [6291] = 4, [21071] = 2, [6303] = 1, [2672] = 9 }
+    local list, used = F.CookList(cooking.recipes, function(id) return have[id] or 0 end, function(id) return F.RAW_FISH[id] end)
+    eq(#list, 3, "the wolf meat is no catch")
+    eq(list[1].name, "Brilliant Smallfish"); eq(list[1].can, 4); eq(list[1].skill, true)
+    eq(list[2].name, "Slitherskin Mackerel"); eq(list[2].skill, false)
+    eq(list[3].name, "Smoked Sagefish"); eq(list[3].can, 0); eq(list[3].short[1].name, "Mild Spices"); eq(list[3].short[1].need, 1)
+    assert(used[6291] and used[21071] and not used[2672])
+end)
+test("cooking: before the cooking window has been opened it says to open it", function()
+    addon.CraftData = function() return nil end
+    said = {}; addon:HandleExtraCommand("fish", "cook"); assert(Heard("Open your cooking window"))
+end)
+test("cooking: the command and the bar line, with a fish no recipe uses", function()
+    addon.CraftData = function(name) if name == "Cooking" then return cooking end end
+    counts[6291], counts[8365] = 2, 3
+    said = {}; addon:HandleExtraCommand("fish", "cook")
+    assert(Heard("Ready to cook now: 1, and 1 of those"), table.concat(said, " / "))
+    assert(Heard("you can make 2") and Heard("No recipe you know uses: 3 x Item 8365"), table.concat(said, " / "))
+    worn = { [16] = POLE }; db.fishCook = true
+    F.Update(); assert(ForeverLazy_FishBar.shown)
+end)
+
 print(string.format("\n%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)

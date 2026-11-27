@@ -307,7 +307,8 @@ local COMMANDS = {
         { "/lazy sellgray on|off|now, fastloot on|off", "Sell grey loot at vendors, and empty the loot window faster (both off until you turn them on)" },
         { "/lazy range on|off", "Colour action buttons out of range, no mana, or unusable" },
         { "/lazy flash on|off, flash check", "Flash a mob's cast bar while your interrupt is ready; check says why nothing flashes" },
-        { "/lazy fish status, fish log, fish log all", "Your fishing skill, pole and lure, and what you have caught (turn the helpers on under Fishing in the options)" } } },
+        { "/lazy fish status, fish log, fish log all", "Your fishing skill, pole and lure, and what you have caught (turn the helpers on under Fishing in the options)" },
+        { "/lazy fish cook", "What you can cook from the fish in your bags, and which of those can still raise your cooking" } } },
     { "Group", {
         { "/lazy spec on|off, spec check", "A player's spec on their tooltip (off until you turn it on); check says why none shows" },
         { "/lazy follow [name]", "Follow a group member" },

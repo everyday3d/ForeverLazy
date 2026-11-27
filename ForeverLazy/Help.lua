@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.31.0", {
+        "COOKING YOUR CATCH: /lazy fish cook says which of your recipes use the fish in your bags, how many you can make now, what is missing, and which can still raise your cooking. There is a tick on the Fishing page to show it on the fishing bar (off until you do).",
+        "Open your cooking window once first, and again after your cooking changes. Coming from 0.29.1 or older? RESTART THE GAME, not just /reload.",
+    } },
     { "0.30.0", {
         "RESTART THE GAME after updating (not just /reload): there is a new file and new key bindings.",
         "FISHING has its own page in the options. Everything on it is off until you turn it on: a cast key and double right-click casting, a louder bobber splash, a pole button that gives your weapons back, a lure button with warnings, auto loot while fishing, a catch log (/lazy fish log), your skill, and pool spots on the world map.",
