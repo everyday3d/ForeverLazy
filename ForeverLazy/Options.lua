@@ -30,6 +30,7 @@ local PAGES = {
     { "Combat", { "Nameplates", "Damage meter", "Gear", "Action bars" } },
     { "My class", { "Class options", "Paladin blessings", "Paladin helpers", "Paladin panel", "Hunter pet", "Shaman panel", "Totems", "Shaman buffs", "Shaman helpers" } },
     { "Bags and items", { "Bags", "Selling and looting", "Item tooltips", "Crafting", "Ore and herb nodes" } },
+    { "Fishing", { "Casting", "Fishing helpers", "Fishing bar" } },
     { "Chat and groups", { "Chat", "Player tooltips", "Sharing and party", "The Hive" } },
     { "Extras", { "Couch mode", "Alerts", "Talents and skills", "Pedometer" } },
     { "Advanced", { "Modules", "Quest data", "RestedXP friend (optional)" } },
@@ -914,6 +915,45 @@ local function BuildControls(parent)
     Check(content, L("Open the seal and aura menus the other way"), 16,
         function() return DB().palMenuFlip == true end, function(v) DB().palMenuFlip = v and true or nil; PalRedraw() end)
     Button(content, L("Put the paladin panel back"), 16, 220, function() local d = DB(); if d.pos then d.pos.paladin = nil end; PalRedraw() end, true)
+
+    local function FishRedraw() if addon.FishingRefresh then addon.FishingRefresh() end end
+    local function FishCheck(text, key, after, x)
+        Check(content, text, x or 16, function() return DB()[key] == true end,
+            function(v) DB()[key] = v and true or nil; FishRedraw(); if after then after() end end)
+    end
+    Header(content, "Casting")
+    Label(content, L("A key that casts your line: click the button, then press the key. With your pole in your bags, the first press puts it on. You press it every cast: nothing fishes for you."))
+    y = y - 36
+    local fishKey = Button(content, L("Click to set a cast key"), 16, 260, function() end, false)
+    Button(content, L("Remove the cast key"), 282, 160, function()
+        if not (addon.Shaman and addon.Shaman.SetKey and addon.Fish) then return end
+        local ok, why = addon.Shaman.SetKey(nil, addon.Fish.CAST_BINDING)
+        addon.Print(ok and L("casting has no key now") or why)
+        if fishKey.Refresh then fishKey.Refresh() end
+    end, true)
+    if addon.Shaman and addon.Shaman.KeyCatcher and addon.Fish then
+        addon.Shaman.KeyCatcher(fishKey, { binding = addon.Fish.CAST_BINDING, set = "Cast key: ", unset = "Click to set a cast key", short = "casting" })
+        refreshers[#refreshers + 1] = fishKey.Refresh
+    end
+    FishCheck(L("Double right-click casts while your pole is on"), "fishDoubleClick")
+
+    Header(content, "Fishing helpers")
+    FishCheck(L("Louder bobber splash while you fish"), "fishSound")
+    FishCheck(L("Pole button: pole on with one click, your weapons back with the next"), "fishSwap")
+    FishCheck(L("Lure button, with a warning when your pole has no lure or it is about to wear off"), "fishLure")
+    FishCheck(L("Pick up what I fish up by itself"), "fishAutoLoot")
+    FishCheck(L("Keep a catch log for each zone (/lazy fish log)"), "fishLog")
+    FishCheck(L("Show my fishing skill and the points gained this session"), "fishSkill")
+    FishCheck(L("Show known fishing pool spots on the world map"), "fishPools", function() if addon.Fish then addon.Fish.DrawPools() end end)
+
+    Header(content, "Fishing bar")
+    Label(content, L("The bar appears with the pole button ticked, or while your pole is on with the lure, skill or catch log ticked. A second key for pole and weapons is in the game's key bindings, under AddOns."))
+    y = y - 36
+    Slider(content, L("Fishing bar size"), 0.5, 2, 0.1, "%.1f", function() return tonumber(DB().fishScale) or 1 end,
+        function(v) DB().fishScale = v; FishRedraw() end)
+    Check(content, L("Lock the fishing bar (untick to drag it)"), 16,
+        function() return DB().fishLocked == true end, function(v) DB().fishLocked = v and true or nil end)
+    Button(content, L("Put the fishing bar back"), 16, 220, function() if addon.Fish then addon.Fish.ResetBar() end end, true)
 
     Header(content, "Hunter pet")
     Check(content, L("Remind me when my pet needs feeding"), 16,

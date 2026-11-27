@@ -280,6 +280,12 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.30.0", {
+        "RESTART THE GAME after updating (not just /reload): there is a new file and new key bindings.",
+        "FISHING has its own page in the options. Everything on it is off until you turn it on: a cast key and double right-click casting, a louder bobber splash, a pole button that gives your weapons back, a lure button with warnings, auto loot while fishing, a catch log (/lazy fish log), your skill, and pool spots on the world map.",
+        "Nothing fishes for you: you press for every cast and click the bobber. This is new, so please tell us what works and what does not.",
+        "FIXED: /lazy fish no longer counts zeppelin or shipwreck debris as a fishing spot.",
+    } },
     { "0.29.1", {
         "STUTTERING: the quest map does a lot less repeat work, mostly noticeable with hunting quests. If your game still skips, tell us where, and whether /lazy questmap off stops it.",
     } },

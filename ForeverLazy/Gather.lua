@@ -24,18 +24,19 @@ end
 local index, scanning
 local waiting = {}
 
-local function WithIndex(cb)
-    if index then cb(); return end
+-- false when the data is not ready. quiet: say nothing either way
+local function WithIndex(cb, quiet)
+    if index then cb(); return true end
     waiting[#waiting + 1] = cb
-    if scanning then return end
+    if scanning then return true end
     local QDB = api.GetQuestie()
     if not (api.QuestieReady and api.QuestieReady() and QDB and QDB.ObjectPointers and C_Timer) then
         waiting = {}
-        Print(L("needs Questie loaded and ready"))
-        return
+        if not quiet then Print(L("needs Questie loaded and ready")) end
+        return false
     end
     scanning = true
-    Print(L("reading Questie's object list, one moment..."))
+    if not quiet then Print(L("reading Questie's object list, one moment...")) end
     local ids = {}
     for id in pairs(QDB.ObjectPointers) do ids[#ids + 1] = id end
     local list, i = {}, 1
@@ -56,6 +57,7 @@ local function WithIndex(cb)
         end
     end
     step()
+    return true
 end
 
 local function MatchIds(matcher)
@@ -154,12 +156,37 @@ local function Gather(arg)
     end)
 end
 
-local FISH = { "school", "swarm", "wreckage", "oil spill", "debris" }
+local function IsPool(name) return addon.Fish ~= nil and addon.Fish.IsPoolName(name) end
+
+-- every known pool spot for the world map, one for each small patch of a map. false when the data is not ready yet
+local pools
+function addon.PoolSpots(cb)
+    if pools then cb(pools); return true end
+    return WithIndex(function()
+        if not pools then
+            local seen = {}
+            pools = {}
+            for _, o in ipairs(MatchIds(IsPool)) do
+                local sp = {}
+                api.AddObjects(sp, { o.id })
+                for _, s in ipairs(sp) do
+                    if s.uiMapId and s.zx and #pools < 1500 then
+                        local key = s.uiMapId .. ":" .. math.floor(s.zx * 50) .. ":" .. math.floor(s.zy * 50)
+                        if not seen[key] then
+                            seen[key] = true
+                            pools[#pools + 1] = { name = o.name, uiMapId = s.uiMapId, zx = s.zx, zy = s.zy }
+                        end
+                    end
+                end
+            end
+        end
+        cb(pools)
+    end, true)
+end
+
 local function Fish(n)
     WithIndex(function()
-        local matches = MatchIds(function(name)
-            for _, p in ipairs(FISH) do if name:find(p, 1, true) then return true end end
-        end)
+        local matches = MatchIds(IsPool)
         local spots = Spots(matches)
         if #spots == 0 then Print(L("no fishing spots known on this continent")); return end
         -- the same pool listed twice is one

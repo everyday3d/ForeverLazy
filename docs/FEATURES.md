@@ -219,6 +219,17 @@ game's totem bar. Each cast takes
 its own click, and what a button casts can only change between fights. `/lazy shaman` shows what is on.
 Drop the set can have its own key (options, My class, Totems, or the game's key bindings): one totem a press, from the set picked on the panel.
 
+## Fishing
+All of it is off until you turn it on, on the **Fishing** page of the options.
+- **Cast key:** click the button in the options and press a key. With your pole in your bags, the first press puts it on; after that each press casts. **Double right-click** casting is a separate tick, and works only with the pole on, out of combat.
+- **Louder bobber splash:** while your line is out, sound effects go up and music and background noise go down. Your own settings come back a few seconds later, and at once if a fight starts.
+- **Pole button:** pole on with one click, and your weapons, shield or off-hand back with the next. There is a key for it in the game's key bindings too.
+- **Lure button:** puts the best lure in your bags that your skill allows on your pole, with a warning when there is none or it is about to wear off.
+- **Auto loot while fishing**, a **catch log** per zone (`/lazy fish log`, `/lazy fish log all`, `/lazy fish log reset`), your **skill and points gained** (`/lazy fish status`), and **pool spots on the world map**. A map marker does not mean the pool is there right now.
+- `/lazy fish` still takes you to the nearest pool.
+
+Nothing fishes for you: you press the key or button every cast and click the bobber yourself.
+
 ## The quest map
 Your quests on the world map and the minimap: coloured areas where to kill or collect, one colour per quest (on the minimap,
 small dots in that colour), a small green dot for each thing to click on the ground, a yellow `!` on quests you can pick up

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.30.0
+
+**Fully restart the game after updating** (a new file and new key bindings).
+
+### New
+- **A Fishing page in the options.** Everything on it is off until you turn it on:
+  - **Cast key**, set on that page. With your pole in your bags, the first press puts it on. **Double right-click** casting has its own tick box.
+  - **Louder bobber splash:** sound effects up, music and background noise down while you fish. Your own settings come back afterwards.
+  - **Pole button:** pole on with one click, your weapons, shield or off-hand back with the next. It can have a key too (game key bindings, AddOns).
+  - **Lure button** with a warning when your pole has no lure or it is about to wear off.
+  - **Auto loot while fishing**, a **catch log** for each zone (`/lazy fish log`), your **fishing skill** and points gained (`/lazy fish status`), and **pool spots on the world map**.
+- Nothing fishes for you: you press for every cast and click the bobber yourself.
+- The fishing helpers are new and not yet confirmed in game. Please report what works and what does not.
+
+### Fixed
+- `/lazy fish` no longer counts zeppelin or shipwreck debris as a fishing spot.
+
 ## 0.29.1
 
 Coming from 0.28.1 or older? **Fully restart the game after updating.** From 0.29.0, `/reload` is enough.

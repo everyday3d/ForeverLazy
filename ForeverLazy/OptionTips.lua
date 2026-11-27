@@ -5,6 +5,17 @@ local L = ns.L
 local addon = ns.addon
 
 local TIPS = {
+    -- fishing
+    ["Double right-click casts while your pole is on"] = "Two quick right-clicks on the water cast your line. Only with the pole on, out of combat, and not on a player or creature.",
+    ["Louder bobber splash while you fish"] = "Sound effects go up and music and background noise go down while your line is out. Your own settings come back a few seconds after.",
+    ["Pole button: pole on with one click, your weapons back with the next"] = "A button on a small fishing bar. It remembers the weapons, shield or off-hand you wore before the pole.",
+    ["Lure button, with a warning when your pole has no lure or it is about to wear off"] = "One click puts the best lure in your bags that your skill allows on your pole.",
+    ["Pick up what I fish up by itself"] = "Takes everything from the fishing loot window, even with the game's auto loot off. Other loot is left alone.",
+    ["Keep a catch log for each zone (/lazy fish log)"] = "Writes down what you fish up and what a vendor would pay for it.",
+    ["Show my fishing skill and the points gained this session"] = "Shown on the fishing bar while your pole is on.",
+    ["Show known fishing pool spots on the world map"] = "Fish icons where pools can turn up. A marker does not mean the pool is there right now.",
+    ["Fishing bar size"] = "How big the fishing bar is.",
+    ["Lock the fishing bar (untick to drag it)"] = "Locked: it stays where it is. Unlocked: drag it where you want it.",
     -- start here, help
     ["Show Forever Lazy buttons and panels in the game windows"] = "The search box and menu on the world map and the buttons under the quest log.",
     ["Use separate settings for this character"] = "This character keeps its own settings. Off: it shares one set with your other characters.",

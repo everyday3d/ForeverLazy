@@ -661,11 +661,12 @@ end
 
 -- give "drop the set" this key, or take its key away (nil). It goes into the game's own key bindings, so the two always agree.
 -- true, or false and why not
-function S.SetKey(key)
+function S.SetKey(key, binding)
+    binding = binding or KEY_BINDING
     if InCombatLockdown() then return false, L("keys can be changed after the fight") end
     if not (SetBinding and GetBindingKey) then return false, L("this client does not let an addon set keys: use the game's key bindings") end
-    local old = { GetBindingKey(KEY_BINDING) }
-    if key and not SetBinding(key, KEY_BINDING) then return false, L("the game would not take that key") end
+    local old = { GetBindingKey(binding) }
+    if key and not SetBinding(key, binding) then return false, L("the game would not take that key") end
     for _, k in ipairs(old) do if k ~= key then SetBinding(k) end end
     local save = SaveBindings or AttemptToSaveBindings
     if save and GetCurrentBindingSet then save(GetCurrentBindingSet()) end
@@ -673,19 +674,22 @@ function S.SetKey(key)
 end
 
 -- what a key does now, when it is something else
-local function UsedFor(key)
+local function UsedFor(key, binding)
     local action = GetBindingAction and GetBindingAction(key)
-    if not action or action == "" or action == KEY_BINDING then return nil end
+    if not action or action == "" or action == binding then return nil end
     return _G["BINDING_NAME_" .. action] or action
 end
 
 -- turns an options button into "click me, then press a key". A key that already does something needs a second press.
-function S.KeyCatcher(button)
+-- what: { binding, set (the words before the key), unset, short (what the key does, for chat) }; none means drop the set
+local DROP = { binding = KEY_BINDING, set = "Drop the set key: ", unset = "Click to set a drop the set key", short = "drop the set" }
+function S.KeyCatcher(button, what)
+    what = what or DROP
     local listening, asked = false, nil
     local function Show()
-        local key = BoundKey()
+        local key = GetBindingKey and GetBindingKey(what.binding)
         button:SetText(listening and L("Press a key (Esc cancels)")
-            or (key and (L("Drop the set key: ") .. key) or L("Click to set a drop the set key")))
+            or (key and (L(what.set) .. key) or L(what.unset)))
     end
     local function Stop()
         if listening then
@@ -700,14 +704,14 @@ function S.KeyCatcher(button)
     local function Take(raw)
         local key = S.KeyName(raw, IsAltKeyDown and IsAltKeyDown(), IsControlKeyDown and IsControlKeyDown(), IsShiftKeyDown and IsShiftKeyDown())
         if not key then return end
-        local used = UsedFor(key)
+        local used = UsedFor(key, what.binding)
         if used and asked ~= key then
             asked = key
-            Print(string.format(L("%s is used for \"%s\". Press it again to use it for drop the set instead, or press another key."), key, used))
+            Print(string.format(L("%s is used for \"%s\". Press it again to use it for %s instead, or press another key."), key, used, L(what.short)))
             return
         end
-        local ok, why = S.SetKey(key)
-        Print(ok and (L("drop the totem set is now on ") .. key) or why)
+        local ok, why = S.SetKey(key, what.binding)
+        Print(ok and string.format(L("%s is now on %s"), L(what.short), key) or why)
         Stop()
     end
     button:RegisterForClicks("AnyUp")

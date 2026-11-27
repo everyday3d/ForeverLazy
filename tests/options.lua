@@ -79,7 +79,7 @@ test("every subheading is on exactly one page, and every listed one exists", fun
     for _, p in ipairs(M.pages) do for _, t in ipairs(p[2]) do assert(not listed[t], "listed twice: " .. t); listed[t] = true end end
     for _, s in ipairs(M.sections) do made[s.title] = true; assert(listed[s.title], "on no page: " .. s.title) end
     for t in pairs(listed) do assert(made[t], "listed but never made: " .. t) end
-    assert(#M.pages == 10)
+    assert(#M.pages == 11)
 end)
 
 test("every control shows on its page, none on top of another", function()
