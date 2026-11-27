@@ -10,3 +10,5 @@ The files in `ForeverLazy/data` (quests, creatures, objects, items, quest XP) co
 5. `lua tools/build_extras.lua <QuestieDB> <ForeverLazy> <new dump> <out dir>` rebuilds `Zones.lua`, `Extra1.lua` (hidden quests, drop chances), `Extra2.lua` (hidden groups, quest tags) and `Townsfolk.lua` from QuestieDB and Questie's own files. `tools/compare_extras.lua` compares them with the old ones.
 
 Checked against the in-game exports: unchanged records come out the same. Quest tags the game itself answers (a handful) are carried over from the last in-game export; new quests only get Questie's own tag corrections.
+
+6. `lua tools/build_route.lua <Alliance text> <Horde text> <out file>` builds `data/Route.lua`, the order of quests in the levelling route, from PoleStar's guides as converted for OpenXP 2.0 (both GPL-3.0; see media/CREDITS.txt). The converter only READS those files as text, it never runs them. Get them from https://github.com/mjared123/OpenXP (OpenXP/Guides/Leveling/Alliance|Horde/PoleStar-01-60.lua).

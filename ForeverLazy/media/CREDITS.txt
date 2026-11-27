@@ -46,3 +46,12 @@ tullaRange licence notice:
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
   IN THE SOFTWARE.
 If either addon is installed too, it does its job and Forever Lazy stays out of the way.
+
+The levelling route (Follow the levelling route)
+------------------------------------------------
+data/Route.lua holds only the ORDER of quests in a 1-60 levelling route (quest numbers, a class limit and an optional mark). The route is the work of
+PoleStar (https://github.com/fitzforge/polestar, GPL-3.0), as converted for OpenXP 2.0 by mjared (https://github.com/mjared123/OpenXP, GPL-3.0).
+Portions Copyright (c) 2026 The Polestar authors. It was built from those files, read as text, by tools/build_route.lua. No guide text, coordinates or code are copied.
+OpenXP lists the data sources PoleStar's guides were checked against in its NOTICE.md (CMaNGOS classic-db, EG Link output (CC BY 4.0), pfQuest (MIT), the Forever
+TrinityCore database and others); only quest numbers and their order come from there. This part is under the GNU General Public License, version 3.
+Forever Lazy is not affiliated with PoleStar or OpenXP.

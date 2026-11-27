@@ -656,7 +656,7 @@ function addon.ArrowTarget()
     local db = DB()
     local skipped
     -- a finished quest I can hand in close by goes first, whether or not the plan has a stop for it (a plan of only library books has none)
-    if db and db.arrowHandIn ~= false and (db.arrowSource or "auto") == "auto" and not (db.planFocus and wp and wp == (db.waypoints and db.waypoints[1])) then
+    if db and db.arrowHandIn ~= false and db.routeHints ~= true and (db.arrowSource or "auto") == "auto" and not (db.planFocus and wp and wp == (db.waypoints and db.waypoints[1])) then
         local okH, spot = pcall(NearbyHandIn)
         if okH and spot then addon.arrowWhy = "a hand-in close by"; return spot end
     end
@@ -670,7 +670,8 @@ function addon.ArrowTarget()
     end
     -- a spot I clicked on the map is a pick too
     if wp and db and wp.questMapPin and wp == (db.waypoints and db.waypoints[1]) then focused = true end
-    if wp and db and not focused and db.arrowNearest ~= false and db.waypoints and wp == db.waypoints[1] and #db.waypoints > 1 and hbd then
+    -- with the levelling route on, the route chooses the stop: the plan's closest-first rule does not override it
+    if wp and db and not focused and db.routeHints ~= true and db.arrowNearest ~= false and db.waypoints and wp == db.waypoints[1] and #db.waypoints > 1 and hbd then
         local okN, pick = pcall(function()
             local px, py, pinst = hbd:GetPlayerWorldPosition()
             if not px then return nil end
@@ -773,6 +774,7 @@ function addon.ArrowTarget()
             addon.arrowWhy = "the next stop in this zone"
         end
     end
+    if not addon.arrowWhy and wp and db and db.routeHints == true then addon.arrowWhy = "the levelling route" end
     if not addon.arrowWhy and wp then
         if focused then addon.arrowWhy = "the quest you picked"
         elseif db and db.waypoints and wp == db.waypoints[1] and wp.label then addon.arrowWhy = "next in your plan" end

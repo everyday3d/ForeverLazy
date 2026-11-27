@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.31.1
+
+Small update. **Fully restart the game after updating.**
+
 ## 0.31.0
 
 From 0.30.0, `/reload` is enough. Coming from 0.29.1 or older? **Fully restart the game after updating.**
