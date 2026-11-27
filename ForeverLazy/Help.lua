@@ -280,6 +280,9 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.32.1", {
+        "Cosmetic fix to the nameplate options: only the plates you are using show ticks now. The other kind's settings are kept and come back when you switch.",
+    } },
     { "0.32.0", {
         "RESTART THE GAME after updating (not just /reload): there is a new file.",
         "PLATES V2, under Combat: who each mob is attacking, your threat as a percentage, a PULL! warning, and tank colours. All off until you turn them on.",

@@ -583,16 +583,19 @@ local function BuildControls(parent)
     Radio(content, L("Which plates to use:"), "plateStyle", { { "v1", L("Plates v1") }, { "v2", L("Plates v2") } },
         function() return addon.PlateStyle and addon.PlateStyle() or DB().plateStyle or "v1" end,
         function(v) if addon.SetPlateStyle then addon.SetPlateStyle(v) else DB().plateStyle = v end end)
-    Label(content, L("One kind at a time: each keeps its own settings, and ticking something below switches to its kind. Quest icons and the interrupt marker show with both."))
+    Label(content, L("Only the kind in use shows ticks; the other's come back when you switch. Ticking a box below switches to its kind. Quest icons and the interrupt marker show with both."))
     y = y - 36
+
+    -- a box of the kind not in use shows empty; what was saved for it is left alone
+    local function Using(style) return not addon.PlateStyle or addon.PlateStyle() == style end
 
     Header(content, "Plates v2")
     Check(content, L("Tank colours: green while a mob is on me, yellow when it is slipping, pink when it got away"), 16,
-        function() return DB().plateTank == true end,
+        function() return Using("v2") and DB().plateTank == true end,
         function(v) DB().plateTank = v or nil; PlatesChanged("v2", v) end)
 
     local function ThreatCheck(text, key)
-        Check(content, text, 16, function() return DB()[key] == true end,
+        Check(content, text, 16, function() return Using("v2") and DB()[key] == true end,
             function(v) DB()[key] = v and true or nil; PlatesChanged("v2", v) end)
     end
     ThreatCheck(L("Show who each mob is attacking, beside its nameplate"), "plateTargetName")
@@ -601,11 +604,11 @@ local function BuildControls(parent)
 
     Header(content, "Plates v1")
     Check(content, L("Colour hostile plates: red = aggressive or attacking me, orange = fighting someone else"), 16,
-        function() return DB().plateColors == true end, function(v) DB().plateColors = v or nil; PlatesChanged("v1", v) end)
+        function() return Using("v1") and DB().plateColors == true end, function(v) DB().plateColors = v or nil; PlatesChanged("v1", v) end)
     Check(content, L("... colour aggressive mobs red before the fight, and by who is being attacked"), 40,
-        function() return DB().plateThreat ~= false end, function(v) DB().plateThreat = OffFlag(v); if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
+        function() return Using("v1") and DB().plateThreat ~= false end, function(v) DB().plateThreat = OffFlag(v); PlatesChanged("v1", v) end)
     Check(content, L("... tint neutral quest mobs that are not in a fight (purple)"), 40,
-        function() return DB().plateQuest ~= false end, function(v) DB().plateQuest = OffFlag(v); if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
+        function() return Using("v1") and DB().plateQuest ~= false end, function(v) DB().plateQuest = OffFlag(v); PlatesChanged("v1", v) end)
     ColorRow(content, L("An aggressive mob, or one attacking me"), "plateColorMe")
     ColorRow(content, L("A mob fighting someone else (not the neutral yellow)"), "plateColorOthers")
     ColorRow(content, L("A neutral quest mob"), "plateColorQuest")

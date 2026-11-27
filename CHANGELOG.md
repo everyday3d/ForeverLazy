@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.32.1
+
+### Fixed
+- Cosmetic fix to the nameplate options: only the plates you are using show ticks now. The other kind's settings are kept and come back when you switch.
+
+Coming from 0.32.0, `/reload` is enough. From anything older, fully restart the game.
+
 ## 0.32.0
 
 **Fully restart the game after updating** (a new file).
