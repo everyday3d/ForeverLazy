@@ -280,6 +280,11 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.33.0", {
+        "RESTART THE GAME after updating (not just /reload): there is a new file.",
+        "BATTLEGROUNDS (experimental) has its own page in the options, all off until you turn it on: queue timers, base capture and flag timers, a score guess, shift-click callouts and Alterac Valley hand-ins. It includes Darkspear Islands.",
+        "Not yet confirmed in a real battleground. /lazy pvp test shows sample timers. In a battleground, /lazy pvp check prints what we need for a bug report.",
+    } },
     { "0.32.1", {
         "Cosmetic fix to the nameplate options: only the plates you are using show ticks now. The other kind's settings are kept and come back when you switch.",
     } },

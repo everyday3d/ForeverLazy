@@ -310,7 +310,8 @@ local COMMANDS = {
         { "/lazy threat check", "Target a mob in a fight: says which threat details the game lets addons read (the threat helpers are under Combat, Plates v2)" },
         { "/lazy flash on|off, flash check", "Flash a mob's cast bar while your interrupt is ready; check says why nothing flashes" },
         { "/lazy fish status, fish log, fish log all", "Your fishing skill, pole and lure, and what you have caught (turn the helpers on under Fishing in the options)" },
-        { "/lazy fish cook", "What you can cook from the fish in your bags, and which of those can still raise your cooking" } } },
+        { "/lazy fish cook", "What you can cook from the fish in your bags, and which of those can still raise your cooking" },
+        { "/lazy pvp status, pvp test, pvp check", "Battleground helpers (off until you turn them on, under Battlegrounds); test shows sample timers, check prints details for a bug report" } } },
     { "Group", {
         { "/lazy spec on|off, spec check", "A player's spec on their tooltip (off until you turn it on); check says why none shows" },
         { "/lazy follow [name]", "Follow a group member" },

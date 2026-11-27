@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.33.0
+
+**Fully restart the game after updating** (a new file).
+
+### New
+- **Battlegrounds (experimental),** on its own page in the options. Everything on it is off until you turn it on:
+  - **Queue timers:** the expected wait, the time left to accept, and the countdown before the battle.
+  - **Capture timers** for Arathi Basin, Alterac Valley and Darkspear Islands.
+  - **Flag timer** for Warsong Gulch and Darkspear Islands (reads the English game messages).
+  - **Warsong Gulch time left,** only if the game gives addons the match clock.
+  - **Score guess** for Arathi Basin and Darkspear Islands, from how fast each side is scoring.
+  - **Shift-click** a timer to say it in battleground chat.
+  - **Alterac Valley:** hands in your items and orders troop upgrades when you talk to the right person. Hold Shift to stop it. It never picks a reward.
+  - Timer bars you can move, size, lock and stack up or down.
+- `/lazy pvp test` shows sample timers. `/lazy pvp check` in a battleground prints details for a bug report.
+- With the Capping addon loaded, these helpers stay out of its way.
+
+**Experimental:** none of this is confirmed in a real battleground yet. Blizzard has not published the Darkspear Islands capture time, flag time or scoring speed, so those timers may be wrong. Please report what you see.
+
 ## 0.32.1
 
 ### Fixed

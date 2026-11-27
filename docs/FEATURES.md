@@ -219,6 +219,18 @@ game's totem bar. Each cast takes
 its own click, and what a button casts can only change between fights. `/lazy shaman` shows what is on.
 Drop the set can have its own key (options, My class, Totems, or the game's key bindings): one totem a press, from the set picked on the panel.
 
+## Battlegrounds (experimental)
+All of it is off until you turn it on, on the **Battlegrounds** page of the options. It is experimental and not yet confirmed in game.
+With the Capping addon loaded, these helpers stay out of its way.
+- **Queue timers:** the game's expected wait, the time left to accept, and the countdown before the battle.
+- **Capture timers:** Arathi Basin and Darkspear Islands (60 seconds), Alterac Valley (5 minutes). A base already being taken when you arrive gets no timer.
+- **Flag timer:** Warsong Gulch (12 seconds) and Darkspear Islands (23 seconds). It reads the English game messages.
+- **Warsong Gulch time left**, if the game gives addons the match clock.
+- **Score guess** for Arathi Basin and Darkspear Islands, from how fast each side is scoring in this match.
+- **Shift-click** a bar to say it in battleground chat.
+- **Alterac Valley:** hands in your items and orders troop upgrades when you talk to the right person. Hold Shift to stop it. It never picks a reward.
+- **Darkspear Islands** (Forever's own battleground, 15 against 15, first to 2000): four bases, and a flag in the middle to carry to a base your team holds. Blizzard has not published its capture time, flag time or scoring speed.
+- `/lazy pvp test` shows sample timers to place the bars. `/lazy pvp check` in a battleground prints what a bug report needs.
 ## Fishing
 All of it is off until you turn it on, on the **Fishing** page of the options.
 - **Cast key:** click the button in the options and press a key. With your pole in your bags, the first press puts it on; after that each press casts. **Double right-click** casting is a separate tick, and works only with the pole on, out of combat.

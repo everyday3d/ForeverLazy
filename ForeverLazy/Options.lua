@@ -31,6 +31,7 @@ local PAGES = {
     { "My class", { "Class options", "Paladin blessings", "Paladin helpers", "Paladin panel", "Hunter pet", "Shaman panel", "Totems", "Shaman buffs", "Shaman helpers" } },
     { "Bags and items", { "Bags", "Selling and looting", "Item tooltips", "Crafting", "Ore and herb nodes" } },
     { "Fishing", { "Casting", "Fishing helpers", "Fishing bar" } },
+    { "Battlegrounds", { "Battleground timers", "Alterac Valley", "Timer bars" } },
     { "Chat and groups", { "Chat", "Player tooltips", "Sharing and party", "The Hive" } },
     { "Extras", { "Couch mode", "Alerts", "Talents and skills", "Pedometer" } },
     { "Advanced", { "Modules", "Quest data", "RestedXP friend (optional)" } },
@@ -985,6 +986,32 @@ local function BuildControls(parent)
     Check(content, L("Lock the fishing bar (untick to drag it)"), 16,
         function() return DB().fishLocked == true end, function(v) DB().fishLocked = v and true or nil end)
     Button(content, L("Put the fishing bar back"), 16, 220, function() if addon.Fish then addon.Fish.ResetBar() end end, true)
+
+    local function BGRedraw() if addon.BattlegroundRefresh then addon.BattlegroundRefresh() end end
+    local function BGCheck(text, key)
+        Check(content, text, 16, function() return DB()[key] == true end,
+            function(v) DB()[key] = v and true or nil; BGRedraw() end)
+    end
+    Header(content, "Battleground timers")
+    Label(content, L("Experimental: not yet confirmed in game, so please report what you see. With the Capping addon loaded, these stay out of its way."))
+    y = y - 36
+    BGCheck(L("Queue timers: expected wait, time left to accept, and when the battle begins"), "bgQueue")
+    BGCheck(L("Time until a base being taken changes hands (Arathi Basin, Alterac Valley, Darkspear Islands)"), "bgNodes")
+    BGCheck(L("Time until the flag comes back (Warsong Gulch, Darkspear Islands)"), "bgFlag")
+    BGCheck(L("Time left in Warsong Gulch, when the game says it"), "bgTime")
+    BGCheck(L("Guess the final score (Arathi Basin, Darkspear Islands)"), "bgScore")
+    BGCheck(L("Shift-click a timer to say it in battleground chat"), "bgCall")
+
+    Header(content, "Alterac Valley")
+    BGCheck(L("Hand in my items and order troop upgrades when I talk to the right person (hold Shift to stop it)"), "bgAV")
+
+    Header(content, "Timer bars")
+    Slider(content, L("Battleground timer size"), 0.5, 2, 0.1, "%.1f", function() return tonumber(DB().bgScale) or 1 end,
+        function(v) DB().bgScale = v; BGRedraw() end)
+    BGCheck(L("Lock the battleground timers (untick to drag them by the title)"), "bgLocked")
+    BGCheck(L("Stack the timers upwards"), "bgGrowUp")
+    Button(content, L("Show sample timers"), 16, 220, function() if addon.BG then addon.BG.Test() end end, true)
+    Button(content, L("Put the timers back"), 16, 220, function() if addon.BG then addon.BG.ResetBars() end end, true)
 
     Header(content, "Hunter pet")
     Check(content, L("Remind me when my pet needs feeding"), 16,
