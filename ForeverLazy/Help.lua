@@ -280,6 +280,12 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.32.0", {
+        "RESTART THE GAME after updating (not just /reload): there is a new file.",
+        "PLATES V2, under Combat: who each mob is attacking, your threat as a percentage, a PULL! warning, and tank colours. All off until you turn them on.",
+        "Our first health bar colours are now called PLATES V1. A switch picks v1 or v2, and each keeps its settings. Quest icons show with both.",
+        "This is new, especially in dungeons where the game hides some combat values. /lazy threat check, with a mob targeted in a fight, says what is hidden. Please tell us what you see.",
+    } },
     { "0.31.0", {
         "COOKING YOUR CATCH: /lazy fish cook says which of your recipes use the fish in your bags, how many you can make now, what is missing, and which can still raise your cooking. There is a tick on the Fishing page to show it on the fishing bar (off until you do).",
         "Open your cooking window once first, and again after your cooking changes. Coming from 0.29.1 or older? RESTART THE GAME, not just /reload.",

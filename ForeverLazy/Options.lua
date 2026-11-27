@@ -27,7 +27,7 @@ local PAGES = {
     { "Arrow and plan", { "Arrows", "My quest arrow", "The plan", "Hide arrows", "Travel and zones", "Journey", "Lazy mode", "My waypoints", "Text" } },
     { "Compass", { "Compass", "Compass size and place", "Hide the compass" } },
     { "Quests and map", { "Quest map", "Map pins", "Quest tracker", "Finding quests", "Quest hints", "Dungeons and class quests", "Quest sounds", "Library books" } },
-    { "Combat", { "Nameplates", "Damage meter", "Gear", "Action bars" } },
+    { "Combat", { "Nameplates", "Which plates", "Plates v2", "Plates v1", "Damage meter", "Gear", "Action bars" } },
     { "My class", { "Class options", "Paladin blessings", "Paladin helpers", "Paladin panel", "Hunter pet", "Shaman panel", "Totems", "Shaman buffs", "Shaman helpers" } },
     { "Bags and items", { "Bags", "Selling and looting", "Item tooltips", "Crafting", "Ore and herb nodes" } },
     { "Fishing", { "Casting", "Fishing helpers", "Fishing bar" } },
@@ -311,7 +311,7 @@ local function Button(parent, text, x, w, onClick, advance)
 end
 
 -- Row of mutually exclusive choices drawn as check buttons
-local function Radio(parent, labelText, key, choices)
+local function Radio(parent, labelText, key, choices, current, pick)
     NewBlock("radio")
     holding = true
     radioLabel = labelText
@@ -323,8 +323,8 @@ local function Radio(parent, labelText, key, choices)
     noConfirm = true
     for _, ch in ipairs(choices) do
         local value, text = ch[1], ch[2]
-        local cb = Check(parent, text, 16 + col * 150, function() return DB()[key] == value end,
-            function() DB()[key] = value; for _, b in ipairs(boxes) do b.Refresh() end; Changed() end, false)
+        local cb = Check(parent, text, 16 + col * 150, function() if current then return current() == value end return DB()[key] == value end,
+            function() if pick then pick(value) else DB()[key] = value end; for _, b in ipairs(boxes) do b.Refresh() end; Changed() end, false)
         boxes[#boxes + 1] = cb
         col = col + 1
         if col == 3 then col = 0; y = y - 26 end
@@ -573,8 +573,35 @@ local function BuildControls(parent)
     Check(content, L("... flash the mob's cast bar while my interrupt is ready"), 40,
         function() return DB().castFlash == true end, function(v) DB().castFlash = v or nil end)
 
+    -- ticking something in a group picks that kind of plates, so a tick is never silently idle
+    local function PlatesChanged(style, ticked)
+        if ticked and addon.SetPlateStyle then addon.SetPlateStyle(style); return end
+        if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end
+        if addon.PlateThreatRefresh then addon.PlateThreatRefresh() end
+    end
+    Header(content, "Which plates")
+    Radio(content, L("Which plates to use:"), "plateStyle", { { "v1", L("Plates v1") }, { "v2", L("Plates v2") } },
+        function() return addon.PlateStyle and addon.PlateStyle() or DB().plateStyle or "v1" end,
+        function(v) if addon.SetPlateStyle then addon.SetPlateStyle(v) else DB().plateStyle = v end end)
+    Label(content, L("One kind at a time: each keeps its own settings, and ticking something below switches to its kind. Quest icons and the interrupt marker show with both."))
+    y = y - 36
+
+    Header(content, "Plates v2")
+    Check(content, L("Tank colours: green while a mob is on me, yellow when it is slipping, pink when it got away"), 16,
+        function() return DB().plateTank == true end,
+        function(v) DB().plateTank = v or nil; PlatesChanged("v2", v) end)
+
+    local function ThreatCheck(text, key)
+        Check(content, text, 16, function() return DB()[key] == true end,
+            function(v) DB()[key] = v and true or nil; PlatesChanged("v2", v) end)
+    end
+    ThreatCheck(L("Show who each mob is attacking, beside its nameplate"), "plateTargetName")
+    ThreatCheck(L("Show my threat on each mob as a percentage"), "plateThreatNum")
+    ThreatCheck(L("Warn me when a mob is about to turn on me (PULL!, with a sound)"), "platePullWarn")
+
+    Header(content, "Plates v1")
     Check(content, L("Colour hostile plates: red = aggressive or attacking me, orange = fighting someone else"), 16,
-        function() return DB().plateColors == true end, function(v) DB().plateColors = v or nil; if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
+        function() return DB().plateColors == true end, function(v) DB().plateColors = v or nil; PlatesChanged("v1", v) end)
     Check(content, L("... colour aggressive mobs red before the fight, and by who is being attacked"), 40,
         function() return DB().plateThreat ~= false end, function(v) DB().plateThreat = OffFlag(v); if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end end)
     Check(content, L("... tint neutral quest mobs that are not in a fight (purple)"), 40,

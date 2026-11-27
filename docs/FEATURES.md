@@ -231,6 +231,14 @@ All of it is off until you turn it on, on the **Fishing** page of the options.
 
 Nothing fishes for you: you press the key or button every cast and click the bobber yourself.
 
+## Plates v2: threat on nameplates
+All of it is off until you turn it on, under **Combat, Plates v2** in the options. **Which plates** picks one kind at a time: Plates v1 (the red, orange and purple health bar colours) or Plates v2 (these). Each keeps its own settings, ticking something switches to its kind, and `/lazy platestyle v1|v2` does it too. Quest icons and the interrupt marker show with both, and the v2 words move over to make room for them.
+- **Who each mob is attacking:** a short name beside the nameplate in that player's class colour, or YOU.
+- **Your threat** on each mob as a percentage.
+- **Pull warning:** PULL! and one sound from 80% threat. It stays quiet when the game hides your threat numbers.
+- **Tank colours:** green is on you, yellow is on you but someone has more threat, pink got away. The pull warning is off while these are on.
+- Some combat values are hidden from addons. Names and numbers are handed to the game to show without being read, and where a colour cannot be worked out the game's own is left. `/lazy threat check`, with a mob targeted in a fight, says what is hidden.
+
 ## The quest map
 Your quests on the world map and the minimap: coloured areas where to kill or collect, one colour per quest (on the minimap,
 small dots in that colour), a small green dot for each thing to click on the ground, a yellow `!` on quests you can pick up

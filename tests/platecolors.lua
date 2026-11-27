@@ -133,5 +133,37 @@ test("the two parts can be switched off one by one", function()
     addon.PlateQuestKind = nil; db.plateQuest = nil
 end)
 
+test("the switch: a saved v1 tick with nothing else picked is still v1", function()
+    db.plateStyle, db.plateTank = nil, nil
+    eq(addon.PlateStyle(), "v1")
+end)
+
+test("with v2 picked the v1 colours wait, and the tank colours work, colour nothing idle and give the bar its colour back", function()
+    db.plateColors, db.plateTank = true, true
+    addon.SetPlateStyle("v2")
+    reset()
+    local f = Frame(); hookFn(f); eq(f.healthBar.color, nil, "an idle aggressive mob")
+    mob.combat, mob.tanking = true, true
+    f.healthBar.r, f.healthBar.g, f.healthBar.b = 0.9, 0.1, 0.1
+    hookFn(f); eq(f.healthBar.color[2], 0.75, "green")
+    reset(); hookFn(f); eq(f.healthBar.color[1], 0.9); eq(f.healthBar.color[2], 0.1)
+    reset(); mob.reaction = 4
+    addon.PlateQuestKind = function() return "kill" end
+    local g = Frame(); hookFn(g); eq(g.healthBar.color, nil, "v2 has no quest tint")
+    addon.PlateQuestKind = nil
+end)
+
+test("switching back to v1 brings its colours back, and the tank colours wait", function()
+    addon.SetPlateStyle("v1")
+    eq(db.plateColors, true); eq(db.plateTank, true)
+    reset(); mob.combat, mob.tanking = true, true
+    local f = Frame(); hookFn(f); eq(f.healthBar.color[1], 1); eq(f.healthBar.color[2], 0)
+end)
+
+test("/lazy platestyle and /lazy platecolors pick the kind", function()
+    addon:HandleExtraCommand("platestyle", "v2"); eq(db.plateStyle, "v2")
+    addon:HandleExtraCommand("platecolors", "on"); eq(db.plateStyle, "v1"); eq(db.plateColors, true)
+    db.plateTank = nil
+end)
 print(string.format("\n%d passed, %d failed", passed, failed))
 if failed > 0 then os.exit(1) end

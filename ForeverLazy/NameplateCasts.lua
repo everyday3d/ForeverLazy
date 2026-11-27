@@ -97,6 +97,12 @@ local function MarkerFor(plate)
     return f
 end
 
+-- the interrupt marker beside this nameplate, while it is showing
+function addon.CastMarkerFor(plate)
+    local f = markers[plate]
+    if f and f:IsShown() then return f end
+end
+
 -- the cast bar on a plate, when the game (or a nameplate addon that keeps its name) shows one
 local function CastBarOf(plate)
     local uf = plate and plate.UnitFrame

@@ -5,7 +5,7 @@
 <p align="center">
   <img alt="Game" src="https://img.shields.io/badge/WoW-Forever-4db8ff?style=for-the-badge">
   <img alt="Interface" src="https://img.shields.io/badge/interface-16001-ffd94d?style=for-the-badge">
-  <img alt="Version" src="https://img.shields.io/badge/version-0.31.1-6bd16b?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.32.0-6bd16b?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-GPL--3.0-ff9ad5?style=for-the-badge">
 </p>
 
@@ -25,6 +25,12 @@ It knows your quests, your bags, your professions and the MAP, and it points an 
 <p align="center">Get it on <a href="https://www.curseforge.com/wow/addons/foreverlazy">CurseForge</a>, or grab the zip from the <a href="https://github.com/everyday3d/ForeverLazy/releases/latest">latest release</a>.</p>
 
 ---
+
+## What's new in 0.32.0
+
+*Fully restart the game after updating.*
+
+- **Plates v2:** who each mob is attacking, your threat percentage, a pull warning and tank colours, all off until you turn them on. The first health bar colours are now **Plates v1**, with a switch between the two. Quest icons show with both.
 
 ## What's new in 0.31.0
 

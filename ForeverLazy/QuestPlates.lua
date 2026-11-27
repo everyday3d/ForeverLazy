@@ -249,6 +249,12 @@ local function IconFor(plate)
     return f
 end
 
+-- the sword or bag beside this nameplate, while it is showing (a quest starter's "!" sits above, out of the way)
+function addon.QuestPlateIcon(plate)
+    local f = icons[plate]
+    if f and f:IsShown() and f.tex:IsShown() then return f end
+end
+
 -- what a mob is to my quests: "kill", "loot" (it drops something a quest needs), "start" (it drops a quest starter) or nil
 local function KindOf(unit)
     if dirty then Rebuild() end

@@ -12,13 +12,40 @@ local addon = ns.addon
 local Print = addon.Print
 
 local function DB() return addon.GetDB() end
-local function On() local d = DB(); return d and d.plateColors == true end
+
+-- Two kinds of plates, one in use at a time. v1: these red, orange and purple colours. v2: the tank colours below and the
+-- threat words in PlateThreat.lua. Each keeps its own settings while the other is in use.
+local V2_KEYS = { "plateTank", "plateTargetName", "plateThreatNum", "platePullWarn" }
+function addon.PlateStyle()
+    local d = DB()
+    if not d then return "v1" end
+    if d.plateStyle == "v1" or d.plateStyle == "v2" then return d.plateStyle end
+    for _, k in ipairs(V2_KEYS) do if d[k] == true then return "v2" end end         -- nothing picked yet: what is ticked says it
+    return "v1"
+end
+local function Full() local d = DB(); return d and d.plateColors == true and addon.PlateStyle() == "v1" end
+local function Tank() local d = DB(); return d and d.plateTank == true and addon.PlateStyle() == "v2" end
+local function On() return Full() or Tank() end
+
+function addon.SetPlateStyle(style)
+    local d = DB()
+    if not d or (style ~= "v1" and style ~= "v2") then return end
+    local changed = addon.PlateStyle() ~= style
+    d.plateStyle = style
+    if changed then Print(L("nameplates: now using Plates ") .. style) end
+    if addon.PlateColorsRefresh then addon.PlateColorsRefresh() end
+    if addon.PlateThreatRefresh then addon.PlateThreatRefresh() end
+    if addon.RefreshOptions then addon.RefreshOptions() end
+end
 
 local DEFAULTS = {
     plateColorMe = { 1, 0, 0 },
     plateColorOthers = { 1, 0.55, 0 },
     plateColorQuest = { 0.75, 0.3, 1 },
 }
+-- tank colours: green holding it, yellow about to lose it, hot pink got away
+local TANK = { safe = { 0.1, 0.75, 0.25 }, slipping = { 1, 0.85, 0 }, lost = { 1, 0.2, 0.7 } }
+
 local function Defaults()
     local db = DB()
     if not db then return end
@@ -29,13 +56,23 @@ local function Defaults()
 end
 
 -- which colour a mob gets (pure, tested offline).
--- info: { hostileNpc, tapped, reaction (the game's 1 to 8: 1 to 3 hostile, 4 neutral), tankingMe, targetsMe, inCombat, questKind }
+-- info: { hostileNpc, tapped, reaction (the game's 1 to 8: 1 to 3 hostile, 4 neutral), tankingMe, targetsMe, inCombat, questKind,
+--         status (my threat status), onList (I am on its threat list), targetsGroup, unsure (the game hides who it is on) }
 -- returns "me" (red), "others" (orange), "quest" (purple) or nil (leave the game's own colour)
-function addon.PlateColorState(info, useThreat, useQuest)
+-- with tank colours, a mob in a fight is "safe" (on me), "slipping" (on me, someone has more threat) or "lost" (got away)
+function addon.PlateColorState(info, useThreat, useQuest, tank)
     if not info or not info.hostileNpc or info.tapped then return nil end
     local aggressive = type(info.reaction) == "number" and info.reaction <= 3
+    local onMe = info.tankingMe or info.targetsMe
+    -- hidden values are no answer: better the game's own colour than a wrong one
+    if info.inCombat and info.unsure and not onMe and (tank or useThreat ~= false) then return nil end
+    if tank and info.inCombat then
+        if onMe then return info.status == 2 and "slipping" or "safe" end
+        if info.onList or info.targetsGroup then return "lost" end
+        return "others"
+    end
     if useThreat ~= false then
-        if info.tankingMe or info.targetsMe then return "me" end
+        if onMe then return "me" end
         if aggressive and not info.inCombat then return "me" end              -- aggressive before the fight: red, so you know
         if info.inCombat then return "others" end
     end
@@ -55,12 +92,33 @@ local function InfoFor(unit)
     info.hostileNpc = (Safe(UnitIsPlayer, unit) ~= true) and (Safe(UnitCanAttack, "player", unit) == true)
     info.tapped = Safe(UnitIsTapDenied, unit) == true
     info.reaction = Safe(UnitReaction, "player", unit)
-    local tanking = Safe(UnitDetailedThreatSituation, "player", unit)
-    info.tankingMe = tanking == true
-    info.targetsMe = Safe(UnitIsUnit, unit .. "target", "player") == true
+    local okT, tanking, status = pcall(UnitDetailedThreatSituation, "player", unit)
+    local function Hidden(v) return issecretvalue ~= nil and issecretvalue(v) end
+    if not okT then tanking, status = nil, nil end
+    if not Hidden(tanking) then info.tankingMe = tanking == true end
+    if not Hidden(status) then info.status, info.onList = status, status ~= nil end
+    local okU, mine = pcall(UnitIsUnit, unit .. "target", "player")
+    if okU and Hidden(mine) then
+        info.unsure = true
+    elseif okU then
+        info.targetsMe = mine == true
+    end
+    info.targetsGroup = (UnitInParty and Safe(UnitInParty, unit .. "target") and true) or (UnitInRaid and Safe(UnitInRaid, unit .. "target") and true) or false
     info.inCombat = Safe(UnitAffectingCombat, unit) == true
     info.questKind = addon.PlateQuestKind and addon.PlateQuestKind(unit) or nil
     return info
+end
+
+local painted = setmetatable({}, { __mode = "k" })      -- health bar -> the colour it had before mine
+
+-- give a bar its own colour back. The game keeps what it last set in bar.r, g, b, and may not set it again by itself
+local function Unpaint(bar)
+    local was = painted[bar]
+    if not was then return end
+    painted[bar] = nil
+    local r, g, b = bar.r, bar.g, bar.b
+    if type(r) ~= "number" then r, g, b = was[1], was[2], was[3] end
+    if r then bar:SetStatusBarColor(r, g, b) end
 end
 
 local function Paint(frame)
@@ -70,9 +128,19 @@ local function Paint(frame)
     local bar = frame.healthBar
     if not bar or not bar.SetStatusBarColor then return end
     local db = DB()
-    local state = addon.PlateColorState(InfoFor(unit), db.plateThreat, db.plateQuest)
-    local c = state == "me" and db.plateColorMe or state == "others" and db.plateColorOthers or state == "quest" and db.plateColorQuest
-    if c then bar:SetStatusBarColor(c[1], c[2], c[3]) end
+    local full = Full()
+    local state = addon.PlateColorState(InfoFor(unit), full and db.plateThreat ~= false or false, full and db.plateQuest ~= false or false, Tank())
+    -- on their own, the tank colours colour nothing but the three tank states
+    local c = TANK[state]
+    if full and not c then
+        c = state == "me" and db.plateColorMe or state == "others" and db.plateColorOthers or state == "quest" and db.plateColorQuest or nil
+    end
+    if c then
+        if not painted[bar] then painted[bar] = bar.GetStatusBarColor and { bar:GetStatusBarColor() } or {} end
+        bar:SetStatusBarColor(c[1], c[2], c[3])
+    else
+        Unpaint(bar)
+    end
 end
 
 local function PaintUnit(unit)
@@ -90,6 +158,7 @@ end
 
 -- put the game's own colour back (when switched off)
 local function Restore()
+    for bar in pairs(painted) do pcall(Unpaint, bar) end
     if not (C_NamePlate and C_NamePlate.GetNamePlates and CompactUnitFrame_UpdateHealthColor) then return end
     for _, plate in ipairs(C_NamePlate.GetNamePlates()) do
         if plate.UnitFrame then pcall(CompactUnitFrame_UpdateHealthColor, plate.UnitFrame) end
@@ -111,12 +180,13 @@ end
 
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "NAME_PLATE_UNIT_ADDED", "UNIT_THREAT_SITUATION_UPDATE", "UNIT_THREAT_LIST_UPDATE", "PLAYER_REGEN_DISABLED",
-                     "PLAYER_REGEN_ENABLED", "QUEST_LOG_UPDATE", "PLAYER_TARGET_CHANGED" }) do
+                     "PLAYER_REGEN_ENABLED", "QUEST_LOG_UPDATE", "PLAYER_TARGET_CHANGED", "UNIT_TARGET" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 ev:SetScript("OnEvent", function(_, event, unit)
     if event == "PLAYER_LOGIN" then Defaults(); Hook(); return end
     if not On() then return end
+    if event == "UNIT_TARGET" and not (type(unit) == "string" and unit:find("^nameplate")) then return end
     if type(unit) == "string" and unit:find("^nameplate") then PaintUnit(unit)
     elseif event == "UNIT_THREAT_SITUATION_UPDATE" or event == "UNIT_THREAT_LIST_UPDATE" then PaintAll()
     else PaintAll() end
@@ -124,10 +194,17 @@ end)
 
 local prev = addon.HandleExtraCommand
 function addon:HandleExtraCommand(cmd, rest)
-    if (cmd or ""):lower() == "platecolors" then
+    if (cmd or ""):lower() == "platestyle" then
+        local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
+        if a == "v1" or a == "v2" then addon.SetPlateStyle(a) end
+        Print(L("nameplates: using Plates ") .. addon.PlateStyle() .. L("  (/lazy platestyle v1|v2)"))
+        return true
+    elseif (cmd or ""):lower() == "platecolors" then
         local a = ((rest or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""))
         local db = DB()
-        if a == "on" then db.plateColors = true elseif a == "off" then db.plateColors = nil else db.plateColors = (not db.plateColors) or nil end
+        if a == "on" then db.plateColors = true elseif a == "off" then db.plateColors = nil
+        else db.plateColors = (not (db.plateColors and addon.PlateStyle() == "v1")) or nil end
+        if db.plateColors then addon.SetPlateStyle("v1") end                      -- these are the v1 colours
         Print(L("nameplate colours: ") .. (db.plateColors and L("on (red = aggressive or attacking me, orange = fighting someone else, purple = a neutral quest mob)") or L("off")))
         addon.PlateColorsRefresh()
         if addon.RefreshOptions then addon.RefreshOptions() end

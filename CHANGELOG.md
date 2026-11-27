@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.32.0
+
+**Fully restart the game after updating** (a new file).
+
+### New
+- **Plates v2**, under Combat in the options. Everything in it is off until you turn it on:
+  - **Who each mob is attacking:** a short name beside the nameplate in that player's class colour, or YOU.
+  - **Your threat** on each mob as a percentage.
+  - **Pull warning:** PULL! and a sound from 80% threat.
+  - **Tank colours:** green is on you, yellow is on you but someone has more threat, pink got away. The pull warning is off while these are on.
+- **Which plates:** our first health bar colours are now **Plates v1**. A switch picks v1 or v2, each keeps its own settings, and ticking something switches to its kind. `/lazy platestyle v1|v2` does it too.
+- The quest icons and the interrupt marker show with both, and the v2 words move over to make room for them.
+- `/lazy threat check`: with a mob targeted in a fight, says which threat details the game lets addons read.
+
+### Changed
+- When the game hides who a mob is attacking, the health bar colours now leave the game's own colour instead of guessing.
+
+Plates v2 is new and not yet confirmed in game, especially in dungeons, where the game hides some combat values. The pull warning stays quiet when it cannot read your threat. Please report what you see.
+
 ## 0.31.1
 
 Small update. **Fully restart the game after updating.**
