@@ -280,6 +280,12 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.34.0", {
+        "RESTART THE GAME after updating (not just /reload): there are new files.",
+        "FISHING ROUTE: /lazy fish route, the button on the Fishing page or the minimap menu. Where to fish at your skill, what to train next, and buttons that point the arrow. On those trips the arrow is a FISH (/lazy arrow turns the big arrow on).",
+        "Two new ticks on the Fishing page, off until you tick them: the fishing level your zone needs, and about what you have earned this session, both on the fishing bar.",
+        "The zone numbers come from fishing guides that use Classic data, and prices are rough. Not confirmed in game yet: please tell us what you see.",
+    } },
     { "0.33.1", {
         "FRESH QUEST DATA from QuestieDB 1.1.7: updated quests, creatures, objects and drops, and goals for the mount quests.",
         "QuestieDB thinned out many creature spawn points, so some kill areas may look different. Please tell us if the arrow or map sends you to a wrong spot.",

@@ -654,6 +654,8 @@ function addon.ArrowTarget()
     if okD and ds then addon.arrowWhy = "a spot in this dungeon"; return ds end
     local wp = BaseArrowTarget()
     local db = DB()
+    -- a fishing route trip I asked for keeps the arrow until I get there
+    if wp and wp.fish and db and db.waypoints and wp == db.waypoints[1] then addon.arrowWhy = "your fishing route"; return wp end
     local skipped
     -- a finished quest I can hand in close by goes first, whether or not the plan has a stop for it (a plan of only library books has none)
     if db and db.arrowHandIn ~= false and db.routeHints ~= true and (db.arrowSource or "auto") == "auto" and not (db.planFocus and wp and wp == (db.waypoints and db.waypoints[1])) then

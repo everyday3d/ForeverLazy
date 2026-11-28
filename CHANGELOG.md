@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.34.0
+
+**Fully restart the game after updating** (new files).
+
+### New
+- **Fishing route:** `/lazy fish route`, the button on the Fishing page, or the minimap menu. It shows zones for your skill, faction and level, when to move on, and what to train next (a fishing trainer, Old Man Heming or Nat Pagle), with buttons that point the arrow.
+- **The arrow turns into a fish** on trips started from the fishing route, and stays on the trip until you arrive. The big arrow is still off unless you turn it on with `/lazy arrow`.
+- **Zone fishing level** on the fishing bar (off until you tick it): the skill at which nothing gets away where you are, in green, yellow or red for your skill. `/lazy fish status` says it too.
+- **Earned this session (approx.)** on the fishing bar (off until you tick it). It uses what your fish sold for at auction (when the sale mail says how many), else Auctionator or TradeSkillMaster prices, else the vendor price. A reload starts it again.
+
+The zone numbers come from WoW Forever fishing guides that use Classic data, and new Forever zones have none yet. Monster levels on the route are the usual Classic ones. None of this is confirmed in game yet, so please report what you see.
+
 ## 0.33.1
 
 Coming from 0.33.0, `/reload` is enough. From anything older, fully restart the game.

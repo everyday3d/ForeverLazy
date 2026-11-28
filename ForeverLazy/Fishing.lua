@@ -4,6 +4,7 @@
 --   one button for pole on, weapons back
 --   a lure warning and a button that puts your best lure on
 --   picking up the catch, a catch log, your skill and the points gained, and pool spots on the world map
+--   about what this session's catch is worth: your own auction sales, an auction addon's prices, or the vendor's
 --   /lazy fish log [all|reset]    what you caught        /lazy fish status    your skill, pole and lure
 --   /lazy fish cook               what you can cook from your catch, and what still raises your cooking
 -- Nothing clicks the bobber or casts by itself: you press the key or the button every time.
@@ -66,13 +67,14 @@ function F.LureMacro(lure) return lure and ("/use item:" .. lure.id .. "\n/use 1
 -- two clicks of the right button, close together
 function F.DoubleClick(last, now) return last ~= nil and now - last >= 0.05 and now - last <= 0.4 end
 
-function F.Record(log, zone, name, count, price)
+function F.Record(log, zone, name, count, price, id)
     local z = log[zone]
     if not z then z = {}; log[zone] = z end
     local e = z[name]
     if not e then e = { n = 0, price = 0 }; z[name] = e end
     e.n = e.n + (count or 1)
     if price and price > 0 then e.price = price end
+    if id then e.id = id end
 end
 
 -- fish: { name = { n, price } }. Most caught first; also how many and what a vendor would pay
@@ -84,6 +86,45 @@ function F.Summary(fish)
     end
     table.sort(list, function(a, b) if a.n ~= b.n then return a.n > b.n end return a.name < b.name end)
     return list, total, value
+end
+
+-- copper as coins: 1g 2s 45c
+function F.Coins(copper)
+    copper = math.floor((copper or 0) + 0.5)
+    local g, s, c = math.floor(copper / 10000), math.floor(copper / 100) % 100, copper % 100
+    if g > 0 then return g .. "g " .. s .. "s " .. c .. "c" end
+    if s > 0 then return s .. "s " .. c .. "c" end
+    return c .. "c"
+end
+
+-- what one is worth: what I got for it at auction, else what an auction addon knows; never less than the vendor pays,
+-- because I could sell it there. gives the price and where it is from: "sold", "auction" or "vendor"
+function F.Worth(vendor, sold, auction)
+    vendor = vendor or 0
+    local price, from = sold, "sold"
+    if not (price and price > 0) then price, from = auction, "auction" end
+    if price and price > vendor then return price, from end
+    return vendor, "vendor"
+end
+
+-- fish: { name = { n, price, id } }. priceOf(name, entry) -> price of one, where from. gives the total and a count by source
+function F.Earned(fish, priceOf)
+    local total, from = 0, {}
+    for name, e in pairs(fish or {}) do
+        local price, source = priceOf(name, e)
+        if price and price > 0 then
+            total = total + price * e.n
+            from[source] = (from[source] or 0) + e.n
+        end
+    end
+    return total, from
+end
+
+-- an auction sale learned from its mail. Only when the mail says how many were in it: otherwise the price of one is not known
+function F.SalePrice(kind, money, count)
+    if kind == "seller" and type(money) == "number" and money > 0 and type(count) == "number" and count >= 1 then
+        return math.floor(money / count)
+    end
 end
 
 -- a pool you can fish in, by its name in the data (so zeppelin wreckage and such stay out)
@@ -295,6 +336,55 @@ local function SoundBackSoon()
 end
 
 --------------------------------------------------------------------------------
+-- Prices
+--------------------------------------------------------------------------------
+-- what an auction addon knows for one: the same numbers it puts in its tooltips, asked for the proper way
+function F.AuctionPrice(id)
+    if not id then return nil end
+    local api = _G.Auctionator and _G.Auctionator.API and _G.Auctionator.API.v1
+    if api and api.GetAuctionPriceByItemID then
+        local ok, price = pcall(api.GetAuctionPriceByItemID, "ForeverLazy", id)
+        if ok and type(price) == "number" and price > 0 then return price end
+    end
+    if _G.TSM_API and _G.TSM_API.GetCustomPriceValue then
+        local ok, price = pcall(_G.TSM_API.GetCustomPriceValue, "DBMarket", "i:" .. id)
+        if ok and type(price) == "number" and price > 0 then return price end
+    end
+end
+
+local SALE_DAYS = 14
+local function Today() return math.floor(((time and time()) or 0) / 86400) end
+
+function F.PriceOf(name, e)
+    local sale = DB().fishSold and DB().fishSold[name]
+    if sale and Today() - sale.day > SALE_DAYS then sale = nil end
+    local vendor = e.price
+    if not vendor and e.id then
+        local info = (C_Item and C_Item.GetItemInfo) or GetItemInfo
+        vendor = info and select(11, info(e.id))
+    end
+    return F.Worth(vendor, sale and sale.price, F.AuctionPrice(e.id))
+end
+
+-- is this something I have fished up
+local function Fished(name)
+    for _, z in pairs(DB().fishCatch or {}) do if z[name] then return true end end
+    return DB().fishNames ~= nil and DB().fishNames[name] == true
+end
+
+-- at the mailbox: what my auctions of fish went for
+function F.ReadSales()
+    if not (Opt("fishValue") and GetInboxNumItems and GetInboxInvoiceInfo) then return end
+    for i = 1, (GetInboxNumItems() or 0) do
+        local kind, name, _, bid, _, _, _, _, _, _, count = GetInboxInvoiceInfo(i)
+        local price = name and Fished(name) and F.SalePrice(kind, bid, count)
+        if price then
+            DB().fishSold = DB().fishSold or {}
+            DB().fishSold[name] = { price = price, day = Today() }
+        end
+    end
+end
+--------------------------------------------------------------------------------
 -- The catch
 --------------------------------------------------------------------------------
 local session = {}                 -- name -> { n, price }
@@ -315,9 +405,10 @@ function F.OnLoot()
     if lootSeen or not FishingLoot() then return end
     lootSeen = true
     local count = GetNumLootItems and GetNumLootItems() or 0
-    if Opt("fishLog") and GetLootSlotInfo then
+    if (Opt("fishLog") or Opt("fishValue")) and GetLootSlotInfo then
         local d = DB()
-        d.fishCatch = d.fishCatch or {}
+        local keep = Opt("fishLog")
+        if keep then d.fishCatch = d.fishCatch or {} end
         local zone = ZoneName()
         for slot = 1, count do
             local _, name, quantity = GetLootSlotInfo(slot)
@@ -325,8 +416,13 @@ function F.OnLoot()
             if link and name then
                 local info = (C_Item and C_Item.GetItemInfo) or GetItemInfo
                 local price = info and select(11, info(link))
-                F.Record(d.fishCatch, zone, name, quantity, price)
-                F.Record({ s = session }, "s", name, quantity, price)
+                local id = tonumber(tostring(link):match("item:(%d+)"))
+                if keep then F.Record(d.fishCatch, zone, name, quantity, price) end
+                F.Record({ s = session }, "s", name, quantity, price, id)
+                if Opt("fishValue") then
+                    d.fishNames = d.fishNames or {}
+                    d.fishNames[name] = true                      -- so a sale of it is known for a fish later
+                end
             end
         end
     end
@@ -358,13 +454,15 @@ local function ShowLog(all)
         if #list > 12 then Print(string.format(L("  ... and %d more kinds"), #list - 12)) end
     end
     local _, now, worth = F.Summary(session)
-    if now > 0 then Print(string.format(L("this session: %d, worth %s"), now, Money(worth))) end
+    if now > 0 then Print(string.format(L("this session: %d, worth %s to a vendor"), now, Money(worth))) end
 end
 
 local function Status()
     local rank, max = F.Skill()
     Print(rank and string.format(L("fishing skill %d of %d, %d gained this session"), rank, max or 0, Gained() or 0)
         or L("the game does not tell me your fishing skill (have you learned fishing?)"))
+    if addon.FishRoute then Print(addon.FishRoute.Line(rank, addon.FishRoute.Here())) end
+    if next(session) then Print(F.EarnedLine()) end
     Print(PoleOn() and L("your pole is on") or (BagPole() and L("your pole is in your bags") or L("no fishing pole in your bags")))
     if PoleOn() then
         local left = LureLeft()
@@ -420,6 +518,11 @@ local function CookLine(e)
     local parts = {}
     for _, s in ipairs(e.short) do parts[#parts + 1] = s.need .. " x " .. s.name end
     return text .. ": " .. L("still need ") .. table.concat(parts, ", ")
+end
+
+function F.EarnedLine()
+    local total = F.Earned(session, F.PriceOf)
+    return string.format(L("Earned this session (approx.): %s"), F.Coins(total))
 end
 
 function F.CookLines()
@@ -480,7 +583,7 @@ end
 -- The buttons (secure: what they do can only be changed between fights)
 --------------------------------------------------------------------------------
 local castKey, swapKey
-local bar, barCast, barSwap, barLure, skillText, catchText, cookLine, cookText
+local bar, barCast, barSwap, barLure, skillText, catchText, cookLine, cookText, zoneText, earnedText
 
 local function Secure(name, parent, template)
     local b = CreateFrame("Button", name, parent, template or "SecureActionButtonTemplate")
@@ -537,6 +640,9 @@ local function BuildBar()
     barCast = BarButton("ForeverLazy_FishBarCast")
     barSwap = BarButton("ForeverLazy_FishBarSwap")
     barLure = BarButton("ForeverLazy_FishBarLure")
+    zoneText = bar:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    zoneText:SetPoint("TOPLEFT", 6, -20)
+    earnedText = bar:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     -- a line to point at for the list, or click to have it in chat
     cookLine = CreateFrame("Button", nil, bar)
     cookLine:SetSize(324, 14)
@@ -587,8 +693,18 @@ function F.Paint()
         end
     end
     skillText:SetText(parts)
+    if zoneText then
+        local route = addon.FishRoute
+        zoneText:SetText((Opt("fishZone") and route) and route.Line((F.Skill()), route.Here(), true) or "")
+    end
     local _, total, value = F.Summary(session)
-    catchText:SetText((Opt("fishLog") and total > 0) and string.format(L("%d caught, %s"), total, Money(value)) or "")
+    local caught = ""
+    if Opt("fishLog") and total > 0 then
+        -- with the earnings line on, one amount on the bar is enough
+        caught = Opt("fishValue") and string.format(L("%d caught"), total) or string.format(L("%d caught, %s"), total, Money(value))
+    end
+    catchText:SetText(caught)
+    if earnedText then earnedText:SetText(Opt("fishValue") and F.EarnedLine() or "") end
     if cookText and Opt("fishCook") then
         local _, ready, gives = F.CookLines()
         cookText:SetText(ready and string.format(L("Cook now: %d recipes, %d for skill"), ready, gives) or L("Cooking: open your cooking window once"))
@@ -597,7 +713,7 @@ end
 
 local function BarWanted()
     if Opt("fishSwap") then return true end                          -- the button has to be there to put the pole on
-    return (Opt("fishLure") or Opt("fishSkill") or Opt("fishLog") or Opt("fishCook")) and PoleOn()
+    return (Opt("fishLure") or Opt("fishSkill") or Opt("fishLog") or Opt("fishCook") or Opt("fishZone") or Opt("fishValue")) and PoleOn()
 end
 
 local pending = false
@@ -628,7 +744,15 @@ function F.Update()
     local p = d.pos and d.pos.fishing
     if p then bar:SetPoint(p[1], UIParent, p[1], p[2], p[3]) else bar:SetPoint("CENTER", UIParent, "CENTER", 0, -180) end
     bar:SetScale(tonumber(d.fishScale) or 1)
-    bar:SetSize(336, Opt("fishCook") and 76 or 62)
+    local zoneRoom = Opt("fishZone") and 14 or 0
+    local earnedRoom = Opt("fishValue") and 14 or 0
+    bar:SetSize(336, 62 + zoneRoom + earnedRoom + (Opt("fishCook") and 14 or 0))
+    earnedText:ClearAllPoints()
+    earnedText:SetPoint("TOPLEFT", 6, -20 - zoneRoom)
+    earnedText:SetShown(Opt("fishValue"))
+    zoneText:SetShown(Opt("fishZone"))
+    cookLine:ClearAllPoints()
+    cookLine:SetPoint("TOPLEFT", 6, -20 - zoneRoom - earnedRoom)
     cookLine:SetShown(Opt("fishCook"))
     SetMacro(barCast, cast)
     barCast:SetText(L("Cast"))
@@ -764,7 +888,7 @@ end
 local ev = CreateFrame("Frame")
 for _, e in ipairs({ "PLAYER_LOGIN", "PLAYER_ENTERING_WORLD", "PLAYER_EQUIPMENT_CHANGED", "BAG_UPDATE_DELAYED", "SKILL_LINES_CHANGED",
                      "PLAYER_REGEN_DISABLED", "PLAYER_REGEN_ENABLED", "PLAYER_LOGOUT", "UNIT_SPELLCAST_CHANNEL_START",
-                     "UNIT_SPELLCAST_CHANNEL_STOP", "LOOT_READY", "LOOT_OPENED", "LOOT_CLOSED" }) do
+                     "UNIT_SPELLCAST_CHANNEL_STOP", "LOOT_READY", "LOOT_OPENED", "LOOT_CLOSED", "MAIL_INBOX_UPDATE" }) do
     pcall(ev.RegisterEvent, ev, e)
 end
 function F.OnEvent(_, event, unit)
@@ -804,6 +928,8 @@ function F.OnEvent(_, event, unit)
         F.Paint()
     elseif event == "LOOT_CLOSED" then
         lootSeen = false
+    elseif event == "MAIL_INBOX_UPDATE" then
+        F.ReadSales()
     end
 end
 ev:SetScript("OnEvent", function(...) pcall(F.OnEvent, ...) end)
@@ -826,7 +952,7 @@ function addon:HandleExtraCommand(cmd, rest)
         elseif a == "status" then Status(); return true
         elseif a == "cook" then ShowCooking(); return true
         elseif a == "help" then
-            Print(L("/lazy fish (nearest pool), /lazy fish status, /lazy fish cook, /lazy fish log, /lazy fish log all, /lazy fish log reset. Turn the helpers on in the options, under Fishing."))
+            Print(L("/lazy fish (nearest pool), /lazy fish route, /lazy fish status, /lazy fish cook, /lazy fish log, /lazy fish log all, /lazy fish log reset. Turn the helpers on in the options, under Fishing."))
             return true
         end
     end

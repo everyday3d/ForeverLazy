@@ -742,6 +742,7 @@ function addon:ApplyStyle()
     arrows.waypoint.arrow:SetTexture(tex)
     arrows.waypoint.arrow:SetVertexColor(unpack(db.colorWaypoint))
     arrows.waypoint:SetAlpha(db.alpha)
+    arrows.waypoint.fish = false
 end
 
 function addon:ApplyLayout()
@@ -977,6 +978,18 @@ local function UpdateWaypointArrow(show)
     end
     f:Show()
     f:SetAlpha(db.alpha)
+    -- on a fishing route trip the arrow is a fish, in its own colours
+    local fish = wp.fish == true
+    if fish ~= (f.fish or false) then
+        f.fish = fish
+        if fish then
+            f.arrow:SetTexture(MEDIA .. "arrow_fish")
+            f.arrow:SetVertexColor(1, 1, 1)
+        else
+            f.arrow:SetTexture(StyleTexture())
+            f.arrow:SetVertexColor(unpack(db.colorWaypoint))
+        end
+    end
     -- a gold "?" over the arrow when this stop is a quest turn-in
     if not f.marker then
         f.marker = f:CreateFontString(nil, "OVERLAY", "GameFontNormalHuge")

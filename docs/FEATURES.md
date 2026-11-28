@@ -239,6 +239,10 @@ All of it is off until you turn it on, on the **Fishing** page of the options.
 - **Lure button:** puts the best lure in your bags that your skill allows on your pole, with a warning when there is none or it is about to wear off.
 - **Auto loot while fishing**, a **catch log** per zone (`/lazy fish log`, `/lazy fish log all`, `/lazy fish log reset`), your **skill and points gained** (`/lazy fish status`), and **pool spots on the world map**. A map marker does not mean the pool is there right now.
 - **Cooking tie-in:** `/lazy fish cook`, or a tick that adds a line to the fishing bar, shows the recipes you know that use the fish in your bags: how many you can make now, what is missing, and which can still raise your cooking. Open your cooking window once first; the colours are from the last time you opened it.
+- **Zone fishing level:** a tick shows on the fishing bar the skill at which nothing gets away where you are (green, yellow or red for your skill). `/lazy fish status` says it too.
+- **Fishing route:** `/lazy fish route`, the button on the Fishing page, or the minimap menu opens a window with zones for your skill, side and level, what to train next, and buttons that point the arrow. On those trips the arrow is a fish (`/lazy arrow` turns the big arrow on).
+- The zone numbers come from WoW Forever fishing guides that use Classic data; the game does not give them to addons, and new Forever zones have none yet.
+- **Earned this session (approx.):** a tick adds a rough total of the catch to the fishing bar, such as 1g 2s 45c. It uses what your fish last sold for at auction (only when the sale mail says how many, within 14 days), else Auctionator or TradeSkillMaster prices, else the vendor price, and never less than the vendor pays. A reload starts the total again.
 - `/lazy fish` still takes you to the nearest pool.
 
 Nothing fishes for you: you press the key or button every cast and click the bobber yourself.

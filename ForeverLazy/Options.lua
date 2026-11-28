@@ -977,9 +977,12 @@ local function BuildControls(parent)
     FishCheck(L("Show my fishing skill and the points gained this session"), "fishSkill")
     FishCheck(L("Show what I can cook from my catch on the fishing bar (/lazy fish cook)"), "fishCook")
     FishCheck(L("Show known fishing pool spots on the world map"), "fishPools", function() if addon.Fish then addon.Fish.DrawPools() end end)
+    FishCheck(L("Show the fishing skill this zone needs on the fishing bar"), "fishZone")
+    FishCheck(L("Show about what I have earned this session on the fishing bar"), "fishValue")
+    Button(content, L("Open the fishing route (where to fish, what to train)"), 16, 330, function() if addon.FishRoute then addon.FishRoute.Toggle() end end, true)
 
     Header(content, "Fishing bar")
-    Label(content, L("The bar appears with the pole button ticked, or while your pole is on with the lure, skill, catch log or cooking ticked. A second key for pole and weapons is in the game's key bindings, under AddOns."))
+    Label(content, L("The bar appears with the pole button ticked, or while your pole is on with the lure, skill, zone level, earnings, catch log or cooking ticked. A second key for pole and weapons is in the game's key bindings, under AddOns."))
     y = y - 36
     Slider(content, L("Fishing bar size"), 0.5, 2, 0.1, "%.1f", function() return tonumber(DB().fishScale) or 1 end,
         function(v) DB().fishScale = v; FishRedraw() end)

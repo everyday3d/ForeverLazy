@@ -265,7 +265,7 @@ local function Show()
     end
     local wps = DB().waypoints
     table.insert(wps, 1, { name = string.format("Trip: %s", LegText(l)), go = true, detail = LegText(l),
-                           instance = at.instance, x = at.x, y = at.y, uiMapId = at.map, zx = at.zx, zy = at.zy })
+                           instance = at.instance, x = at.x, y = at.y, uiMapId = at.map, zx = at.zx, zy = at.zy, fish = trip.dest.fish })
     addon:RefreshPins()
     if addon.RefreshOptions then addon.RefreshOptions() end
 end
@@ -279,9 +279,10 @@ local function Start(dest)
     for i, l in ipairs(legs) do Print(string.format("  %d. %s", i, LegText(l))) end
     Show()
 end
-function addon.GoTo(map, zx, zy, name)
+-- kind "fish": a fishing route trip, whose arrow is a fish
+function addon.GoTo(map, zx, zy, name, kind)
     local dest = Place(name or "there", map, zx, zy)
-    if dest then Start(dest) end
+    if dest then dest.fish = (kind == "fish") or nil; Start(dest) end
 end
 
 -- Lazy Mode asks this for a far-away stop: if the quickest way there uses a flight, start that trip

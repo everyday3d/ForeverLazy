@@ -180,6 +180,7 @@ local function CraftMenu()
         { text = "Go to the bank", fn = function() Cmd("craft", "bank") end },
         { text = "Herb or ore route...", fn = function() Ask("Which node? (peacebloom, tin, ...)", function(t) Cmd("gather", t) end) end, module = "gather" },
         { text = "Nearest fishing spot", fn = function() Cmd("fish") end, module = "gather" },
+        { text = "Fishing route", fn = function() Cmd("fish", "route") end, module = "gather" },
     }
 end
 

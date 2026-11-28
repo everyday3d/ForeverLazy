@@ -231,5 +231,51 @@ test("cooking: the command and the bar line, with a fish no recipe uses", functi
     F.Update(); assert(ForeverLazy_FishBar.shown)
 end)
 
+test("coins read like the game writes them", function()
+    eq(F.Coins(10245), "1g 2s 45c"); eq(F.Coins(245), "2s 45c"); eq(F.Coins(45), "45c"); eq(F.Coins(0), "0c"); eq(F.Coins(10000), "1g 0s 0c")
+end)
+test("what one is worth: my sale, else the auction price, never under the vendor", function()
+    local p, from = F.Worth(25, 300, 200); eq(p, 300); eq(from, "sold")
+    p, from = F.Worth(25, nil, 200); eq(p, 200); eq(from, "auction")
+    p, from = F.Worth(25, nil, 10); eq(p, 25); eq(from, "vendor")
+    p, from = F.Worth(nil, nil, nil); eq(p, 0); eq(from, "vendor")
+    eq(F.Earned({ a = { n = 2 }, b = { n = 3 } }, function(name) return name == "a" and 100 or 10, "vendor" end), 230)
+end)
+test("a sale mail only counts when it says how many it was", function()
+    eq(F.SalePrice("seller", 500, 5), 100)
+    eq(F.SalePrice("seller", 500, nil), nil); eq(F.SalePrice("seller", 500, 0), nil); eq(F.SalePrice("buyer", 500, 5), nil)
+end)
+test("the earnings line: Auctionator's price, then my own sale, and it is off until ticked", function()
+    worn = { [16] = POLE }
+    db.fishLog, db.fishAutoLoot, db.fishValue = nil, nil, nil
+    GetLootSlotLink = function(s) return "|Hitem:" .. (s == 1 and 6291 or 5) .. ":0|h" end
+    local asked
+    Auctionator = { API = { v1 = { GetAuctionPriceByItemID = function(who, id) asked = who; if id == 6291 then return 200 end end } } }
+    db.fishValue = true
+    fishingLoot = true; Event("LOOT_READY"); Event("LOOT_CLOSED")
+    -- 2 fish at the auction price of 200, 1 driftwood at the vendor's 25
+    local line = F.EarnedLine()
+    eq(asked, "ForeverLazy")
+    assert(line:find("approx", 1, true), line)
+    local before = tonumber(line:match("(%d+)c$"))
+    F.Update(); assert(ForeverLazy_FishBar.shown)
+    local count = 1
+    GetInboxNumItems = function() return count end
+    GetInboxInvoiceInfo = function() return "seller", "Raw Brilliant Smallfish", "Ann", 900, 900, 0, 0, 0, 0, 0, 3 end
+    Event("MAIL_INBOX_UPDATE")
+    eq(db.fishSold["Raw Brilliant Smallfish"].price, 300)
+    assert(F.EarnedLine() ~= line, "my own sale changes the total")
+    GetInboxInvoiceInfo = function() return "seller", "Linen Cloth", "Ann", 900, 900, 0, 0, 0, 0, 0, 3 end
+    Event("MAIL_INBOX_UPDATE"); eq(db.fishSold["Linen Cloth"], nil, "only what I fished")
+    eq(db.fishCatch and db.fishCatch.Westfall and db.fishCatch.Westfall["Raw Brilliant Smallfish"].n, 2, "no log entry while the log is off")
+    Auctionator = nil
+end)
+test("an auction addon that breaks does no harm", function()
+    Auctionator = { API = { v1 = { GetAuctionPriceByItemID = function() error("boom") end } } }
+    eq(F.AuctionPrice(6291), nil)
+    Auctionator = nil
+    eq(F.AuctionPrice(nil), nil)
+end)
+
 print(string.format("\n%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)
