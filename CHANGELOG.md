@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.33.1
+
+Coming from 0.33.0, `/reload` is enough. From anything older, fully restart the game.
+
+### Changed
+- **Fresh quest data** from QuestieDB 1.1.7: 3 new quests and about 320 changed ones, 6 new creatures and about 1,390 changed ones, 5 new objects and about 260 changed ones, 48 changed items and 4 new quest XP values. It includes goals for the mount quests, which should show once you have the riding skill.
+- **Fewer creature spawn points:** QuestieDB greatly thinned them out for many creatures (about 22% fewer in all), so some kill areas on the map may look different. No creature lost all of its spots. Please report it if the arrow or map sends you somewhere wrong.
+
 ## 0.33.0
 
 **Fully restart the game after updating** (a new file).

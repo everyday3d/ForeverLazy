@@ -280,6 +280,10 @@ end
 -- What is new
 --------------------------------------------------------------------------------
 local NEW = {
+    { "0.33.1", {
+        "FRESH QUEST DATA from QuestieDB 1.1.7: updated quests, creatures, objects and drops, and goals for the mount quests.",
+        "QuestieDB thinned out many creature spawn points, so some kill areas may look different. Please tell us if the arrow or map sends you to a wrong spot.",
+    } },
     { "0.33.0", {
         "RESTART THE GAME after updating (not just /reload): there is a new file.",
         "BATTLEGROUNDS (experimental) has its own page in the options, all off until you turn it on: queue timers, base capture and flag timers, a score guess, shift-click callouts and Alterac Valley hand-ins. It includes Darkspear Islands.",

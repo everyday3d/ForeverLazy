@@ -304,6 +304,13 @@ do
                 "local ADDON, ns = ...\nns.dataset.townsfolk = {\n" }
     local set = { townsfolk = T.townsfolk, professionTrainers = T.professionTrainers, classSpecificTownsfolk = T.classSpecificTownsfolk,
                   factionSpecificTownsfolk = T.factionSpecificTownsfolk, petFoodVendorTypes = T.petFoodVendorTypes, professionKeys = prof.professionKeys }
+    -- Questie 12.16 stopped building the pet food vendor lists here: keep the ones we had
+    if not (set.petFoodVendorTypes and next(set.petFoodVendorTypes)) then
+        local ns = { dataset = {} }
+        assert(loadfile(FLDIR:gsub("\\", "/"):gsub("/$", "") .. "/data/Townsfolk.lua"))("ForeverLazy", ns)
+        set.petFoodVendorTypes = ns.dataset.townsfolk.petFoodVendorTypes
+        print("pet food vendor lists carried over from the old file")
+    end
     for _, k in ipairs({ "townsfolk", "professionTrainers", "classSpecificTownsfolk", "factionSpecificTownsfolk", "petFoodVendorTypes", "professionKeys" }) do
         o[#o + 1] = "  " .. k .. " = " .. Lit(set[k] or {}) .. ",\n"
     end
